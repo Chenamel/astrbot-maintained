@@ -1,0 +1,15 @@
+AstrBot Maintained Fork — NOTICE
+
+Upstream:   https://github.com/AstrBotDevs/AstrBot
+Baseline:   tag v4.28.2, commit 3c7adafa1397e182d60b1016bf88759265113c8a
+License:    GNU Affero General Public License v3.0 or later (see LICENSE)
+Fork home:  https://github.com/Chenamel/astrbot-maintained
+
+1. This repository is a MODIFIED version of AstrBot. Modifications are made
+   under section 13 of the AGPL-3.0.
+2. All modifications are additive unless explicitly recorded in
+   maintained/installed_manifest.json and CHANGELOG.md.
+3. The complete Corresponding Source of this modified version is available
+   at the URL above at no charge.
+4. Upstream copyright notices, the AGPL-3.0 text, and EULA.md are kept intact.
+5. This fork is not affiliated with or endorsed by the AstrBot authors.
