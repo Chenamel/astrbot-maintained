@@ -42,7 +42,8 @@ baseline : tag v4.28.2 = 3c7adafa1397e182d60b1016bf88759265113c8a
 
 ## 4. 隔离红线
 
-- 增强插件 `astrbot_plugin_astrbot_enhance_mode`、内容安全插件的源码，**一律不得出现在 `astrbot-maintained`**，只能进 `astrbot-extras`。
+- 增强插件 `astrbot_plugin_astrbot_enhance_mode`、内容安全插件的**源码与文件清单**，**一律不得出现在 `astrbot-maintained`**，只能进 `astrbot-extras`。
+- `maintained/installed_manifest.json` **只登记 core（`astrbot/**`）**；`data/plugins/**` 与 `dashboard/**` 条目留在归档仓与私有仓。
 - `data/`、`configs/config.yaml`、`.env`、`*.log`、`venv` 永不入仓。
 - 提交前必跑 §6 自检。
 
@@ -79,8 +80,9 @@ grep -rIn "Axi404" --exclude-dir=.git . | head
 git ls-files | grep -i "data/plugins" | head        # 空
 git ls-files | grep -iE "config\.yaml|\.env$" | head # 空
 
-# 台账
-sha256sum maintained/installed_manifest.json        # 与归档仓一致
+# 台账（只应含 core 条目）
+python -c "import json;d=json.load(open('maintained/installed_manifest.json',encoding='utf-8'));f=d['files'];\
+print(len(f), all(k.startswith('astrbot/') for k in f))"   # 期望：22 True
 
 # 归档仓只读性
 git -C "<INST>/maintenance_repos/astrbot_local" status --porcelain | wc -l   # 0
