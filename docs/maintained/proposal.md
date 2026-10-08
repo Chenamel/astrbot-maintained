@@ -64,6 +64,8 @@
 
 只覆盖 **core fork 与插件兼容层**。不含：部署运维、模型选型、dashboard 前端、上游功能开发。
 
+既有增强插件**只作为参考实现**（其"主动回复"等能力后续大概率重写）；本 fork 的代码范式以**类官方风格**为准，不迁就旧插件的写法。
+
 ## 8. 验收标准（每条可命令验证）
 
 - **A1** `git rev-parse HEAD` = `3c7adafa…`，`git status --porcelain` 为空，本地无 `master` 分支。
@@ -91,3 +93,4 @@ SSH 密钥 `id_ed25519_workbuddy`、GitHub 账号 `Chenamel`、Python 3.12 venv�
 | D4 | 兼容优先、最大化增强：对外冻结 + 内部加法 |
 | D5 | 建仓即私有，阶段 7 转公开 |
 | D6 | 不引入 open-source-license-check（许可证结论已核实，避免工具堆叠） |
+| D7 | 增强插件**仅作参考实现**，后续大概率重写；本 fork **优先完善 core 与 `astrbot/api/**`**，按类官方范式写代码 |
