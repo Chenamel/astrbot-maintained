@@ -6,17 +6,26 @@
 |---|---|
 | `VERSION` | 本 fork 的维护版本号（形如 `4.28.2.m1`）。上游 `pyproject.toml` 与 `astrbot.__version__` 保持 `4.28.2` 不变。 |
 | `installed_manifest.json` | 受保护文件的 SHA-256 台账，**只含 core（`astrbot/**`，22 条）**，另有 `proactive_must_remain_disabled` 字段。 |
-| `tools/update_local.py` | 离线校验器。`--check` 比对目标实例的台账哈希；`--ref` 做三方合并预演（**不触碰运行中的文件**）。 |
+## 校验
 
-## 用法
+台账是**契约**，可用任意方式比对。公开仓不附带实例运维脚本（那些脚本涉及私有插件，
+不属于 core 项目本体），它们保留在维护归档仓与私有仓。
 
 ```bash
-# 校验实例中受保护文件是否与台账一致（不一致则非零退出）
-python maintained/tools/update_local.py core --check --instance "<实例路径>"
-
-# 预演上游三方合并
-python maintained/tools/update_local.py core --ref v4.28.2 --instance "<实例路径>"
+# 校验实例中受保护 core 文件是否与台账一致
+python - <<'PY'
+import hashlib, json, pathlib
+receipt = json.load(open("maintained/installed_manifest.json", encoding="utf-8"))
+root = pathlib.Path("<AstrBot core 目录>")
+bad = [r for r, h in receipt["files"].items()
+       if not (root / r).is_file()
+       or hashlib.sha256((root / r).read_bytes()).hexdigest() != h]
+print(json.dumps({"compatible_hashes": not bad, "mismatches": bad}, ensure_ascii=False))
+raise SystemExit(bool(bad))
+PY
 ```
+
+阶段 6 会按类官方范式重写 `check_drift` / `apply_patches` 工具链。
 
 ## 规则
 

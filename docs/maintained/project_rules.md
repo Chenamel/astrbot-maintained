@@ -23,7 +23,7 @@ baseline : tag v4.28.2 = 3c7adafa1397e182d60b1016bf88759265113c8a
 2. **先文档后代码**：改动前先更新 `docs/maintained/` 对应文档，再动代码。
 3. **一改动一提交**：一次逻辑改动 = 一次 commit，语义化前缀 `fix / feat / docs / chore / test / refactor`。
 4. **无测试不进阶段 4+**：阶段 4 起每个改动必须附 `tests/maintained/` 下的测试。
-5. **改 core 同步更新 `maintained/installed_manifest.json` 的 SHA-256**，并用 `maintained/tools/update_local.py --check` 复核。
+5. **改 core 同步更新 `maintained/installed_manifest.json` 的 SHA-256**，并按 `maintained/README.md` 的比对脚本复核。
 6. **不动主动回复开关**：`proactive_must_remain_disabled` 恒为 true，任何代码路径不得打开。
 
 ## 2. 兼容边界三规则
@@ -56,7 +56,7 @@ git switch -c tmp/sync-<ref> maintained/v4.28.2
 git merge --no-commit --no-ff <upstream ref>
 # 冲突只解"我们改过的文件"；骨架文件因零冲突原则不应冲突
 # 合并后：
-python maintained/tools/update_local.py --check --instance <INST>
+python -c "见 maintained/README.md 的台账比对脚本"
 ruff check . && pytest tests/maintained
 ```
 

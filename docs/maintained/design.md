@@ -31,7 +31,7 @@ maintained/v4.28.2  (长期主干)
 | R-04 | 空参重复工具调用 14 次 | `REPEATED_TOOL_FAILURE_LIMIT` 补丁 | `astrbot/core/agent/runners/…` | 否 | 无 | `tests/maintained/test_tool_loop.py` |
 | R-05 | provider 内部图片降级 / QQ 图片本地化 | core 补丁 | `astrbot/core/provider/…`、`astrbot/core/platform/…` | 否 | 无 | `tests/maintained/test_media.py` |
 | R-06 | 维护保护（拦启动器覆盖） | `star/maintenance.py` + `updater` 保护 | `astrbot/core/star/…` | 否 | 无 | `tests/maintained/test_maintenance.py` |
-| R-07 | 补丁完整性可校验 | SHA-256 台账 + `--check` 校验器 | `maintained/installed_manifest.json`、`maintained/tools/update_local.py` | 否 | 无 | 台账比对 |
+| R-07 | 补丁完整性可校验 | SHA-256 台账 + 比对脚本 | `maintained/installed_manifest.json` | 否 | 无 | 台账比对 |
 
 ## 3. 兼容边界与冻结清单
 
@@ -90,7 +90,7 @@ def old_name(*args, **kwargs):
 | 新可选参数为 `None` | 走旧代码路径 |
 | 主动回复相关异常 | 默认关闭（`proactive_must_remain_disabled` 恒 true） |
 | 三方合并冲突 | 回退到 `baseline/v4.28.2`，按 `maintained/` 台账重放 |
-| 台账 SHA 不匹配 | `update_local.py --check` 非零退出，阻断发布 |
+| 台账 SHA 不匹配 | 比对脚本非零退出，阻断发布 |
 
 ## 9. 配置与开关设计
 

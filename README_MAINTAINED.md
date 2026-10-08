@@ -35,7 +35,7 @@
 git fetch upstream --tags --prune
 git switch -c tmp/sync-<ref> maintained/v4.28.2
 git merge --no-commit --no-ff <upstream ref>
-python maintained/tools/update_local.py --check --instance <实例路径>
+# 校验台账与实例一致性：见 maintained/README.md 的比对脚本
 ```
 
 ## 许可证
