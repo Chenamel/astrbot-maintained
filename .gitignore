@@ -107,3 +107,6 @@ astrbot_plugin_content_safety_guard/
 # Local scratch
 optimization_backups/
 maintained/.tmp/
+
+# WorkBuddy local state (never published)
+.workbuddy/
