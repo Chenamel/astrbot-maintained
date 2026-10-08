@@ -65,3 +65,45 @@ GenieData/
 .worktrees/
 
 dashboard/bun.lock
+
+# --- maintained fork additions (append-only) ---
+.astrbot/
+astrbot.lock
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.*
+cmd_config.json
+
+# Runtime artifacts that must never enter the public fork
+data/
+data_v2.db
+data_v3.db
+configs/config.yaml
+configs/session/
+
+# Large binaries
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.zip
+*.7z
+*.rar
+*.tar.gz
+*.pt
+*.pth
+*.onnx
+*.bin
+*.safetensors
+*.pdf
+
+# Third-party plugin sources are private and must never be committed here
+data/plugins/**
+astrbot_plugin_astrbot_enhance_mode/
+astrbot_plugin_content_safety_guard/
+
+# Local scratch
+optimization_backups/
+maintained/.tmp/

@@ -1,0 +1,17 @@
+# Normalize to LF on checkin; keep repository bytes identical to upstream on checkout.
+* text=auto eol=lf
+
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.pdb  binary
+
+# Generated / vendored
+astrbot/dashboard/dist/** -diff -merge linguist-generated
+dashboard/dist/**        -diff -merge linguist-generated
+docs/**/*.png            -diff -merge
