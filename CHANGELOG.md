@@ -18,8 +18,13 @@
   按 sdd 规范跳过 `docs/layouts/`（本项目无 UI）。
 - 合规文件 `NOTICE`（AGPL §13）与 `README_MAINTAINED.md`。
 - `.gitattributes`（LF 归一化）与 `.gitignore` 追加段（私有代码黑名单）。
-- `maintained/`：`installed_manifest.json`（65 条 SHA-256 台账，自归档仓原样迁入）、
+- `maintained/`：`installed_manifest.json`（**仅 core 的 SHA-256 台账，22 条**）、
   `tools/update_local.py`（离线 `--check` 校验器）、`VERSION`。
+
+### 变更
+
+- 台账脱敏：剔除 `data/plugins/**`（39 条）与 `dashboard/**`（4 条），只保留 `astrbot/**`（22 条）。
+  理由：本仓是 core 项目，第三方插件无许可证、其文件清单不宜公开；完整台账留在归档仓与私有仓。
 
 ### 未做
 
