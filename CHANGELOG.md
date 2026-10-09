@@ -35,9 +35,10 @@
 
 - **阶段 4 止血（实例侧）**：恢复 26 个 core 补丁 + 部署 6 个 `astrbot/api` 文件到运行实例；
   台账 28/28 SHA-256 一致，`capabilities()` 五项全 `True`，插件 `ImportError` 根因消除。
-  备份位于 `<INST>/optimization_backups/20261009_124413_CST_premaintenance/`。
-  详见 [`docs/maintained/deploy-log.md`](./docs/maintained/deploy-log.md)。
-  **未启动机器人**；另发现 `active_reply.enable = true` 与铁律 6 相悖，待用户拍板。
+  机器人启动后已核验**插件加载成功**（插件自身 WebUI 监听 `127.0.0.1:6196`）。
+  另将 `active_reply.enable` 由 `true` 改为 `false`（防调试期误发，符合铁律 6）。
+  备份位于 `<INST>/optimization_backups/20261009_124413_CST_premaintenance/` 与
+  `..._142013_CST_proactive_off/`。详见 [`docs/maintained/deploy-log.md`](./docs/maintained/deploy-log.md)。
 - `README.md` 替换为本 fork 说明（GitHub 首页渲染入口）。这是**唯一**被修改的上游既有文件：
   `.gitattributes` 声明 `README.md merge=ours` 并配置对应 merge driver，
   上游对 README 的改动永不覆盖本 fork 版本；其余全部上游文件（含 `docs/`、
