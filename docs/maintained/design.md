@@ -55,13 +55,18 @@ maintained/v4.28.2  (长期主干)
 
 ## 4. 新增模块清单（阶段 3 落）
 
-| 模块 | 职责 | 对外符号 | 是否 api 层 |
-|---|---|---|---|
-| `astrbot/api/turns` | 直连会话轮次与在途取消 | 待定 | 是 |
-| `astrbot/api/media` | 图片/媒体输入降级与本地化 | 待定 | 是 |
-| `astrbot/api/delivery` | 代码交付策略 | 待定 | 是 |
-| `astrbot/api/permissions` | 执行权限闸门 | 待定 | 是 |
-| `astrbot/api/proactive` | 主动场景工具白名单 | 待定 | 是（默认关闭） |
+**接口契约以 [`api-contract.md`](./api-contract.md) 为唯一规格**（含签名、降级语义、测试要求）。
+
+| 模块 | 职责 | 解决的共性问题 |
+|---|---|---|
+| `astrbot/api/_bridge.py` | 内部桥：惰性解析 core 符号 + 能力清单（**非公开面**） | 统一降级机制 |
+| `astrbot/api/media/` | 图片输入契约与判定 | **P1**（插件顶层 import 私有常量）、P4（`<image_caption>` 硬编码） |
+| `astrbot/api/turns/` | 直报回合状态访问与重置 | P2 的一半 |
+| `astrbot/api/delivery/` | 交付策略纯函数 | P3 的一部分 |
+| `astrbot/api/permissions/` | 权限与执行授权 | P6 |
+| `astrbot/api/proactive/` | 轻量主动判定（**开关恒关**） | 铁律 6 |
+
+**关键约束**：五个模块均为**新增目录**，**不修改**任何既有 api 文件；core 侧补丁在基线 4.28.2 上不存在，api 层必须降级可用、补丁就位后自动生效。
 
 ## 5. core 内部改动策略
 
