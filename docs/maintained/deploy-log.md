@@ -373,3 +373,33 @@ ls -la <INST>/core/astrbot/core/provider/__pycache__/entities.cpython-312.pyc   
 
 **阶段 7 至此完成**：打磨（P4/P5/P7/P8）+ 回归护栏 + 文档对齐 + 插件清理与只读自检，
 全部部署并重启验证通过。仅剩 QQ 侧 `enhance api-status` 冒烟（可选，随时可做）。
+
+---
+
+## 2026-10-10 · 项目重定位 + 文档门槛 + β 保护
+
+**用户定调（压倒性约束，已写入 `project_rules.md` 与 `proposal.md`）**：
+
+> 项目定位：不再是一个纯个人的私有分支，而是一个面向社区开源的**「轻量级、高灵活度、集成增强版 AstrBot」**。
+> 核心价值：**提供官方主线缺乏的底层扩展 API，提升机制效率，方便插件进行拟人化干预**。
+
+由此落地三件事：
+
+| 项 | 落地位置 | 内容 |
+|---|---|---|
+| 项目定位 | `project_rules.md`（置顶节）、`proposal.md`（置顶节 + §2 G6/G7 + §4 受众重排） | 三条硬性含义：对外文档优先、允许有主张地偏离官方、上游合并红线 |
+| β 保护 | `inventory.md` §4 P11；`project_rules.md` §5 | β 明确标记为**本项目的核心架构优化、属设计预期**：**保留现状、坚决不改回上游、严禁上游合并时覆盖**；§5 增「合并红线」，冲突时以本 fork 为准 |
+| api 文档门槛 | `project_rules.md` §9、`api-contract.md` §3.4、`tests/maintained/test_api_doc_gate.py` | 模块 docstring / 显式 `__all__` / 逐符号 docstring / 常量 `#:` 注释；**禁止野路子公开名**（不在 `__all__`/契约/测试中的公开定义）；违规不得登记台账、不得部署 |
+
+**门槛测试抓出并已修**（违反 §9 的实例）：
+
+| 文件 | 问题 | 修法 |
+|---|---|---|
+| `astrbot/api/permissions/__init__.py` | `EXECUTION_POLICY_UNAVAILABLE` 公开名、不在 `__all__`、不在契约 | 降为 `_EXECUTION_POLICY_UNAVAILABLE`（**返回值不变**）；契约 §3.4 补"拒绝原因两种口径"说明 |
+| `astrbot/api/turns/__init__.py` | `logger = logging.getLogger(...)` 裸公开名 | 降为 `_logger`（4 处调用同步） |
+
+**验证**：`tests/maintained/` **148 项全绿**（+54 为新增门槛测试）、`ruff` 干净、上游仍 **17 failed（= 基线）**；
+变更的 2 个 api 文件已部署，**双端 31/31 NO DRIFT**。
+
+**注**：本次两个改动只在符号名层面（返回值与行为不变），
+运行中的进程持有旧符号**无功能影响**；下次重启 AstrBot 自然生效，无需专门重启。

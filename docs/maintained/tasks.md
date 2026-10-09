@@ -95,3 +95,6 @@
 | T7-15 | P0 | T7-13 | docs/maintained/{project_rules,api-contract}.md + astrbot/api/** | **api 面文档门槛**（§9）：模块 docstring/`__all__`/逐符号 docstring/常量 `#:` 注释；禁止野路子公开名 | 机械测试 `test_api_doc_gate.py` 全绿；已修 `permissions._EXECUTION_POLICY_UNAVAILABLE` 与 `turns._logger` | pytest + 评审 | 否 | ✅ | feat(api): enforce the public-surface documentation gate |
 | T7-91 | P2 | T7-13 | README_MAINTAINED.md 等对外材料 | 把新定位同步到对外材料（README/NOTICE 措辞） | 与定位一致 | 目视 | 是 | ⬜ | docs: align public-facing material with the new positioning |
 | T7-90 | P2 | — | — | **暂缓（用户决定）**：脱敏 / P2·P3·P6·P9·P10；**「转公开」现与项目定位直接绑定（定位为面向社区开源），时间点待用户确认** | 用户另行决定 | — | — | ⏸ 暂缓 | — |
+
+> **定位变更提示（2026-10-10）**：项目已重定位为「面向社区开源的集成增强版 AstrBot」（见 `project_rules.md` 置顶节）。
+> 原「转公开」暂缓项（T7-90）现与定位直接绑定，**时间点待用户确认**。
