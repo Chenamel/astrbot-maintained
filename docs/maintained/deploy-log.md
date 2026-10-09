@@ -341,3 +341,19 @@ ls -la <INST>/core/astrbot/core/provider/__pycache__/entities.cpython-312.pyc   
 ```
 
 **注记**：`.pytest_cache` 曾被误同步进实例插件目录，已删除并为 extras 仓补上忽略规则（提交 `f79a81a`）。
+
+### 重启后复核（T7-10 通过，2026-10-09 22:5x）
+
+| 检查 | 结果 |
+|---|---|
+| 进程 | 新 PID **213812**（重启前 200188）→ 确为重启 |
+| 监听端口 | `6199` / `6185` / `6196` 全在听 → 机器人 + 插件均正常 |
+| core 新代码 | `entities` / `direct_turns` / `tool_loop_agent_runner` / `api/media` 的 pyc 均为 **22:49**（晚于 20:14 部署）→ **已编译加载** |
+| 部署生效实证 | 在实例 core 中导入 `AUXILIARY_LLM_TIMEOUT_SEC=30`、`MAX_TURN_IMAGE_URLS=2`、`CHANGE_POLL_INTERVAL_SEC=0.25`、`IMAGE_CAPTION_MARKER='<image_caption>'` 全部成功 |
+| 插件新代码 | `main.cpython-312.pyc` **22:49:38** > `main.py` 20:07 → 新代码已加载（其余 pyc 仍为 13:34，因源码未变，符合预期） |
+| `check_drift` | 实例 **31/31 NO DRIFT**；仓内 **31/31 NO DRIFT** |
+| 插件依赖面 | 实例 `main.py` 中 `astrbot.core` **0 处**；`enhance api-status` 命令**在**（1 处） |
+| 铁律 ⑥ | `active_reply.enable = **False**`（重启未回写） |
+
+**阶段 7 至此完成**：打磨（P4/P5/P7/P8）+ 回归护栏 + 文档对齐 + 插件清理与只读自检，
+全部部署并重启验证通过。仅剩 QQ 侧 `enhance api-status` 冒烟（可选，随时可做）。
