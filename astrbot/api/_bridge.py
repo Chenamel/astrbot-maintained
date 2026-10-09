@@ -53,6 +53,18 @@ CAPABILITIES: dict[str, tuple[str, str]] = {
         "astrbot.core.provider.entities",
         "IMAGE_INPUT_UNAVAILABLE_NOTICE",
     ),
+    "content.parts": (
+        "astrbot.core.agent.message",
+        "TextPart",
+    ),
+    "runtime.helpers": (
+        "astrbot.core.utils.io",
+        "download_image_by_url",
+    ),
+    "embedding.provider": (
+        "astrbot.core.provider.provider",
+        "EmbeddingProvider",
+    ),
 }
 
 
