@@ -170,11 +170,35 @@
 | 组 | 数量 | 断言在测什么 | 维护版做了什么 | 影响 |
 |---|---|---|---|---|
 | **α 执行工具授权收紧** | 9（`test_proactive_agent_respects_runtime_and_safety_settings` ×8 + `test_persona_empty_tools_keeps_local_runtime_builtin_tools` ×1） | `runtime == "local"` 时工具集应含 `astrbot_execute_python` / `astrbot_execute_shell` | `apply_execution_policy`（`astr_main_agent.py:1857`，**无任何条件、每次请求都调用**）在 `execution_denial` 非空时过滤掉 `EXECUTION_TOOL_NAMES`（python/ipython/shell/shell_session） | **有真实影响且对全部对话生效**：非管理员**永远**拿不到执行工具；管理员也必须在**当前消息里明确要求运行/执行**（写代码、解释、引言都不算授权）。属**有意的安全加固**（防"引用的代码被当授权执行"），方向是**更严格** |
-| **β hook 发射时序** | 8（`test_skills_like_requery_reply_reaches_stream_bridge_once`） | 前两次发射时 hook 标记应为 `False`（"保持既有 `llm_result` 顺序，只有新增的流式增量跟在 hook 之后"） | 维护版里 hook 标记**更早**被置 True（实测四个发射点全为 `True`） | ⚠️ **唯一踩到插件兼容性的一类**：挂在 agent run hook 上的插件，观察到的**顺序/次数可能与上游不同**，理论上可致副作用重复或错序。重写批次应优先对齐 |
+| **β hook 发射时序** | 8（`test_skills_like_requery_reply_reaches_stream_bridge_once`） | 前两次发射时 hook 标记应为 `False`（"保持既有 `llm_result` 顺序，只有新增的流式增量跟在 hook 之后"） | 维护版里 hook 标记**更早**被置 True（实测四个发射点全为 `True`） | ⚠️ **唯一踩到插件兼容性的一类**：挂在 agent run hook 上的插件，观察到的**顺序/次数可能与上游不同**。重写批次应优先对齐 |
 
 **净评估**：边界清晰（3 类、集中在 `astr_main_agent.py` 与 `tool_loop_agent_runner.py` 两个文件），
 其中 9 项是**朝更安全方向**偏离；无崩溃、无数据损坏。真正需要处理的只有 β（插件契约）。
 **未重开主动回复前，α 中与主动场景相关的部分不会生效；但 α 的"执行工具收紧"对所有对话生效。**
+
+#### β 根因更正（2026-10-09 深夜复核，推翻初判）
+
+**初判（错）**：以为是补丁把 `on_agent_done` 调用挪了位置。
+
+**实测更正**：承载该钩子的 `ToolLoopAgentRunner._complete_with_assistant_response()`
+在**基线与维护版中逐行相同**（顺序均为：追加 assistant 消息 → 调 `on_agent_done` → `_resolve_unconsumed_follow_ups()`）。
+所以**钩子本身没有被挪位**；真正变化的是**"这一轮何时被判定为完成"**——
+补丁新增的代码交付修复 / 末轮补生成逻辑（该方法上方的 `language` / `outcome` 记录与修复路径）
+使 `_complete_with_assistant_response` 在更早的一步被调用，于是当最终两条 `llm_result`
+经过 `step()` 时，钩子标记已经是 `True`。
+
+**谁受影响**：`on_agent_done` → `MainAgentHooks.on_agent_done` 会派发
+`OnLLMResponseEvent` 与 `OnAgentDoneEvent`。
+**实例中的 `astrbot_plugin_content_safety_guard` 正挂在 `@filter.on_agent_done(priority=1000)` 上**
+（处理函数 docstring：「Replace the runner's pre-audit message **before core history persists it**」）。
+
+**影响判定**：guard 的关键依赖是「钩子在**追加 assistant 消息之后、core 写历史之前**触发」——
+该位置**未被破坏**。变化的是「钩子 vs 回复被发出」的先后：维护版钩子更早，
+对 guard 这类「拦截 / 清空回复」的逻辑**更早触发反而更安全**。
+
+**⇒ 处置建议（重要）**：**不要为了对齐上游测试去改 β**。
+重写批次应先为「guard 的丢弃机制」补一条针对性测试（模拟被审计拒绝的回复 → 断言它既没进历史也没发出），
+确认时序变化没有削弱它，再决定是否调整。盲目对齐可能反而破坏真正在用的功能。
 
 ## 5. 证据来源
 
