@@ -13,10 +13,25 @@
 
 ### 新增
 
+- **阶段 7 安全打磨 + 可用性验证**（发布暂缓，仓库保持私有）：
+  - **回归护栏**：`tests/maintained/test_manifest_guard.py`（仓工作树↔台账自洽、台账只含 core、
+    `proactive_must_remain_disabled`、条数钉）与 `test_api_frozen.py`（上游 `astrbot/api` 相对
+    `baseline/v4.28.2` 零改动，白名单=9 个新增文件）。
+  - **core 零行为打磨**：P4 `IMAGE_CAPTION_MARKER` 下沉 core（4 处改引，`astrbot.api.media` 改为
+    resolve + 同值兜底）；P5 `_proactive_delivery_deferred` 提升为 `__init__` 正式字段；
+    P7 三文件 8 处「被取代回合」门禁补 `logger.debug`；P8 提取 9 个具名常量（值逐字节不变）。
+  - **插件**（私有仓）：删死导入 `is_image_part` 与只写不读的 `MAINTAINED_API_AVAILABLE`；
+    新增只读自检命令 `enhance api-status`（契约见 `api-contract.md` §7）。
+  - **审计发现 P11**：维护版 core 相对纯基线打破上游 **17 项测试预期**（详见 `inventory.md` §4），
+    故本阶段 core 打磨的验收标准为「不新增失败」而非「上游测试全绿」。
+  - `tests/maintained/` 最终 **94 项**全绿。
+- **阶段 6 维护工具链**：`maintained/tools/{check_drift,apply_patches}.py` —— 漂移检测与一键重打。
+  只处理台账内文件、默认预演、写前自动备份；用法与边界见
+  [`docs/maintained/tools.md`](./docs/maintained/tools.md)。24 项工具测试。
 - **阶段 5 插件正规化（api 层部分）**：新增 `astrbot/api/{content,runtime,embedding}/`
   三个模块（纯新增，未改既有 api 文件），把插件剩余的 core 依赖全部纳入公开面。
   契约见 [`docs/maintained/api-contract.md`](./docs/maintained/api-contract.md) §3.0。
-  台账 28 → 31 条；`tests/maintained/` 47 → 62 项全绿。
+  台账 28 → 31 条；`tests/maintained/` 47 → 62 项全绿（阶段 7 后为 94）。
   插件侧改造记录见 [`docs/maintained/deploy-log.md`](./docs/maintained/deploy-log.md)。
 - **阶段 3 API 层**：`astrbot/api/` 下新增六个文件（**未修改任何既有 api 文件**）：
   - `_bridge.py` — 内部能力桥（惰性解析 core 符号 + 能力清单，**非公开面**）
@@ -25,7 +40,7 @@
   - `delivery/` — 交付策略纯函数
   - `permissions/` — 权限与执行授权（补丁缺席时**回退管理员判定，不降级为放行**）
   - `proactive/` — 轻量主动判定（开关恒关，模块内不存在 enable 入口）
-  - 契约见 `docs/maintained/api-contract.md`；测试 `tests/maintained/`（47 项）
+  - 契约见 `docs/maintained/api-contract.md`；测试 `tests/maintained/`（阶段 3 交付 47 项，后续扩至 94）
 - **阶段 2 存量治理产出**：
   - `docs/maintained/inventory.md` — 26 文件逐条分级表（✅必须留 core 17 / 🟡重写保留 4 / ⚪可上移 api 2 / 🔵非 core 前端 4）+ 跨文件共性问题 P1–P10 + 对交接包 5 处事实修正。
   - `docs/maintained/knowledge/` — 存量补丁知识库（11 篇）：三条业务线的业务/技术全景 + 两组成对专题流程（消息合并与取代、图片不可用降级）。
@@ -34,7 +49,8 @@
   按 sdd 规范跳过 `docs/layouts/`（本项目无 UI）。
 - 合规文件 `NOTICE`（AGPL §13）与 `README_MAINTAINED.md`。
 - `.gitattributes`（LF 归一化）与 `.gitignore` 追加段（私有代码黑名单）。
-- `maintained/`：`installed_manifest.json`（**仅 core 的 SHA-256 台账，22 条**）、`VERSION`。
+- `maintained/`：`installed_manifest.json`（**仅 core 的 SHA-256 台账，22 条**；该数为脱敏时点值，
+  阶段 5 追加 3 个 api 模块后为 **31 条**）、`VERSION`。
 
 ### 变更
 
