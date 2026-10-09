@@ -216,6 +216,30 @@
 3. 建议（非必须）为「guard 丢弃被拒回复」补一条针对性测试，把这项优化**钉成可回归的不变量**，
    以免将来重构时无意改回上游时序。
 
+#### P11 机械定型（2026-10-10，T8-01）
+
+上游测试文件**一字不改**（零冲突原则 §3）。改用**两个新增文件**把 17 项标记为 `xfail(strict=True)`：
+仓库根 `conftest.py`（`pytest_collection_modifyitems` 打标）+ `maintained/p11_deviations.py`（注册表，
+单一真相源）。逐条 nodeid 如下（2026-10-10 实测，pytest 9.1.1）：
+
+| 组 | 文件 | 用例 | 参数组合 | 数量 |
+|---|---|---|---|---|
+| α | `tests/unit/test_astr_main_agent.py` | `test_proactive_agent_respects_runtime_and_safety_settings` | `True-local-cron`、`True-local-background`、`True-sandbox-cron`、`True-sandbox-background`、`False-local-cron`、`False-local-background`、`False-sandbox-cron`、`False-sandbox-background` | 8 |
+| α | 同上 | `TestEnsurePersonaAndSkills::test_persona_empty_tools_keeps_local_runtime_builtin_tools` | — | 1 |
+| β | `tests/test_tool_loop_agent_runner.py` | `test_skills_like_requery_reply_reaches_stream_bridge_once` | `False-True-False-False`、`False-True-False-True`、`False-True-True-True`、`False-False-False-True`、`True-True-False-False`、`True-True-False-True`、`True-True-True-True`、`True-False-False-True` | 8 |
+
+**strict 语义（＝"测试全绿"的正式定义）**：
+
+- `xfail(strict=True)`：用例**照常执行**；失败 → `xfailed`（绿）；**意外通过 → `XPASS(strict)` 判红**。
+- 所以"这 17 项意外通过"即等于「偏离被回退 / 被上游合并覆盖」，会**立刻报警**，正合 §5 合并红线。
+- 套件口径：`tests/maintained` 全绿 + 上游 `170 passed, 17 xfailed`，**没有未解释的红**。
+
+**命中数守护**：`tests/maintained/test_p11_deviations.py` 在同一会话收集到上述两个文件时，
+断言注册表命中数 `APPLIED == 17`。若上游改了用例名或参数组合导致打标静默失效，该断言会红。
+
+**新增一条的流程**：先在本节登记理由 → 加进 `maintained/p11_deviations.py` → 跑全套验证。
+**删除一条的前提**：该偏离已被有意回退，且在本节写明回退理由（否则 strict 会一直红）。
+
 ## 5. 证据来源
 
 - diff：`git diff --no-index <归档>/baseline_source/core <归档>/maintained_source/core`

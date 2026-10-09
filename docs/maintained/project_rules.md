@@ -54,6 +54,9 @@ baseline : tag v4.28.2 = 3c7adafa1397e182d60b1016bf88759265113c8a
 - 本 fork 自有内容一律走**新增路径**：
   `NOTICE` / `CHANGELOG.md` / `README_MAINTAINED.md` / `maintained/**` / `docs/maintained/**` / `tests/maintained/**`。
 - **禁止修改上游既有文件**，除非属于已登记的 core 补丁。
+  - 因此**上游测试文件一字不改**：P11 的 17 项有意偏离靠**新增文件**标记
+    （仓库根 `conftest.py` + `maintained/p11_deviations.py`，见 `inventory.md` §4 P11）。
+    这两个文件若将来与上游同名文件冲突，**一律以本 fork 为准、手工合并**。
 - **唯一例外：`README.md`**（GitHub 首页渲染入口，代表本 fork 身份）。
   已替换为 fork 说明，并在 `.gitattributes` 声明 `README.md merge=ours`、
   本仓配置 `merge.ours.driver`，上游对 README 的改动**永不覆盖本 fork 版本**；
@@ -87,6 +90,7 @@ git merge --no-commit --no-ff <upstream ref>
 python maintained/tools/check_drift.py --instance "<实例目录>" --check-repo
 ruff check . && pytest tests/maintained
 # ★ 合并后必须复核：P11 的 α/β 偏离是否仍在（语义级，不只看测试颜色）
+# ★ 上游若新增根 conftest.py：以本 fork 为准合并（它是 P11 打标的载体，被覆盖 = 偏离告警失效）
 ```
 
 ## 6. 提交前自检命令
