@@ -60,7 +60,9 @@
 | T3-07 | P0 | T3-02..06 | tests/maintained/test_api_*.py | 六份测试 | 全绿且不依赖运行中的 AstrBot | pytest | 否 | ✅ | test(api): cover additive api surface and degradation |
 | T3-08 | P0 | T3-07 | maintained/installed_manifest.json | 新文件登记 SHA-256（铁律 5） | 台账含全部新增 api 文件 | 校验脚本 | 否 | ✅ | chore: register new api modules in manifest |
 | T3-09 | P0 | T3-08 | — | **阶段门禁：停下汇报 ≤10 行，等确认** | 已汇报且确认 | 对话记录 | 否 | ⬜ | — |
-| T4-01 | P0 | T3-01 | core 实例 | 备份 → 恢复补丁 → SHA 校验 → 重启止血 | 机器人恢复运行、插件加载成功 | 实测 | 否 | ✅ | 待定 |
+| T4-01 | P0 | T3-09 | core 实例 | 备份 → 恢复 26 补丁 + 6 api 文件 → SHA 校验 | 台账 28/28 一致、capabilities 全 True | 实测 | 否 | ✅ | （实例侧操作，见 docs/maintained/deploy-log.md） |
+| T4-02 | P0 | T4-01 | 实例运行 | 启动 AstrBot，确认插件加载成功 | 日志无 ImportError、机器人可响应 | 实测日志 | 否 | ⏳ 待人工启动 | — |
+| T4-03 | P0 | T4-02 | 插件配置 | **铁律 6 冲突**：`active_reply.enable = true`，与 `proactive_must_remain_disabled` 相悖 | 用户拍板后处理 | 目视 | 否 | ⏳ 待用户拍板 | — |
 | T5-01 | P1 | T4-01 | 私有仓 extras | 3 处私有 import → 公开 API + try/except 降级 | 插件无顶层私有 import | grep + 实测 | 否 | ⬜ | 待定 |
 | T6-01 | P2 | T5-01 | maintained/tools/ | check_drift / apply_patches 工具 | 一键校验与重打可用 | 实测 | 是 | ⬜ | 待定 |
 | T7-01 | P1 | T6-01 | NOTICE / CHANGELOG / tag | CHANGELOG、§13 README、打 tag、转公开 | 仓库公开且 §13 义务满足 | 目视 | 否 | ⬜ | 待定 |
