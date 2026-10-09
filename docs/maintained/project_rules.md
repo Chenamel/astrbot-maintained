@@ -92,7 +92,8 @@ grep -rIn "astrbot_plugin_astrbot_enhance_mode" --exclude-dir=.git . | head
 grep -rIn "astrbot_plugin_content_safety_guard" --exclude-dir=.git . | head
 grep -rIn "Axi404" --exclude-dir=.git . | head
 git ls-files | grep -i "data/plugins" | head        # 空
-git ls-files | grep -iE "config\.yaml|\.env$" | head # 空
+git ls-files | grep -iE "(^|/)configs/config\.yaml$|(^|/)\.env$" | head   # 空
+#   ↑ 必须锚定路径：早先的 `config\.yaml` 会误命中 .pre-commit-config.yaml / openspec/config.yaml
 
 # 台账（只应含 core 条目）
 python -c "import json;d=json.load(open('maintained/installed_manifest.json',encoding='utf-8'));f=d['files'];\
