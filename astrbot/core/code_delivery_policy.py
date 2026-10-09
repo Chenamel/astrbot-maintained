@@ -14,6 +14,8 @@ EXECUTION_TOOL_NAMES = frozenset(
     }
 )
 CODE_DELIVERY_FAILURE = "这次没生成完整代码，可以再试一次"
+#: Maximum number of task-text characters kept for delivery checks.
+TASK_TEXT_MAX_CHARS = 16000
 SAFETY_REFUSAL_PATTERN = re.compile(
     r"<refuse\s*/>|这部分不方便展开|"
     r"(?=[\s\S]*(?:违法|非法|伤害|恶意|攻击|暴力|色情|隐私|仇恨|危险|安全限制|"
@@ -133,7 +135,7 @@ def code_task_spec(event) -> tuple[str, str] | None:
                 break
         if language:
             break
-    return text[:16000], language
+    return text[:TASK_TEXT_MAX_CHARS], language
 
 
 def has_code_delivery(text: str, language: str) -> bool:

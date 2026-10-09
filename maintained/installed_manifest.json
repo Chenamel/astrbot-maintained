@@ -10,10 +10,10 @@
     "astrbot/api/proactive/__init__.py": "b05da0ffa7147143bc0190fe254e08b1cd11fbc14d473bc10193951c6365ea9f",
     "astrbot/api/runtime/__init__.py": "8abe034f8f534a96c0b0fc86a5ccdd42fd8dcf5186eccb9f181695f17b3b58c9",
     "astrbot/api/turns/__init__.py": "a7ebd485504e0e3aa9424043c796513a7cb882a7cafe4e377c3eeb20c53f4bc4",
-    "astrbot/core/agent/runners/tool_loop_agent_runner.py": "024b67e85573ddb735bebed155e6288d29b07dfc5bf2ec3738f086221e8b71d2",
-    "astrbot/core/astr_agent_run_util.py": "3ee9d36a324159c1e0d7bb891257b5f343d9ff220510c0ea80b1b2f11dfc738c",
+    "astrbot/core/agent/runners/tool_loop_agent_runner.py": "547013029a1c86221c4f53a51beffc4888abd013202764b16bf8835b22f33e9c",
+    "astrbot/core/astr_agent_run_util.py": "cc379aae3021d96003e996889dd7a788a70475a258dbefbc67aefe665bdc3cb9",
     "astrbot/core/astr_main_agent.py": "22e181b1cca00c0f89101757d924cbfd9420a5b25b11a90810134f1bf695f7cb",
-    "astrbot/core/code_delivery_policy.py": "9a23ebb2afbc0932ed7328dded4164da44f1ce356096615b1c1e3c7f1ec47943",
+    "astrbot/core/code_delivery_policy.py": "693d233549dce9fb1b152bd0cba46340c06e7ebe08b152cd2018bfb4a78ff5c4",
     "astrbot/core/pipeline/context_utils.py": "426ac085024dced768bd543903441ad6c69549ddd6e67d5acb93e3914585fc9d",
     "astrbot/core/pipeline/process_stage/follow_up.py": "8c62abed219fc00eaa95587c72d2751523339ffe7310055a9cd9d14e22562e86",
     "astrbot/core/pipeline/process_stage/method/agent_sub_stages/image_input.py": "8a94c377d6aa9283beaeb4afb6c71c8568a38abe48aed7e58c6ce6d996760a32",
@@ -30,7 +30,7 @@
     "astrbot/core/tools/computer_tools/python.py": "5b1b8e5bcc992c9775091b08f8ded888f17b5049deca522a364a83f293aef70c",
     "astrbot/core/tools/computer_tools/shell.py": "b32b7859f1146c1d007322ca40478792f1e2e6e7056555e304ef1c09d095569b",
     "astrbot/core/tools/computer_tools/util.py": "9f0fd2a1ec67c1f9decae58fde43e3b65d75287cabe7f2bd4eac0c9d66ba6f64",
-    "astrbot/core/utils/direct_turns.py": "3b9b3579e3179fc6389faed7b28748002a028f1eb7bda3294e0eab7e62affdaa",
+    "astrbot/core/utils/direct_turns.py": "b14bba4a7932ba81594a78f2c558d1aed148cffa4edc311f6b75c60075be0824",
     "astrbot/dashboard/services/plugin_service.py": "3568f5a720f0c8f7490cc4a31d7cfcb68523b876e54e8d682a24dcc872b328fa"
   }
 }

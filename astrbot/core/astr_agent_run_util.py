@@ -21,6 +21,10 @@ from astrbot.core.provider.entities import LLMResponse
 from astrbot.core.provider.provider import TTSProvider
 from astrbot.core.utils.direct_turns import is_current
 
+#: Default ceiling on agent steps for a single request (run_agent, _run_agent and
+#: run_live_agent all share it).
+DEFAULT_MAX_STEPS = 30
+
 AgentRunner = ToolLoopAgentRunner[AstrAgentContext]
 
 
@@ -124,7 +128,7 @@ def _merge_buffered_llm_chains(
 
 async def run_agent(
     agent_runner: AgentRunner,
-    max_step: int = 30,
+    max_step: int = DEFAULT_MAX_STEPS,
     show_tool_use: bool = True,
     show_tool_call_result: bool = False,
     stream_to_general: bool = False,
@@ -162,7 +166,7 @@ async def run_agent(
 
 async def _run_agent(
     agent_runner: AgentRunner,
-    max_step: int = 30,
+    max_step: int = DEFAULT_MAX_STEPS,
     show_tool_use: bool = True,
     show_tool_call_result: bool = False,
     stream_to_general: bool = False,
@@ -418,7 +422,7 @@ async def _watch_agent_stop_signal(agent_runner: AgentRunner, astr_event) -> Non
 async def run_live_agent(
     agent_runner: AgentRunner,
     tts_provider: TTSProvider | None = None,
-    max_step: int = 30,
+    max_step: int = DEFAULT_MAX_STEPS,
     show_tool_use: bool = True,
     show_tool_call_result: bool = False,
     show_reasoning: bool = False,

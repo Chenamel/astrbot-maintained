@@ -84,6 +84,10 @@ if sys.version_info >= (3, 12):
 else:
     from typing_extensions import override
 
+#: Timeout for the auxiliary LLM calls this runner performs: the delivery-repair
+#: request and the final generation after a tool-failure limit.
+AUXILIARY_LLM_TIMEOUT_SEC = 30
+
 
 @dataclass(slots=True)
 class _HandleFunctionToolsResult:
@@ -240,7 +244,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                         abort_signal=self._abort_signal,
                         request_max_retries=0,
                     ),
-                    timeout=30,
+                    timeout=AUXILIARY_LLM_TIMEOUT_SEC,
                 )
                 if (
                     repair.role == "assistant"
@@ -1298,7 +1302,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                                 abort_signal=self._abort_signal,
                                 request_max_retries=0,
                             ),
-                            timeout=30,
+                            timeout=AUXILIARY_LLM_TIMEOUT_SEC,
                         )
                     )
                     if self._is_stop_requested():

@@ -8,6 +8,26 @@ from dataclasses import dataclass, field
 from astrbot.core import logger
 from astrbot.core.message.components import At, Image, Plain, Reply
 
+#: Default aggregation window: quiet period after the last message, and the hard
+#: ceiling measured from the first message of the turn.
+DEFAULT_QUIET_SEC = 4
+DEFAULT_MAX_WAIT_SEC = 15
+
+#: Upper bound on events retained per turn.
+MAX_TRACKED_EVENTS = 30
+
+#: Poll interval used while waiting for the aggregation window to close.
+CHANGE_POLL_INTERVAL_SEC = 0.25
+
+#: Upper bound on image URLs carried by one merged turn.
+MAX_TURN_IMAGE_URLS = 2
+
+#: Maximum number of task-text characters kept for delivery checks.
+TASK_TEXT_MAX_CHARS = 16000
+
+#: How long to wait for another turn's in-flight tool result.
+TOOL_RESULT_WAIT_TIMEOUT_SEC = 15
+
 
 @dataclass
 class DirectTurn:
@@ -23,7 +43,12 @@ class DirectTurn:
 
 
 class DirectTurnCoordinator:
-    def __init__(self, clock=time.monotonic, quiet_sec=4, max_wait_sec=15):
+    def __init__(
+        self,
+        clock=time.monotonic,
+        quiet_sec=DEFAULT_QUIET_SEC,
+        max_wait_sec=DEFAULT_MAX_WAIT_SEC,
+    ):
         self.clock = clock
         self.quiet_sec = quiet_sec
         self.max_wait_sec = max_wait_sec
@@ -126,7 +151,7 @@ class DirectTurnCoordinator:
             turn.version += 1
             turn.last_at = self.clock()
             turn.events.append(event)
-            if len(turn.events) > 30:
+            if len(turn.events) > MAX_TRACKED_EVENTS:
                 turn.events[1:2] = []
             event.set_extra("_direct_turn_state", turn)
             event.set_extra("_direct_turn_version", turn.version)
@@ -173,7 +198,9 @@ class DirectTurnCoordinator:
                 return True
             turn.changed.clear()
             try:
-                await asyncio.wait_for(turn.changed.wait(), min(remaining, 0.25))
+                await asyncio.wait_for(
+                    turn.changed.wait(), min(remaining, CHANGE_POLL_INTERVAL_SEC)
+                )
             except TimeoutError:
                 pass
         return False
@@ -225,10 +252,13 @@ class DirectTurnCoordinator:
         current_quotes = event.get_extra("_enhance_owned_quote_image_urls", {})
         priority_refs = [ref for values in current_quotes.values() for ref in values]
         event.set_extra(
-            "_direct_turn_image_urls", list(dict.fromkeys(priority_refs + refs))[:2]
+            "_direct_turn_image_urls",
+            list(dict.fromkeys(priority_refs + refs))[:MAX_TURN_IMAGE_URLS],
         )
         event.set_extra("_direct_turn_text", "\n".join(lines))
-        event.set_extra("_direct_turn_task_text", "\n".join(task_texts)[-16000:])
+        event.set_extra(
+            "_direct_turn_task_text", "\n".join(task_texts)[-TASK_TEXT_MAX_CHARS:]
+        )
 
     def finish(self, event):
         turn = event.get_extra("_direct_turn_state")
@@ -309,7 +339,7 @@ async def wait_tool_result(event, name, args):
     entry = turn.tools.get(_tool_key(name, args)) if turn else None
     if entry:
         try:
-            await asyncio.wait_for(entry[0].wait(), 15)
+            await asyncio.wait_for(entry[0].wait(), TOOL_RESULT_WAIT_TIMEOUT_SEC)
             return entry[1]
         except TimeoutError:
             pass
