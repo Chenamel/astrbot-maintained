@@ -260,3 +260,24 @@ live core）。这既违反「单一真相源」，也与 `design.md §1`（维�
 
 
 
+
+---
+
+## 2026-10-09 · 阶段 6 工具链（check_drift / apply_patches）
+
+**产出**：`maintained/tools/{check_drift,apply_patches}.py` + `docs/maintained/tools.md` + 24 项测试。
+工具**只碰台账内文件**，不含任何插件信息（与本仓「只留 core」定位一致）。
+
+**端到端实测（真实实例）**：
+
+| 步骤 | 结果 |
+|---|---|
+| `check_drift --check-repo` | 实例 31/31、仓内 31/31 → **NO DRIFT**，退出码 0 |
+| 故意注入漂移（给 `direct_turns.py` 追加一行注释） | 检测到 `1 mismatch` → **DRIFT DETECTED**，退出码 1 |
+| `apply_patches` 预演 | `nothing to do`（未注入时）/ 正确列出待改项，**不写文件** |
+| `apply_patches --apply` | 自动备份 → 写回 → `verify: 31 entries -> 31 ok` |
+| 修复后复核 | **NO DRIFT**；文件字节与注入前**完全一致** |
+| 测试残留 | 已清理（该备份仅含注入漂移那份文件） |
+
+**意义**：把「启动器覆盖 core」的处置从**人工排查半小时**压缩为**两条命令**（检测 + 一键重打）。
+工具**不试图拦启动器**（拦不住），定位是事后快速检测与恢复。

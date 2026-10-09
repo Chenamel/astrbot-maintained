@@ -75,6 +75,14 @@ cd /d/asbot_core_for_fork
 git remote -v                    # upstream 禁推 / origin 为 SSH
 git rev-parse --abbrev-ref HEAD  # maintained/v4.28.2
 
+# 台账：默认双向校验（实例 + 仓内），无漂移才返回 0
+python maintained/tools/check_drift.py --instance "<实例目录>" --check-repo
+
+# 若报出漂移：先预演再执行（工具只碰台账内文件，写前自动备份）
+python maintained/tools/apply_patches.py --instance "<实例目录>"
+python maintained/tools/apply_patches.py --instance "<实例目录>" --apply
+```
+
 # 换行
 git config --get core.autocrlf          # false
 git ls-files --eol | awk '$1=="crlf"' | wc -l   # 0
@@ -88,7 +96,7 @@ git ls-files | grep -iE "config\.yaml|\.env$" | head # 空
 
 # 台账（只应含 core 条目）
 python -c "import json;d=json.load(open('maintained/installed_manifest.json',encoding='utf-8'));f=d['files'];\
-print(len(f), all(k.startswith('astrbot/') for k in f))"   # 期望：22 True
+print(len(f), all(k.startswith('astrbot/') for k in f))"   # 期望：31 True
 
 # 归档仓只读性
 git -C "<INST>/maintenance_repos/astrbot_local" status --porcelain | wc -l   # 0

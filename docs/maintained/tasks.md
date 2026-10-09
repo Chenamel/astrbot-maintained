@@ -73,5 +73,9 @@
 | T5-06 | P0 | T5-02..05 | tests/maintained/ | 三模块测试 + 插件侧 import 扫描测试 | 全绿且覆盖降级分支 | pytest | 否 | ✅ | test(api): cover phase 5 api additions |
 | T5-07 | P0 | T5-06 | 实例插件目录 | 仓 → 实例同步 + 重载插件 + 验证加载 | 插件正常加载、无 ImportError | 重载后查端口/日志 | 否 | ✅ | （重启后复核通过，见 deploy-log.md） |
 | T5-08 | P0 | T5-07 | — | **阶段门禁：停下汇报 ≤10 行，等确认** | 已汇报且确认 | 对话记录 | 否 | ⬜ | — |
-| T6-01 | P2 | T5-01 | maintained/tools/ | check_drift / apply_patches 工具 | 一键校验与重打可用 | 实测 | 是 | ⬜ | 待定 |
+| T6-00 | P1 | T5-08 | docs/maintained/tools.md | 写工具链规格（用法/退出码/边界） | 契约齐全 | 评审 | 否 | ✅ | docs(sdd): specify maintenance tooling |
+| T6-01 | P1 | T6-00 | maintained/tools/check_drift.py | 漂移检测（实例 + 可选仓内） | 台账口径比对，退出码 0/1/2 | pytest + 真实实例实测 | 是 | ✅ | feat(tools): add check_drift |
+| T6-02 | P1 | T6-00 | maintained/tools/apply_patches.py | 一键重打（默认预演，`--apply` 才写；先备份再写） | 源校验→备份→写回→复核 | pytest + 端到端注入漂移实测 | 是 | ✅ | feat(tools): add apply_patches |
+| T6-03 | P0 | T6-01,02 | tests/maintained/test_tools_*.py | 24 项测试覆盖全分支 | 全绿 | pytest | 否 | ✅ | test(tools): cover drift detection and patch apply |
+| T6-04 | P0 | T6-03 | — | **阶段门禁：停下汇报 ≤10 行，等确认** | 已汇报且确认 | 对话记录 | 否 | ⬜ | — |
 | T7-01 | P1 | T6-01 | NOTICE / CHANGELOG / tag | CHANGELOG、§13 README、打 tag、转公开 | 仓库公开且 §13 义务满足 | 目视 | 否 | ⬜ | 待定 |
