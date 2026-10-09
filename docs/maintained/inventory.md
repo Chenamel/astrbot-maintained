@@ -1,0 +1,147 @@
+# 存量补丁清单与分级结论（阶段 2 产出）
+
+> 来源：归档仓 `maintenance_repos/astrbot_local` 的 `baseline_source/core` ↔ `maintained_source/core` 实测 diff。
+> 实测总计：**26 文件，+1639 / -91**（4 新增 + 22 修改），与交接包一致。
+
+## 0. 先说结论
+
+| 分级 | 文件数 | 处置 |
+|---|---|---|
+| ✅ **必须留在 core**（无钩子可替代） | 17 | 保留补丁，按 §4 重构后进入主干 |
+| 🟡 **重写后保留**（职责错位/硬编码） | 4 | 语义保留，实现重写为数据驱动 |
+| ⚪ **可上移 `astrbot/api/**`**（纯判定/契约） | 2 | 判定逻辑开放给插件，避免重复实现 |
+| 🔵 **非 core 补丁**（dashboard 前端，独立改线） | 4 | 保留但重分类，不参与 core 论证 |
+
+**一句话**：这 1639 行不是"AI 产的乱码"，而是**三条真实产品语义**的实现——① 同账号连发消息合并与在途取消；② 交付保障（要代码必须给代码 / 工具失败熔断 / 图片不可用不幻觉）；③ 维护保护与执行授权。架构问题是**耦合方向反了**：core 反向硬依赖具体插件名与工具名。
+
+## 1. 交接包需要修正的 4 处
+
+| # | 交接包说法 | 实测事实 |
+|---|---|---|
+| 1 | `platform/sources/aiocqhttp/aiocqhttp_message_event.py` +22 =「QQ 图片本地化」 | **不准确**。该 22 行全是「直报回合发送闸门」（`is_current` / `mark_sent`）。真正的图片 URL 归集在 `direct_turns.prepare()`，且**只保存 URL 字符串，不做 URL→本地文件下载** |
+| 2 | 补丁路径写作 `astrbot/utils/direct_turns.py` 等 | 4.28.2 真实布局是 `astrbot/core/utils/direct_turns.py`（多一层 `core/`） |
+| 3 | `dashboard/src/services/plugin_service.py` | 实际路径 `astrbot/dashboard/services/plugin_service.py`（属后端，不是前端） |
+| 4 | 「`maintenance.py` 拦不住启动器」 | **属实**，但更准确：它只拦 **进程内** 4 条更新路径（`PluginManager.update_plugin` / `_install_plugin_from_directory` / `_PluginUpdater.update` / Dashboard 的 `update_plugin`+`update_all_plugins`）。`uninstall_plugin` **未挂闸门**，存在「先卸载再安装」绕过；且 `registry` 文件缺失时 **fail-open** 静默放行 |
+| 5 | 补丁清单未点明两个"心脏" | `direct_turns.py`(316) 与 `code_delivery_policy.py`(217) 是本次补丁的底座与判定层；不读它们无法理解任何一条小改动 |
+
+## 2. 全景依赖图
+
+```
+                       ┌──────────────────────────────────────────┐
+                       │  direct_turns.py  【底座】                │
+                       │  DirectTurnCoordinator 单例               │
+                       │  observe/collect/prepare/finish           │
+                       │  is_current / mark_sent                   │
+                       │  工具结果复用 begin/record/get/release     │
+                       └───────┬──────────────────────┬────────────┘
+       挂载点（7 处 core）      │                      │ 消费
+   ┌───────────────────────────┴──────────┐           │
+   │ scheduler.py      observe/finish     │           │
+   │ process_stage/stage.py   collect     │           │
+   │ .../internal.py          prepare     │           │
+   │ .../follow_up.py         proactive   │           │
+   │ pipeline/respond/stage.py 出站门禁    │           │
+   │ pipeline/context_utils.py 钩子门禁    │           │
+   │ aiocqhttp_message_event.py 平台门禁   │           │
+   └──────────────────────────────────────┘           │
+                                                      ▼
+   ┌────────────────────────────┐        ┌─────────────────────────────┐
+   │ code_delivery_policy.py    │        │ tool_loop_agent_runner.py   │
+   │ 【判定层】                  │───────▶│ 【执行中枢】                 │
+   │ execution_denial           │  4 符号 │ 轮次门禁 / 工具去重          │
+   │ code_task_spec             │        │ REPEATED_TOOL_FAILURE_LIMIT │
+   │ has_code_delivery          │        │ 交付修复 / 图片短路          │
+   │ apply_execution_policy     │        │ _finish_proactive_request   │
+   └──────────┬─────────────────┘        └──────────┬──────────────────┘
+              │ 消费                                 │ 消费
+   ┌──────────┴───────────┐              ┌───────────┴──────────────┐
+   │ computer_tools/*     │              │ astr_agent_run_util.py    │
+   │ util/shell/python     │              │ 交付闸门 _send_current     │
+   └───────────────────────┘              └───────────────────────────┘
+
+   ┌────────────────────────────┐   ┌──────────────────────────────────┐
+   │ provider/entities.py       │   │ star/maintenance.py 【维护保护】   │
+   │ 【数据契约】                │   │ ├─ star_manager.py (+3)           │
+   │ IMAGE_INPUT_UNAVAILABLE_*  │   │ ├─ updater.py (+2)                │
+   └──┬───────┬──────────┬──────┘   │ └─ dashboard/plugin_service.py(+17)│
+      │       │          │          └──────────────────────────────────┘
+      ▼       ▼          ▼
+  astr_main  image_   openai_source.py
+  _agent.py  input.py  (+97 容错)
+   (+152)
+```
+
+## 3. 逐文件分级表（26 条）
+
+图例：**A**=新增 / **M**=修改；判据「能否不改 core 在插件层实现」。
+
+### 3.1 必须留在 core（✅ 17）
+
+| # | 文件（`astrbot/core/` 起） | A/M | 行数 | 功能目标 | 为什么必须留 core |
+|---|---|---|---|---|---|
+| 1 | `utils/direct_turns.py` | A | +316 | 同账号连发消息聚合成一轮 + 取代旧轮 + 在途取消 + 工具结果复用 | 需在消息进 pipeline **前**扣留（可阻塞钩子不存在）；需持 runner 句柄调 `request_stop` |
+| 2 | `agent/runners/tool_loop_agent_runner.py` | M | +443/-20 | 轮次门禁 / 同参工具只跑一次 / 失败熔断 / 交付修复 / 图片短路 | 位于步进循环内部；插件无「执行前替换工具返回值」「最终响应前改写」钩子 |
+| 3 | `astr_agent_run_util.py` | M | +62/-8 | 交付闸门：被取代轮次不得发中间消息/最终结果 | per-step 与 chunk 交付边界，无钩子覆盖 |
+| 4 | `pipeline/process_stage/stage.py` | M | +4 | `await coordinator.collect()` 静默期等待（合并实际发生点） | 必须在 agent 子阶段前，且早于 `on_llm_request` |
+| 5 | `pipeline/scheduler.py` | M | +3 | `observe` / `finish` 生命周期挂载 | pipeline 唯一入口，无法外移 |
+| 6 | `pipeline/process_stage/method/agent_sub_stages/internal.py` | M | +47 | 合并文本/图片注入 `req`；三处失活短路 | 必须位于 session lock 与 `build_main_agent` 之间 |
+| 7 | `pipeline/respond/stage.py` | M | +16 | 出站最后门禁（流式 + 3 条非流式路径） | 出站必经点 |
+| 8 | `pipeline/context_utils.py` | M | +16 | 失活回合不触发 `OnLLMResponse`/`OnDecoratingResult` 钩子；**修复 `CancelledError` 被吞** | 影响全部插件生态的钩子调度；`CancelledError` 是独立 bug fix |
+| 9 | `platform/sources/aiocqhttp/aiocqhttp_message_event.py` | M | +22 | 平台层最后一道发送门禁（防插件直接 `event.send`） | 平台适配器内部 |
+| 10 | `provider/sources/openai_source.py` | M | +97 | 图片不可用时的确定性回退（摘工具 + 注入声明 + 固定文案）；流式缓冲重放 | provider 传输层错误恢复，无 `on_provider_fallback` 钩子 |
+| 11 | `provider/entities.py` | M | +30 | `IMAGE_INPUT_UNAVAILABLE_MESSAGE/NOTICE` 常量 + 双向布尔字段 | 数据契约，必须 core 侧存在 |
+| 12 | `pipeline/.../agent_sub_stages/image_input.py` | M | +30 | 视觉证据存在性判定 → `req.image_input_unavailable` | 低成本纯判定；建议同时开放 helper |
+| 13 | `astr_main_agent.py`（图片降级 + 策略挂载部分） | M | +152/-27 | `_ensure_img_caption` 降级；末尾 `apply_execution_policy` | 降级语义属 core 职责 |
+| 14 | `star/maintenance.py` | A | +43 | 本地维护名单拦截插件覆盖 | 纯本地运维策略，上移会污染公共 API |
+| 15 | `star/star_manager.py` | M | +3 | 更新/目录安装前断言 | 挂载点只能在 `PluginManager` 内 |
+| 16 | `star/updater.py` | M | +2 | 下载前最后一道断言 | 防绕过 `PluginManager` 直调 |
+| 17 | `astrbot/dashboard/services/plugin_service.py` | M | +17 | 单个更新报错、批量更新「跳过而非失败」；顺带修正 `sync_skills` 触发条件 bug | 与 maintenance 强绑定 |
+
+### 3.2 重写后保留（🟡 4）
+
+| # | 位置 | 问题 | 重写方向 |
+|---|---|---|---|
+| 18 | `astr_main_agent._is_lightweight_proactive_request` + `_apply_lightweight_proactive_tools` | **core 硬编码插件目录名 + 反向回调插件方法**；29 个工具名硬编码（含大量第三方工具） | 白名单外置为配置；插件通过公开钩子声明「本次请求的可用工具」；去掉目录名硬匹配 |
+| 19 | `code_delivery_policy.execution_denial` + `EXECUTION_TOOL_NAMES` | 硬编码 4 个工具名字符串；中文祈使句正则启发式，双向误判；`allowed=True` 时仍无条件注入 system prompt | 工具自身声明 `requires_execution_authorization`；prompt 仅在检测到代码意图时注入且可配置 |
+| 20 | `tool_loop_agent_runner._finish_proactive_request` | 遍历 `star_registry` 按目录名找插件实例（架构倒挂） | 改为事件钩子（如 `OnAgentDoneEvent` + extra token），core 不认识任何插件名 |
+| 21 | `pipeline/process_stage/follow_up.py` 的 `try_capture_follow_up` | 与 `direct_turns.observe` 的 `other` 判定**重复实现**；`self_id` 缺失时把所有 @ 当"@别人"误丢 | 复用 `direct_turns` 暴露的判定函数；补齐 `self_id` 兜底语义 |
+
+### 3.3 可上移 `astrbot/api/**`（⚪ 2）
+
+| # | 内容 | 上移理由 |
+|---|---|---|
+| 22 | `IMAGE_INPUT_UNAVAILABLE_MESSAGE` / `IMAGE_INPUT_UNAVAILABLE_NOTICE` 常量 | 已被 core 三处 + 插件一处共同消费，是事实公共契约；必须进 `astrbot.api.provider` 稳定面，插件才能改软依赖 |
+| 23 | `code_task_spec` / `has_code_delivery` / `CODE_DELIVERY_FAILURE`（纯函数） | 纯函数、无副作用，插件可复用；同时抽 `IMAGE_CAPTION_MARKER` 常量消除 5 处 `"<image_caption>"` 硬编码 |
+
+### 3.4 非 core 补丁 · 前端独立改线（🔵 4）
+
+| # | 文件 | A/M | 性质 | 说明 |
+|---|---|---|---|---|
+| 24 | `dashboard/src/utils/messageControlDisplay.js` | A | 全新 | 把 `<quote>` / `<mention>` 控制标签渲染为可读文本，保护代码块不被误改。服务对象是 **Satori 适配器**产出的标签，**与本次 core 补丁无呼应** |
+| 25 | `dashboard/src/components/chat/ThreadedMarkdownMessagePart.vue` | M | +5 | 同上 util 的接入点（Thread 面板） |
+| 26 | `dashboard/src/components/chat/message_list_comps/MarkdownMessagePart.vue` | M | +4 | 同上 util 的接入点（主列表） |
+| 27 | `dashboard/src/assets/mdi-subset/materialdesignicons-subset.css` | M | +14 | **实为删减**（272→269 图标），自动生成产物刷新（`pnpm run subset-icons`）。标记为「+14」具误导性 |
+
+> 25/26 存在性能隐患：`messageControlDisplay` 在 computed 内每条消息每次重算（含 `markitdown-it` 全量 parse），流式渲染时对每条 token 都会重跑，**无 memo**。
+
+## 4. 跨文件共性问题（进入阶段 3 前必须处理）
+
+| # | 问题 | 位置 | 处置 |
+|---|---|---|---|
+| P1 | **插件顶层 import core 私有常量** → core 漂移即插件整体下线 | 存量插件 `main.py:28` | ① 常量上移 `astrbot.api.provider`；② 插件改 `try/except ImportError` 软依赖 |
+| P2 | **core 反向硬依赖插件目录名** | `astr_main_agent` ×2 处、`tool_loop_agent_runner` ×1 处 | 全部改为钩子/注册表查询，core 不认识任何插件名 |
+| P3 | **工具名硬编码白名单** | `code_delivery_policy.EXECUTION_TOOL_NAMES`、`_LIGHTWEIGHT_PROACTIVE_TOOL_NAMES` | 改为工具/插件自行声明 |
+| P4 | **隐式字符串协议** | `"<image_caption>"` 在 5 处硬编码；`"<quote>"`/`"<mention>"` 亦无共享常量 | 抽共享常量 |
+| P5 | **跨模块写私有属性** | `astr_agent_run_util` 写 `agent_runner._proactive_delivery_deferred` | 提升为正式字段 + 公开方法 |
+| P6 | 权限双模型并存 | `check_admin_permission` 与 `check_execution_permission` 并存（`fs.py` 仍只用前者） | 统一权限入口，按工具敏感度分级 |
+| P7 | 静默丢弃不可观测 | `respond/stage.py`、`aiocqhttp_message_event.py`、`context_utils.py` 门禁均无日志 | 补 debug 日志与丢弃计数 |
+| P8 | 魔法数字未提取 | `timeout=30`、`16000`、`15s`、图片上限 2、`quiet_sec=4`、`max_wait_sec=15` | 提取常量或配置项 |
+| P9 | `maintenance` fail-open | registry 文件缺失即放行；`uninstall_plugin` 无闸门 | 缺失改 fail-closed 或至少 warn；补卸载闸门 |
+| P10 | 手写正则做安全判定 | `SAFETY_REFUSAL_PATTERN`、`execution_denial` 中文祈使句 | 明确误判容限并补测试（阶段 3 必做） |
+
+## 5. 证据来源
+
+- diff：`git diff --no-index <归档>/baseline_source/core <归档>/maintained_source/core`
+- 台账：`maintained/installed_manifest.json`（22 条 core SHA-256）
+- 失败日志：`<INST>/astrbot_manual.out.log`（插件 `ImportError` 现场）
+- 测试：归档仓 `tests/`（215 文件），含 `test_direct_turns.py`、`test_local_maintenance.py`、`test_image_unavailable_delivery.py` 等

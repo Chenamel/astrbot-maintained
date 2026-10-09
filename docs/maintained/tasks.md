@@ -48,7 +48,8 @@
 
 | 编号 | 优先级 | 前置依赖 | 涉及文件 | 工作内容 | 完成标准 | 验证方式 | 可否并行 | 状态 | 提交信息 |
 |---|---|---|---|---|---|---|---|---|---|
-| T2-01 | P1 | T1-16 | docs/maintained/, 存量补丁 | 逆向存量 1639 行，产出知识库与分级结论 | 每个补丁有"必须/可插件化/多余"判定 | 评审 | 否 | ⬜ | 待定 |
+| T2-01 | P1 | T1-16 | docs/maintained/ | 逆向存量 1639 行（26 文件），产出知识库与分级结论 | 每个补丁有"必须留 core / 重写保留 / 上移 api / 非 core"判定 | 评审 + 链接/敏感/格式校验 | 否 | ✅ | docs(knowledge): reverse-engineer 26 legacy patches, add inventory and knowledge base |
+| T2-02 | P1 | T2-01 | docs/maintained/inventory.md | 输出跨文件共性问题 P1–P10 与交接包修正 5 处 | 每条有位置与处置 | 评审 | 否 | ✅ | 同上 |
 | T3-01 | P1 | T2-01 | astrbot/api/** | 建五个 api 模块 + 测试 | 外部只需 `astrbot.api.*` | pytest | 否 | ⬜ | 待定 |
 | T4-01 | P0 | T3-01 | core 实例 | 备份 → 恢复补丁 → SHA 校验 → 重启止血 | 机器人恢复运行、插件加载成功 | 实测 | 否 | ⬜ | 待定 |
 | T5-01 | P1 | T4-01 | 私有仓 extras | 3 处私有 import → 公开 API + try/except 降级 | 插件无顶层私有 import | grep + 实测 | 否 | ⬜ | 待定 |

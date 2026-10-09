@@ -107,5 +107,5 @@ ruff check .
 - 全局已设 `core.autocrlf=false`、`core.eol=lf`、`core.longpaths=true`，**不要改回**。
 - GitHub 操作：本机无 `gh` CLI；GitHub MCP 连接器**无 repo 写权限**（建仓需 PAT 或浏览器手动建）。
 - 大流量 git 操作走 **SSH**（HTTPS 会被代理以 `CONNECT tunnel failed 502` 掐断）；SSH 需显式传密钥：
-  `GIT_SSH_COMMAND="ssh -i C:/Users/philia093/.ssh/id_ed25519_workbuddy -o IdentitiesOnly=yes -F /dev/null"`
+  `GIT_SSH_COMMAND="ssh -i <本机ssh私钥路径> -o IdentitiesOnly=yes -F /dev/null"`
 - 后台任务不继承沙箱提权，**涉及 SSH 密钥的 git 操作必须前台执行**。
