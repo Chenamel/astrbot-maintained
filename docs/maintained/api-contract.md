@@ -33,6 +33,62 @@ def capabilities() -> dict[str, bool]: ...
 
 ## 3. 模块清单
 
+### 3.0 阶段 5 追加：把插件剩余的 core 依赖也收敛到公开面
+
+**背景**：参考插件当前有 **8 处** `from astrbot.core...`（6 处顶层 + 2 处函数内）。
+经核实，这 8 个符号**官方公开面一个都没有**，而铁律 1 要求外部只允许 `import astrbot.api.*`。
+故本层再追加 3 个模块（**仍为新增目录，不改既有 api 文件**）：
+
+| core 符号 | 新落点 | 说明 |
+|---|---|---|
+| `astrbot.core.agent.message.TextPart` | `astrbot.api.content` | 内容部件类型；插件用它做 isinstance 判断与构造 |
+| `astrbot.core.agent.message.ImageURLPart` | `astrbot.api.content` | 同上，成对提供 |
+| `astrbot.core.utils.astrbot_path.get_astrbot_data_path` | `astrbot.api.runtime` | 运行时路径工具 |
+| `astrbot.core.utils.io.download_image_by_url` | `astrbot.api.runtime` | 图片下载 |
+| `astrbot.core.utils.quoted_message_parser.extract_quoted_message_images` | `astrbot.api.runtime` | 引用消息图片提取 |
+| `astrbot.core.provider.provider.EmbeddingProvider` | `astrbot.api.embedding` | 嵌入提供者类型 |
+
+**取舍说明**：这 5 个 core 路径在干净的 4.28.2 上**都存在**（不属"必须修"），
+本阶段把它们也纳入公开面，是为了满足铁律 1 并给插件一个**统一且可降级**的依赖面。
+本层对它们**只做转发**（经 `_bridge.resolve`），暂不提供替代实现；
+若将来上游改名，再由本层补 fallback（届时属加法，不破坏契约）。
+
+### 3.0.1 `astrbot/api/content/` — 内容部件
+
+| 符号 | 类型 | 补丁/上游缺席时 |
+|---|---|---|
+| `available() -> bool` | 函数 | `False` |
+| `TextPart` | 类（转发） | `None`（导入不报错） |
+| `ImageURLPart` | 类（转发） | `None` |
+
+> 注意：`TextPart`/`ImageURLPart` 在缺席时为 `None`，`isinstance(x, None)` 会抛 `TypeError`。
+> 插件侧须用本模块提供的 `is_text_part(x)` / `is_image_part(x)` 做判定（缺席时返回 `False`），
+> 而不是直接 `isinstance(x, TextPart)`。
+
+### 3.0.2 `astrbot/api/runtime/` — 运行时工具
+
+| 符号 | 类型 | 补丁/上游缺席时 |
+|---|---|---|
+| `available() -> bool` | 函数 | `False` |
+| `get_astrbot_data_path() -> str` | 函数 | 回退到 `Path.cwd()/data` 的字面量路径 |
+| `download_image_by_url(url, ...) -> Any` | 协程 | `raise RuntimeError`（明确失败，不静默） |
+| `extract_quoted_message_images(event, comp) -> Any` | 协程 | 返回空列表（降级为"没有引用图"） |
+
+### 3.0.3 `astrbot/api/embedding/` — 嵌入提供者
+
+| 符号 | 类型 | 补丁/上游缺席时 |
+|---|---|---|
+| `available() -> bool` | 函数 | `False` |
+| `EmbeddingProvider` | 类（转发） | `None` |
+| `is_embedding_provider(obj) -> bool` | 函数 | 缺席时 `False` |
+
+### 3.0.4 插件侧改造规则（阶段 5）
+
+1. 插件中**所有** `from astrbot.core...` 改为 `from astrbot.api...`；
+2. 顶层 import 一律包在 `try/except ImportError` 中并设降级默认值，
+   使"被换回官方 core"时插件**仍能加载**（功能降级）而非整体下线；
+3. 类型判定改用本层提供的 `is_*` 辅助函数，禁止直接 `isinstance(x, 可能为 None 的类)`。
+
 ### 3.1 `astrbot/api/media/` — 媒体与图片输入契约
 
 **解决的共性问题**：P1（插件顶层 import core 私有常量 → core 漂移即插件整体下线）、P4（`"<image_caption>"` 5 处硬编码）。
