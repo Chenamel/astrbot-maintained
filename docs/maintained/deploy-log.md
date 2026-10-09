@@ -210,5 +210,53 @@ RESTORE.md       # 选择性回滚说明
 并具备降级能力——core 再次被官方覆盖时，插件仍能加载（功能降级）而不是整体下线。
 **"core 一动插件全死"这一立项根因已消除。**
 
+---
+
+## 2026-10-09 · 阶段回顾审计（阶段 1–5）与两项修复
+
+按用户要求对前五阶段做逐项复核。**全部通过项**：台账 31/31、既有 api 文件零改动、
+CRLF 0、文档 18 篇无断链、`ruff` 干净、fork 测试 62 项通过、extras 仓 33 文件无 `data/`+`__pycache__`。
+
+### 修复 1（P0）· 维护版 core 未进 fork 仓 —— 单一真相源缺口
+
+**发现**：fork 仓内那 19 个 core 文件是**基线原样**（例：`provider/entities.py`
+仓 `1d2f1c41…` vs 实例 `c66a4c78…`），3 个新增模块则完全不存在。
+即 **22 个 core 补丁只存在于两处，且都在启动器管理的实例目录内**（归档仓 +
+live core）。这既违反「单一真相源」，也与 `design.md §1`（维护分支应含已登记补丁）不符，
+**正是当初事故的脆弱性来源**。
+
+**修复**：按台账把 22 个文件从归档仓导入 fork 仓（源哈希先与台账逐条核对，不符即中止），
+新增 3 / 覆盖 19，提交 `feat(core): import the maintained core patch set (22 files)`。
+现 fork 仓即维护版 core 的真相源，`ruff` 与 62 项测试仍全绿。
+
+### 修复 2（P1）· `astr_main_agent.py` 换行口径不一致
+
+**发现**：31 条台账文件中**唯一一个** `astr_main_agent.py` 是 CRLF（1898 处），
+且台账哈希按 **CRLF 口径**记录；而 `.gitattributes` 的 `* text=auto eol=lf` 会在
+克隆时归一化为 LF → **新克隆出来后该文件哈希必然与台账不符**，漂移检测会永久误报。
+
+**修复**：仓内与实例该文件统一归一化为 LF（CRLF 1898 → 0），台账哈希更新为 LF 口径
+（`0ffb6fe27a8c…` → `83a1760ded1d…`）。**双端复核均 31/31 一致**。
+
+> 附带教训：Windows 上 `pathlib.write_text` 会把 `\n` 写成 `\r\n`；
+> 写 JSON/台账一律用 `write_bytes`（见 `project_rules.md` §8）。
+
+### 明确的排除项（非疏漏）
+
+**4 个 dashboard 前端补丁文件不进仓、不进台账**：
+
+| 文件 | 现状 |
+|---|---|
+| `dashboard/src/components/chat/ThreadedMarkdownMessagePart.vue` | 实例与仓**哈希相同**（已回退到基线） |
+| `.../message_list_comps/MarkdownMessagePart.vue` | 同上 |
+| `dashboard/src/assets/mdi-subset/materialdesignicons-subset.css` | 同上 |
+| `dashboard/src/utils/messageControlDisplay.js` | **仓内不存在**，实例残留孤儿文件（无任何文件引用它） |
+
+即：**dashboard 前端补丁已在 10-08 那次覆盖中一并丢失**（3 个被回退、1 个成孤儿），
+并非"未导入"。按 inventory §3.4 的分级（🔵 非 core 前端改线）与用户
+「这是 core 的项目，只留 core 相关内容」的指示，**不恢复、不纳入台账**。
+若日后要修复 WebUI 的 Satori 标签渲染，应作为独立任务从零实现。
+
+
 
 

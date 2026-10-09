@@ -113,3 +113,8 @@ ruff check .
   `<托管binaries>/python/envs/astrbot-test/Scripts/python.exe -m pytest tests/maintained -q`
   备用方案与理由见 `tests/maintained/README.md`。**禁止**往 AstrBot 实例 venv 安装任何包。
 - `ruff` 用托管工具 venv（`<托管binaries>/python/envs/default`），版本 `0.15.22`。
+- **写 JSON / 台账 / 任何要求字节精确的文件，用 `Path.write_bytes(...)`**：
+  Windows 上 `write_text` 会把 `\n` 翻译成 `\r\n`，破坏台账哈希口径。
+  改完换行敏感文件后复核：`git ls-files --eol | awk -F'\t' '{split($1,a," "); if (a[2]=="w/crlf") print $2}'`。
+- **台账哈希口径 = 文件磁盘字节**（非 LF 归一化）。`.gitattributes` 会按 `eol=lf` 归一化，
+  故**入仓文件必须是 LF**，否则新克隆后哈希对不上、漂移检测永久误报。
