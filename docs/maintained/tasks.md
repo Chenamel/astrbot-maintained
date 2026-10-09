@@ -50,7 +50,16 @@
 |---|---|---|---|---|---|---|---|---|---|
 | T2-01 | P1 | T1-16 | docs/maintained/ | 逆向存量 1639 行（26 文件），产出知识库与分级结论 | 每个补丁有"必须留 core / 重写保留 / 上移 api / 非 core"判定 | 评审 + 链接/敏感/格式校验 | 否 | ✅ | docs(knowledge): reverse-engineer 26 legacy patches, add inventory and knowledge base |
 | T2-02 | P1 | T2-01 | docs/maintained/inventory.md | 输出跨文件共性问题 P1–P10 与交接包修正 5 处 | 每条有位置与处置 | 评审 | 否 | ✅ | 同上 |
-| T3-01 | P1 | T2-01 | astrbot/api/** | 建五个 api 模块 + 测试 | 外部只需 `astrbot.api.*` | pytest | 否 | ⬜ | 待定 |
+| T3-00 | P0 | T2-02 | docs/maintained/api-contract.md | 写 API 契约（签名/降级语义/测试要求） | 五模块符号与降级表齐全 | 评审 | 否 | ✅ | docs(sdd): add api contract for phase 3 |
+| T3-01 | P0 | T3-00 | astrbot/api/_bridge.py | 内部桥：惰性解析 + 能力清单 | 缺补丁时返回默认值且只记一次日志 | pytest | 否 | ⬜ | feat(api): add capability bridge with graceful degradation |
+| T3-02 | P0 | T3-01 | astrbot/api/media/ | 图片输入契约（P1 修复：常量不再依赖 core 私有路径） | 常量与 core 值一致；判定函数可用 | pytest | 是 | ⬜ | feat(api): expose media input contract |
+| T3-03 | P0 | T3-01 | astrbot/api/turns/ | 回合状态访问与 `reset`/`reset_all` | 补丁缺席时 `is_current→True`、`reset*→False` | pytest | 是 | ⬜ | feat(api): expose direct turn state access |
+| T3-04 | P1 | T3-01 | astrbot/api/delivery/ | 交付策略纯函数对外 | 缺席时返回安全默认值 | pytest | 是 | ⬜ | feat(api): expose delivery policy helpers |
+| T3-05 | P1 | T3-01 | astrbot/api/permissions/ | 权限与执行授权 | 缺席时**回退管理员判定，不得无条件放行** | pytest | 是 | ⬜ | feat(api): expose permission and execution policy |
+| T3-06 | P1 | T3-01 | astrbot/api/proactive/ | 轻量主动判定（开关恒关） | `proactive_switch_is_disabled→True` | pytest | 是 | ⬜ | feat(api): expose proactive capability flag (always disabled) |
+| T3-07 | P0 | T3-02..06 | tests/maintained/test_api_*.py | 六份测试 | 全绿且不依赖运行中的 AstrBot | pytest | 否 | ⬜ | test(api): cover additive api surface and degradation |
+| T3-08 | P0 | T3-07 | maintained/installed_manifest.json | 新文件登记 SHA-256（铁律 5） | 台账含全部新增 api 文件 | 校验脚本 | 否 | ⬜ | chore: register new api modules in manifest |
+| T3-09 | P0 | T3-08 | — | **阶段门禁：停下汇报 ≤10 行，等确认** | 已汇报且确认 | 对话记录 | 否 | ⬜ | — |
 | T4-01 | P0 | T3-01 | core 实例 | 备份 → 恢复补丁 → SHA 校验 → 重启止血 | 机器人恢复运行、插件加载成功 | 实测 | 否 | ⬜ | 待定 |
 | T5-01 | P1 | T4-01 | 私有仓 extras | 3 处私有 import → 公开 API + try/except 降级 | 插件无顶层私有 import | grep + 实测 | 否 | ⬜ | 待定 |
 | T6-01 | P2 | T5-01 | maintained/tools/ | check_drift / apply_patches 工具 | 一键校验与重打可用 | 实测 | 是 | ⬜ | 待定 |
