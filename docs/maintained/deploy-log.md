@@ -115,3 +115,58 @@ RESTORE.md       # 选择性回滚说明
    否则本次恢复会被再次覆盖。阶段 6 的 `check_drift` 会提供一键检测与重打。
 3. 阶段 5 仍需把插件那 3 处私有 import 改为 `astrbot.api.*` + 软依赖，
    否则每次 core 漂移仍会让插件整体下线（本次只是恢复了现状，未消除根因）。
+
+---
+
+## 2026-10-09 · 阶段 5 插件正规化（消除 core 漂移根因）
+
+**目标**：把插件对 core 的 8 处私有依赖全部收敛到 `astrbot.api.*`，并加降级兜底，
+使 core 再次漂移时插件**仍能加载**（功能降级）而不是整体下线。
+
+**先做核实（决定改动面）**：扫描全实例 14 个有 `astrbot.core` import 的插件，
+确认**只有 `astrbot_plugin_astrbot_enhance_mode/main.py` 一个生产文件**引用了补丁私有符号；无人引用
+`code_delivery_policy` / `IMAGE_INPUT_UNAVAILABLE_MESSAGE`。
+
+**A. api 层扩建（公开仓，3 个新模块，仍为纯新增）**
+
+| 模块 | 暴露 |
+|---|---|
+| `astrbot/api/content/` | `TextPart`、`ImageURLPart`、`is_text_part`、`is_image_part` |
+| `astrbot/api/runtime/` | `get_astrbot_data_path`、`download_image_by_url`、`extract_quoted_message_images` |
+| `astrbot/api/embedding/` | `EmbeddingProvider`、`is_embedding_provider` |
+
+- 类型在 core 缺席时为 `None`，并提供 `is_*` 辅助函数（避免 `isinstance(x, None)` 抛错）；
+- 下载类函数**失败要响**（`RuntimeError`），路径/引用图**降级为可用默认值**；
+- 台账 28 → **31 条**；fork 仓测试 47 → **62 项**全绿；`ruff` 干净。
+
+**B. 插件改造（私有仓 extras）**
+
+- 6 处顶层 core import → `astrbot.api.{content,media,runtime,embedding,turns}`，
+  整体包在 `try/except ImportError` 中，缺席时记 `warning` 并以降级实现继续；
+- `isinstance(part, TextPart)` → `is_text_part(part)`（4 处）；
+  `isinstance(provider, EmbeddingProvider)` → `is_embedding_provider(...)`；
+  注解 `-> EmbeddingProvider | None` 改为字符串注解（该文件无 `from __future__ import annotations`，
+  求值时会踩到 `None | None`）；
+- `TextPart(...)` 构造统一走 `_make_text_part()`，类型缺席时返回 `None` 并跳过；
+- 2 处函数内 `from astrbot.core.utils.direct_turns import coordinator` → 顶层
+  `astrbot.api.turns.reset / reset_all`；
+- 插件 `main.py` 现在 **`astrbot.core` 零引用**。
+- `tests/test_visual_context.py`：`TextPart`/`IMAGE_INPUT_UNAVAILABLE_NOTICE`/`ProviderRequest`
+  改走公开面；**保留 2 处刻意引用 core 内部**（provider source 实现、`DirectTurn`/`DirectTurnCoordinator`），
+  已加注释说明原因（api 层有意不暴露内部数据模型）。
+
+**验证**
+
+| 检查 | 结果 |
+|---|---|
+| 插件自带测试（用**已打补丁的实例 core**） | **183 passed** |
+| 插件 `main.py` 语法编译 | ✅ |
+| api 层部署后台账 | **31/31 一致** |
+| 仓 → 实例同步 | 字节一致；改前哈希 `50dd1aaf…`（与归档台账一致，可精确回滚） |
+
+**保护机制**：`data/optimization_tracking/maintenance_registry.json` 的 `protected_plugins`
+**已含该插件**，面板「更新插件」会被 `maintenance.py` 拦截，不会覆盖本次改造
+（该名单同时印证 `proactive_must_remain_disabled: true`）。
+
+**待完成**：插件仍运行着旧代码，需要在面板重载该插件（或重启机器人）后复核（T5-07）。
+
