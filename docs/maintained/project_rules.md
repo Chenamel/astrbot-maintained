@@ -109,3 +109,7 @@ ruff check .
 - 大流量 git 操作走 **SSH**（HTTPS 会被代理以 `CONNECT tunnel failed 502` 掐断）；SSH 需显式传密钥：
   `GIT_SSH_COMMAND="ssh -i <本机ssh私钥路径> -o IdentitiesOnly=yes -F /dev/null"`
 - 后台任务不继承沙箱提权，**涉及 SSH 密钥的 git 操作必须前台执行**。
+- **测试**用专用测试 venv（Python 3.12.13，含运行依赖 + pytest + pytest-asyncio）：
+  `<托管binaries>/python/envs/astrbot-test/Scripts/python.exe -m pytest tests/maintained -q`
+  备用方案与理由见 `tests/maintained/README.md`。**禁止**往 AstrBot 实例 venv 安装任何包。
+- `ruff` 用托管工具 venv（`<托管binaries>/python/envs/default`），版本 `0.15.22`。
