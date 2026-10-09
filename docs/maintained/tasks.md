@@ -93,11 +93,24 @@
 | T7-13 | P0 | T7-12 | docs/maintained/{project_rules,proposal}.md | **重定项目定位**：面向社区开源的轻量级/高灵活度/集成增强版；核心价值=补官方缺的底层扩展 API | 两份文档均有定位节且互相一致 | 目视 + 评审 | 否 | ✅ | docs: restate the project positioning for community use |
 | T7-14 | P0 | T7-13 | docs/maintained/inventory.md | **β hook 时序登记为核心架构优化**：保留现状、坚决不改回上游、严禁上游合并时覆盖 | P11 有明确标记；`project_rules.md` §5 列为合并红线 | 目视 | 否 | ✅ | docs: protect the beta hook-timing optimisation from upstream merges |
 | T7-15 | P0 | T7-13 | docs/maintained/{project_rules,api-contract}.md + astrbot/api/** | **api 面文档门槛**（§9）：模块 docstring/`__all__`/逐符号 docstring/常量 `#:` 注释；禁止野路子公开名 | 机械测试 `test_api_doc_gate.py` 全绿；已修 `permissions._EXECUTION_POLICY_UNAVAILABLE` 与 `turns._logger` | pytest + 评审 | 否 | ✅ | feat(api): enforce the public-surface documentation gate |
-| T7-91 | P2 | T7-13 | README_MAINTAINED.md 等对外材料 | 把新定位同步到对外材料（README/NOTICE 措辞） | 与定位一致 | 目视 | 是 | ⬜ | docs: align public-facing material with the new positioning |
-| T7-90 | P2 | — | — | **暂缓（用户决定）**：脱敏 / P2·P3·P6·P9·P10；**「转公开」现与项目定位直接绑定（定位为面向社区开源），时间点待用户确认** | 用户另行决定 | — | — | ⏸ 暂缓 | — |
+| T7-90 | P2 | — | — | **⛔ Blocked（转公开 / 脱敏 / 对外材料）**<br>**解除条件**：本阶段**存量治理与重构完成、测试全绿**后才启动。<br>**Blocked 理由**：当前注意力全部集中在**代码攻坚**；过早对外会锁死尚在重构的公开面。<br>**明确不做（在解除前）**：转公开、脱敏、对外材料同步、`README_MAINTAINED.md` 措辞调整。 | 解除条件达成且用户确认 | 用户确认 | — | ⛔ Blocked | — |
+| T7-91 | P3 | T7-90 | README_MAINTAINED.md 等对外材料 | 把新定位同步到对外材料 | 与定位一致 | 目视 | 是 | ⛔ Blocked（随 T7-90 一并解除） | — |
+
+
+## 阶段 8 · 存量治理与重构（代码攻坚 —— T7-90 的解除前置）
+
+> 2026-10-10 定调：注意力全部集中在代码攻坚；**不做**脱敏、不做对外材料（随 T7-90 一并 Blocked）。
+
+| 编号 | 优先级 | 前置依赖 | 涉及文件 | 工作内容 | 完成标准 | 验证方式 | 可否并行 | 状态 | 提交信息 |
+|---|---|---|---|---|---|---|---|---|---|
+| T8-01 | P0 | — | tests/ | **P11 定型**：α 9 项上游失败标 `xfail`（注明"设计使然的预期失败"）；β 8 项保持登记（核心架构优化，保留现状）——给"测试全绿"一个明确定义 | 套件输出 = 全绿 + 9 xfail，无未解释的红 | pytest | 否 | ⬜ | 待定 |
+| T8-02 | P0 | T8-01 | P10 区域 | **手写正则安全判定**：先补测试把当前行为钉死（误判容限显式化），再谈优化 | 行为被测试覆盖 | pytest | 否 | ⬜ | 待定 |
+| T8-03 | P0 | T8-02 | P2 区域 | **core 反向硬依赖插件目录名（2 处）→ 注册表/钩子化**；完成后解锁"插件名守卫测试"（严格版） | core 内零插件目录名 | grep + pytest | 否 | ⬜ | 待定 |
+| T8-04 | P1 | T8-03 | P3 区域 | **工具名硬编码白名单 → 工具自声明**（执行类 / 轻量主动类） | 白名单不再写死在 core | 评审 + pytest | 是 | ⬜ | 待定 |
+| T8-05 | P1 | T8-04 | P6 区域 | **权限双模型统一入口**（目标语义需用户先定：仅统一命名 vs 统一判定强度） | 单一判定入口 | pytest | 是 | ⬜ | 待定 |
+| T8-06 | P1 | T8-05 | P9 区域 | **maintenance fail-open → warning**；`uninstall_plugin` 补闸门 | 更新/安装/卸载三入口闸门齐备 | 实测 | 是 | ⬜ | 待定 |
+| T8-07 | P0 | T8-06 | 🟡 4 文件 | **拆分重写**（含 runner 拆分）；**β 的 hook 完成时序优化必须原样保留**（P11 红线） | 行为等价、全量测试全绿、P11 复核无回退 | pytest + P11 复核 | 否 | ⬜ | 待定 |
+| T8-08 | P0 | T8-07 | — | **阶段门禁：停下汇报 ≤10 行，等确认** → 之后才回到 T7-90 评估 | 已汇报且确认 | 对话记录 | 否 | ⬜ | — |
 
 > **定位变更提示（2026-10-10）**：项目已重定位为「面向社区开源的集成增强版 AstrBot」（见 `project_rules.md` 置顶节）。
-> 原「转公开」暂缓项（T7-90）现与定位直接绑定，**时间点待用户确认**。
-
-> **定位变更提示（2026-10-10）**：项目已重定位为「面向社区开源的集成增强版 AstrBot」（见 `project_rules.md` 置顶节）。
-> 原「转公开」暂缓项（T7-90）现与定位直接绑定，**时间点待用户确认**。
+> T7-90（转公开）已正式 **Blocked**：待阶段 8（存量治理与重构）完成、测试全绿后启动。
