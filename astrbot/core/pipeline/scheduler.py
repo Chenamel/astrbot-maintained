@@ -8,6 +8,7 @@ from astrbot.core.platform.sources.wecom_ai_bot.wecomai_event import (
     WecomAIBotMessageEvent,
 )
 from astrbot.core.utils.active_event_registry import active_event_registry
+from astrbot.core.utils.direct_turns import coordinator
 
 from .bootstrap import ensure_builtin_stages_registered
 from .context import PipelineContext
@@ -87,6 +88,7 @@ class PipelineScheduler:
 
         """
         active_event_registry.register(event)
+        coordinator.observe(event, self.ctx.astrbot_config.get("wake_prefix", []))
         try:
             await self._process_stages(event)
 
@@ -96,5 +98,6 @@ class PipelineScheduler:
 
             logger.debug("pipeline execution completed.")
         finally:
+            coordinator.finish(event)
             event.cleanup_temporary_local_files()
             active_event_registry.unregister(event)

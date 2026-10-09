@@ -9,6 +9,7 @@ from astrbot.core.message.components import BaseMessageComponent, ComponentType
 from astrbot.core.message.message_event_result import MessageChain, ResultContentType
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.star.star_handler import EventType
+from astrbot.core.utils.direct_turns import is_current, mark_sent
 from astrbot.core.utils.path_util import path_Mapping
 
 from ..context import PipelineContext, call_event_hook
@@ -170,6 +171,9 @@ class RespondStage(Stage):
         self,
         event: AstrMessageEvent,
     ) -> None | AsyncGenerator[None, None]:
+        if not is_current(event):
+            event.clear_result()
+            return
         result = event.get_result()
         if result is None:
             return
@@ -227,7 +231,10 @@ class RespondStage(Stage):
                 == "realtime_segmenting"
             )
             logger.info(f"Applying streaming output ({event.get_platform_id()}).")
+            if not is_current(event):
+                return
             await event.send_streaming(result.async_stream, realtime_segmenting)
+            mark_sent(event)
             return
         if len(result.chain) > 0:
             # 检查路径映射
@@ -276,12 +283,15 @@ class RespondStage(Stage):
                 for comp in result.chain:
                     i = await self._calc_comp_interval(comp)
                     await asyncio.sleep(i)
+                    if not is_current(event):
+                        return
                     try:
                         if comp.type in need_separately:
                             await event.send(result.derive([comp]))
                         else:
                             await event.send(result.derive([*header_comps, comp]))
                             header_comps.clear()
+                        mark_sent(event)
                     except Exception as e:
                         logger.error(
                             "Failed to send the message chain: "
@@ -305,9 +315,12 @@ class RespondStage(Stage):
                     modify_raw_chain=True,
                 )
                 for comp in sep_comps:
+                    if not is_current(event):
+                        return
                     chain = result.derive([comp])
                     try:
                         await event.send(chain)
+                        mark_sent(event)
                     except Exception as e:
                         logger.error(
                             f"Failed to send the message chain: chain = {chain}, "
@@ -316,8 +329,11 @@ class RespondStage(Stage):
                         )
                 chain = result.derive(result.chain)
                 if result.chain and len(result.chain) > 0:
+                    if not is_current(event):
+                        return
                     try:
                         await event.send(chain)
+                        mark_sent(event)
                     except Exception as e:
                         logger.error(
                             f"Failed to send the message chain: chain = {chain}, "

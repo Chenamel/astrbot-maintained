@@ -19,12 +19,22 @@ from astrbot.core.persona_error_reply import (
 )
 from astrbot.core.provider.entities import LLMResponse
 from astrbot.core.provider.provider import TTSProvider
+from astrbot.core.utils.direct_turns import is_current
 
 AgentRunner = ToolLoopAgentRunner[AstrAgentContext]
 
 
 def _should_stop_agent(astr_event) -> bool:
-    return astr_event.is_stopped() or bool(astr_event.get_extra("agent_stop_requested"))
+    return (
+        not is_current(astr_event)
+        or astr_event.is_stopped()
+        or bool(astr_event.get_extra("agent_stop_requested"))
+    )
+
+
+async def _send_current(event, chain) -> None:
+    if is_current(event):
+        await event.send(chain)
 
 
 def _truncate_tool_result(text: str, limit: int = 70) -> str:
@@ -121,6 +131,44 @@ async def run_agent(
     show_reasoning: bool = False,
     buffer_intermediate_messages: bool = False,
 ) -> AsyncGenerator[MessageChain | None, None]:
+    """Keep proactive validity through delivery, including buffered results.
+
+    The pipeline sends each yielded chain before resuming this generator.
+    A terminal model step alone must not invalidate that pending delivery.
+    """
+    event = agent_runner.run_context.context.event
+    defer = bool(event.get_extra("_enhance_active_reply_token"))
+    if defer:
+        agent_runner._proactive_delivery_deferred = True
+    try:
+        async for chain in _run_agent(
+            agent_runner,
+            max_step,
+            show_tool_use,
+            show_tool_call_result,
+            stream_to_general,
+            show_reasoning,
+            buffer_intermediate_messages,
+        ):
+            if not is_current(event):
+                agent_runner.request_stop()
+                return
+            yield chain
+    finally:
+        if defer:
+            agent_runner._proactive_delivery_deferred = False
+            agent_runner._finish_proactive_request()
+
+
+async def _run_agent(
+    agent_runner: AgentRunner,
+    max_step: int = 30,
+    show_tool_use: bool = True,
+    show_tool_call_result: bool = False,
+    stream_to_general: bool = False,
+    show_reasoning: bool = False,
+    buffer_intermediate_messages: bool = False,
+) -> AsyncGenerator[MessageChain | None, None]:
     step_idx = 0
     astr_event = agent_runner.run_context.context.event
     tool_name_by_call_id: dict[str, str] = {}
@@ -154,6 +202,11 @@ async def run_agent(
         )
         try:
             async for resp in agent_runner.step():
+                if not is_current(astr_event):
+                    buffered_llm_chains.clear()
+                    agent_runner.request_stop()
+                    # Drain a tool that already started so its result can be reused.
+                    continue
                 if _should_stop_agent(astr_event):
                     agent_runner.request_stop()
 
@@ -184,7 +237,7 @@ async def run_agent(
 
                 if resp.type == "agent_stats":
                     if astr_event.get_platform_name() == "webchat":
-                        await astr_event.send(resp.data["chain"])
+                        await _send_current(astr_event, resp.data["chain"])
                     continue
 
                 if resp.type == "tool_call_result":
@@ -199,16 +252,17 @@ async def run_agent(
 
                     if msg_chain.type == "tool_direct_result":
                         # tool_direct_result 用于标记 llm tool 需要直接发送给用户的内容
-                        await astr_event.send(msg_chain)
+                        await _send_current(astr_event, msg_chain)
                         continue
                     if astr_event.get_platform_id() == "webchat":
-                        await astr_event.send(msg_chain)
+                        await _send_current(astr_event, msg_chain)
                     elif show_tool_use and show_tool_call_result:
                         status_msg = _build_tool_result_status_message(
                             msg_chain, tool_name_by_call_id
                         )
-                        await astr_event.send(
-                            MessageChain(type="tool_call").message(status_msg)
+                        await _send_current(
+                            astr_event,
+                            MessageChain(type="tool_call").message(status_msg),
                         )
                     # 对于其他情况，暂时先不处理
                     continue
@@ -230,7 +284,7 @@ async def run_agent(
                     _record_tool_call_name(tool_info, tool_name_by_call_id)
 
                     if astr_event.get_platform_name() == "webchat":
-                        await astr_event.send(resp.data["chain"])
+                        await _send_current(astr_event, resp.data["chain"])
                     elif show_tool_use:
                         if show_tool_call_result and isinstance(tool_info, dict):
                             # Delay tool status notification until tool_call_result.
@@ -238,7 +292,7 @@ async def run_agent(
                         chain = MessageChain(type="tool_call").message(
                             _build_tool_call_status_message(tool_info)
                         )
-                        await astr_event.send(chain)
+                        await _send_current(astr_event, chain)
                     continue
                 elif resp.type == "llm_result":
                     chain = resp.data["chain"]

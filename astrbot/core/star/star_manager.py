@@ -52,6 +52,7 @@ from .command_management import sync_command_configs
 from .context import Context
 from .error_messages import format_plugin_error
 from .filter.permission import COMMAND_PERMISSION_TYPES, PermissionTypeFilter
+from .maintenance import assert_plugin_update_allowed
 from .star import star_map, star_registry
 from .star_handler import EventType, star_handlers_registry
 from .updater import PLUGIN_METADATA_FILENAMES, _PluginUpdater
@@ -1885,6 +1886,7 @@ class PluginManager:
         if plugin.reserved:
             raise Exception("该插件是 AstrBot 保留插件，无法更新。")
 
+        assert_plugin_update_allowed(plugin_name, plugin.root_dir_name or "")
         await self._updater.update(
             plugin,
             proxy=proxy,
@@ -2070,6 +2072,7 @@ class PluginManager:
             if plugin and plugin.reserved:
                 raise Exception("该插件是 AstrBot 保留插件，无法更新。")
             if target_plugin_path.exists():
+                assert_plugin_update_allowed(metadata_dir_name, target_plugin_path.name)
                 # Only replace a directory whose metadata identifies the same plugin.
                 if (
                     target_plugin_path.is_symlink()

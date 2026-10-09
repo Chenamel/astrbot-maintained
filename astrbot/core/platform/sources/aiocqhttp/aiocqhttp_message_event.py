@@ -18,6 +18,7 @@ from astrbot.api.message_components import (
     Video,
 )
 from astrbot.api.platform import Group, MessageMember
+from astrbot.core.utils.direct_turns import is_current, mark_sent
 
 
 class AiocqhttpMessageEvent(AstrMessageEvent):
@@ -131,6 +132,7 @@ class AiocqhttpMessageEvent(AstrMessageEvent):
         event: Event | None = None,
         is_group: bool = False,
         session_id: str | None = None,
+        owner_event: AstrMessageEvent | None = None,
     ) -> None:
         """发送消息至 QQ 协议端（aiocqhttp）。
 
@@ -150,6 +152,11 @@ class AiocqhttpMessageEvent(AstrMessageEvent):
             ret = await cls._parse_onebot_json(message_chain)
             if not ret:
                 return
+            if owner_event is not None:
+                if not is_current(owner_event):
+                    return
+                if message_chain.type not in ("tool_call", "tool_call_result"):
+                    mark_sent(owner_event)
             await cls._dispatch_send(bot, event, is_group, session_id, ret)
             return
         for seg in message_chain.chain:
@@ -160,6 +167,10 @@ class AiocqhttpMessageEvent(AstrMessageEvent):
                     seg = nodes
 
                 payload = await seg.to_dict()
+                if owner_event is not None:
+                    if not is_current(owner_event):
+                        return
+                    mark_sent(owner_event)
 
                 if is_group:
                     payload["group_id"] = session_id
@@ -173,16 +184,26 @@ class AiocqhttpMessageEvent(AstrMessageEvent):
                     await bot.call_action("send_private_forward_msg", **payload)
             elif isinstance(seg, File):
                 d = await cls._from_segment_to_dict(seg)
+                if owner_event is not None:
+                    if not is_current(owner_event):
+                        return
+                    mark_sent(owner_event)
                 await cls._dispatch_send(bot, event, is_group, session_id, [d])
             else:
                 messages = await cls._parse_onebot_json(MessageChain([seg]))
                 if not messages:
                     continue
+                if owner_event is not None:
+                    if not is_current(owner_event):
+                        return
+                    mark_sent(owner_event)
                 await cls._dispatch_send(bot, event, is_group, session_id, messages)
                 await asyncio.sleep(0.5)
 
     async def send(self, message: MessageChain) -> None:
         """发送消息"""
+        if not is_current(self):
+            return
         event = getattr(self.message_obj, "raw_message", None)
 
         is_group = bool(self.get_group_id())
@@ -194,6 +215,7 @@ class AiocqhttpMessageEvent(AstrMessageEvent):
             event=event,  # 不强制要求一定是 Event
             is_group=is_group,
             session_id=session_id,
+            owner_event=self,
         )
         await super().send(message)
 

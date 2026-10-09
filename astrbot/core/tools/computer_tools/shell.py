@@ -17,7 +17,7 @@ from astrbot.core.utils.astrbot_path import get_astrbot_system_tmp_path
 
 from ..registry import builtin_tool
 from .util import (
-    check_admin_permission,
+    check_execution_permission,
     is_local_runtime,
     workspace_root_for_context,
 )
@@ -99,7 +99,7 @@ class ExecuteShellTool(FunctionTool):
         env: dict[str, Any] | None = None,
         yield_time_ms: int = 10_000,
     ) -> ToolExecResult:
-        if permission_error := check_admin_permission(context, "Shell execution"):
+        if permission_error := check_execution_permission(context, "Shell execution"):
             return permission_error
 
         sb = await get_booter(
@@ -336,7 +336,7 @@ class ShellSessionTool(FunctionTool):
         Returns:
             JSON session operation result or a user-facing error.
         """
-        if permission_error := check_admin_permission(
+        if permission_error := check_execution_permission(
             context,
             "Shell session management",
         ):

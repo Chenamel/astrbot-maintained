@@ -38,6 +38,14 @@ class ProviderType(enum.Enum):
     RERANK = "rerank"
 
 
+IMAGE_INPUT_UNAVAILABLE_MESSAGE = "当前看不到图片，请重新发送。"
+IMAGE_INPUT_UNAVAILABLE_NOTICE = (
+    "[Image unavailable: no visual evidence was received. "
+    "Do not infer or describe the image from history, filenames or surrounding text. "
+    f"Reply only: {IMAGE_INPUT_UNAVAILABLE_MESSAGE}]"
+)
+
+
 @dataclass
 class ProviderMeta:
     """The basic metadata of a provider instance."""
@@ -118,6 +126,8 @@ class ProviderRequest:
     """附加的上次请求后工具调用的结果。参考: https://platform.openai.com/docs/guides/function-calling#handling-function-calls"""
     model: str | None = None
     """模型名称，为 None 时使用提供商的默认模型"""
+    image_input_unavailable: bool = False
+    """Internal delivery guard when the current image has no usable visual evidence."""
 
     def __repr__(self) -> str:
         return (
@@ -299,11 +309,19 @@ class ProviderRequest:
                     },
                 )
 
-        if image_capture_failed and not any(
-            block.get("type") != "text" or block.get("text", "").strip()
+        has_image = any(block.get("type") == "image_url" for block in content_blocks)
+        has_caption = any(
+            block.get("type") == "text" and "<image_caption>" in block.get("text", "")
             for block in content_blocks
-        ):
-            content_blocks = [{"type": "text", "text": "[Image unavailable]"}]
+        )
+        if has_image or has_caption:
+            self.image_input_unavailable = False
+        elif image_capture_failed:
+            self.image_input_unavailable = True
+            self.func_tool = None
+            content_blocks.append(
+                {"type": "text", "text": IMAGE_INPUT_UNAVAILABLE_NOTICE}
+            )
 
         # 只有当只有一个来自 prompt 的文本块且没有额外内容块时，才降级为简单格式以保持向后兼容
         if (
@@ -385,6 +403,8 @@ class LLMResponse:
     """The ID of the response. For chunked responses, it's the ID of the chunk; for non-chunked responses, it's the ID of the response."""
     usage: TokenUsage | None = None
     """The usage of the response. For chunked responses, it's the usage of the chunk; for non-chunked responses, it's the usage of the response."""
+    image_input_unavailable: bool = False
+    """The image request failed; text and tools must not be treated as image evidence."""
 
     def __init__(
         self,
@@ -405,6 +425,7 @@ class LLMResponse:
         is_chunk: bool = False,
         id: str | None = None,
         usage: TokenUsage | None = None,
+        image_input_unavailable: bool = False,
     ) -> None:
         """初始化 LLMResponse
 
@@ -437,6 +458,7 @@ class LLMResponse:
         self.reasoning_signature = reasoning_signature
         self.raw_completion = raw_completion
         self.is_chunk = is_chunk
+        self.image_input_unavailable = image_input_unavailable
 
         if id is not None:
             self.id = id

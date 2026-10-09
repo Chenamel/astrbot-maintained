@@ -1,7 +1,9 @@
 from pathlib import Path
 
+from astrbot import logger
 from astrbot.core.agent.run_context import ContextWrapper
 from astrbot.core.astr_agent_context import AstrAgentContext
+from astrbot.core.code_delivery_policy import execution_denial
 from astrbot.core.db import BaseDatabase
 from astrbot.core.utils.astrbot_path import get_astrbot_workspaces_path
 from astrbot.core.workspace import (
@@ -69,3 +71,27 @@ def check_admin_permission(
             f"User's ID is: {context.context.event.get_sender_id()}. User's ID can be found by using /sid command."
         )
     return None
+
+
+def check_execution_permission(
+    context: ContextWrapper[AstrAgentContext], operation_name: str
+) -> str | None:
+    """Recheck current-message execution authorization at the tool boundary.
+
+    Args:
+        context: Current tool context.
+        operation_name: Operation name for the diagnostic log.
+
+    Returns:
+        Permission error, or None for an authorized current run request.
+    """
+    event = context.context.event
+    config = context.context.context.get_config(umo=event.unified_msg_origin)
+    error = execution_denial(event, config)
+    logger.info(
+        "Execution entry operation=%s message_id=%s allowed=%s",
+        operation_name,
+        getattr(event.message_obj, "message_id", ""),
+        error is None,
+    )
+    return error

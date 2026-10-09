@@ -1,5 +1,7 @@
 import asyncio
 import copy
+import json
+import re
 import sys
 import time
 import traceback
@@ -28,6 +30,12 @@ from astrbot import logger
 from astrbot.core.agent.message import ImageURLPart, TextPart, ThinkPart
 from astrbot.core.agent.tool import FunctionTool, ToolSet
 from astrbot.core.agent.tool_image_cache import tool_image_cache
+from astrbot.core.code_delivery_policy import (
+    CODE_DELIVERY_FAILURE,
+    SAFETY_REFUSAL_PATTERN,
+    code_task_spec,
+    has_code_delivery,
+)
 from astrbot.core.exceptions import EmptyModelOutputError
 from astrbot.core.message.components import Json
 from astrbot.core.message.message_event_result import (
@@ -46,6 +54,14 @@ from astrbot.core.provider.modalities import (
     sanitize_contexts_by_modalities,
 )
 from astrbot.core.provider.provider import Provider
+from astrbot.core.utils.direct_turns import (
+    begin_tool,
+    get_tool_result,
+    is_current,
+    record_tool_result,
+    release_tool,
+    wait_tool_result,
+)
 
 from ..context.compressor import ContextCompressor
 from ..context.config import ContextConfig
@@ -144,6 +160,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
     REPEATED_TOOL_NOTICE_L1_THRESHOLD = 3
     REPEATED_TOOL_NOTICE_L2_THRESHOLD = 4
     REPEATED_TOOL_NOTICE_L3_THRESHOLD = 5
+    REPEATED_TOOL_FAILURE_LIMIT = 3
     MALFORMED_TOOL_NAME_PLACEHOLDER = "__malformed_tool_name__"
     REPEATED_TOOL_NOTICE_L1_TEMPLATE = (
         "\n\n[SYSTEM NOTICE] By the way, you have executed the same tool "
@@ -179,6 +196,88 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
 
     async def _complete_with_assistant_response(self, llm_resp: LLMResponse) -> None:
         """Finalize the current step as a plain assistant response with no tool calls."""
+        event = getattr(self.run_context.context, "event", None)
+        task = code_task_spec(event)
+        safe_refusal = SAFETY_REFUSAL_PATTERN.search(llm_resp.completion_text or "")
+        if (
+            task
+            and not safe_refusal
+            and not getattr(llm_resp, "image_input_unavailable", False)
+            and not self._code_repair_attempted
+            and not has_code_delivery(llm_resp.completion_text or "", task[1])
+        ):
+            self._code_repair_attempted = True
+            task_text, language = task
+            repaired_text = CODE_DELIVERY_FAILURE
+            outcome = "incomplete"
+            repair_context = list(self.run_context.messages)
+            repair_context.append(
+                Message(
+                    role="assistant",
+                    content=llm_resp.completion_text or "[No source delivered]",
+                )
+            )
+            repair_context.append(
+                Message(
+                    role="user",
+                    content=(
+                        "[Source delivery correction] The current task requires actual source, "
+                        "not a promise or execution results. Do not call tools or repeat any action. "
+                        "Return complete usable source in a fenced code block in the requested "
+                        f"language ({language or 'as requested'}), preserving the task requirements. "
+                        "If the task is unsafe, briefly decline instead.\n"
+                        f"Task and current follow-up:\n{task_text}"
+                    ),
+                )
+            )
+            try:
+                repair = await asyncio.wait_for(
+                    self.provider.text_chat(
+                        contexts=self._sanitize_contexts_for_provider(repair_context),
+                        func_tool=None,
+                        model=self.req.model,
+                        session_id=self.req.session_id,
+                        abort_signal=self._abort_signal,
+                        request_max_retries=0,
+                    ),
+                    timeout=30,
+                )
+                if (
+                    repair.role == "assistant"
+                    and not repair.tools_call_name
+                    and has_code_delivery(repair.completion_text or "", language)
+                ):
+                    repaired_text = repair.completion_text
+                    outcome = "completed"
+                elif (
+                    repair.role == "assistant"
+                    and not repair.tools_call_name
+                    and SAFETY_REFUSAL_PATTERN.search(repair.completion_text or "")
+                ):
+                    repaired_text = repair.completion_text
+                    outcome = "refused"
+                if repair.usage:
+                    self.stats.token_usage += repair.usage
+                    self.stats.current_context_tokens = repair.usage.input
+            except Exception as exc:
+                outcome = type(exc).__name__
+            llm_resp.result_chain = None
+            llm_resp.completion_text = repaired_text
+            llm_resp.reasoning_content = None
+            llm_resp.reasoning_signature = None
+            llm_resp.raw_completion = None
+            llm_resp.tools_call_name = []
+            llm_resp.tools_call_args = []
+            llm_resp.tools_call_ids = []
+            llm_resp.tools_call_extra_content = {}
+            if event is not None and hasattr(event, "set_extra"):
+                event.set_extra("_llm_reasoning_content", None)
+            logger.info(
+                "Code delivery repair message_id=%s language=%s outcome=%s",
+                getattr(getattr(event, "message_obj", None), "message_id", ""),
+                language,
+                outcome,
+            )
         self.final_llm_resp = llm_resp
         self._transition_state(AgentState.DONE)
         self.stats.end_time = time.time()
@@ -273,6 +372,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
             if fallback_id:
                 seen_provider_ids.add(fallback_id)
         self.final_llm_resp = None
+        self._code_repair_attempted = False
         self._state = AgentState.IDLE
         self.tool_executor = tool_executor
         self.agent_hooks = agent_hooks
@@ -284,6 +384,12 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         self._last_tool_name: str | None = None
         self._last_tool_args: dict[str, T.Any] | None = None
         self._same_tool_streak = 0
+        self._last_failed_tool_key: tuple[str, str] | None = None
+        self._same_tool_failure_streak = 0
+        self._repeated_failed_call_ids: list[str] = []
+        self._blocked_failed_tool_keys: set[tuple[str, str]] = set()
+        self._tool_failure_summary = ""
+        self._proactive_request_finished = False
 
         # These two are used for tool schema mode handling
         # We now have two modes:
@@ -297,13 +403,12 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         self._skill_like_raw_tool_set = None
         if tool_schema_mode == "skills_like":
             tool_set = self.req.func_tool
-            if not tool_set:
-                return
-            self._skill_like_raw_tool_set = tool_set
-            light_set = tool_set.get_light_tool_set()
-            self._tool_schema_param_set = tool_set.get_param_only_tool_set()
-            # MODIFIE the req.func_tool to use light tool schemas
-            self.req.func_tool = light_set
+            if tool_set:
+                self._skill_like_raw_tool_set = tool_set
+                light_set = tool_set.get_light_tool_set()
+                self._tool_schema_param_set = tool_set.get_param_only_tool_set()
+                # MODIFIE the req.func_tool to use light tool schemas
+                self.req.func_tool = light_set
 
         # append existing messages in the run context
         messages = bind_checkpoint_messages(request.contexts or [])
@@ -349,6 +454,11 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
             audio_urls=request.audio_urls if supports_audio else [],
         )
         context = await adjusted_request.assemble_context()
+        # Materialization can fail after the earlier image preparation stage.
+        # Preserve that outcome on the request checked by the runner, even when
+        # unsupported audio required a provider-specific copy of the request.
+        if supports_image:
+            request.image_input_unavailable = adjusted_request.image_input_unavailable
         content = context.get("content")
         if isinstance(content, str):
             content_blocks: list[dict[str, T.Any]] = [{"type": "text", "text": content}]
@@ -796,6 +906,50 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
 
     @override
     async def step(self):
+        """Release proactive busy state only after a terminal or interrupted step."""
+        terminated = False
+        try:
+            async for response in self._step():
+                yield response
+        except BaseException:
+            terminated = True
+            raise
+        finally:
+            if terminated or self.done():
+                self._finish_proactive_request()
+
+    def _finish_proactive_request(self) -> None:
+        """Notify the plugin once even if its valid response token became stale."""
+        if getattr(self, "_proactive_delivery_deferred", False):
+            return
+        if getattr(self, "_proactive_request_finished", False):
+            return
+        event = getattr(getattr(self.run_context, "context", None), "event", None)
+        if not event or not callable(getattr(event, "get_extra", None)):
+            return
+        if not event.get_extra("_enhance_active_reply_token"):
+            return
+        from astrbot.core.star.star import star_registry
+
+        self._proactive_request_finished = True
+        for metadata in star_registry:
+            if (
+                metadata.activated
+                and metadata.root_dir_name == "astrbot_plugin_astrbot_enhance_mode"
+                and metadata.star_cls is not None
+            ):
+                finish = getattr(metadata.star_cls, "finish_proactive_request", None)
+                if callable(finish):
+                    try:
+                        finish(event)
+                    except Exception as exc:
+                        logger.warning(
+                            "Proactive completion cleanup failed (%s).",
+                            type(exc).__name__,
+                        )
+                return
+
+    async def _step(self):
         """Process a single step of the agent.
         This method should return the result of the step.
         """
@@ -807,6 +961,26 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                 await self.agent_hooks.on_agent_begin(self.run_context)
             except Exception as e:
                 logger.error(f"Error in on_agent_begin hook: {e}", exc_info=True)
+
+        if getattr(self.req, "image_input_unavailable", False):
+            response = LLMResponse(
+                role="assistant",
+                completion_text="当前看不到图片，请重新发送。",
+                image_input_unavailable=True,
+            )
+            await self._complete_with_assistant_response(response)
+            chain = response.result_chain
+            if not chain and response.completion_text:
+                chain = MessageChain().message(response.completion_text)
+            if chain:
+                yield AgentResponse(
+                    type="llm_result", data=AgentResponseData(chain=chain)
+                )
+                if self.streaming:
+                    yield AgentResponse(
+                        type="streaming_delta", data=AgentResponseData(chain=chain)
+                    )
+            return
 
         # 开始处理，转换到运行状态
         self._transition_state(AgentState.RUNNING)
@@ -947,6 +1121,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                     logger.warning(
                         "skills_like tool re-query returned no tool calls; fallback to assistant response."
                     )
+                    await self._complete_with_assistant_response(llm_resp)
                     if llm_resp.reasoning_content:
                         yield AgentResponse(
                             type="llm_result",
@@ -969,7 +1144,6 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                             ),
                         )
 
-                    await self._complete_with_assistant_response(llm_resp)
                     # Re-query uses text_chat(), so its reply has no stream chunks.
                     # Supply them after hooks without changing llm_result ordering.
                     if self.streaming:
@@ -1087,8 +1261,85 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                         )
 
             self.req.append_tool_calls_result(tool_calls_result)
+            if self._tool_failure_summary:
+                # One bounded final generation replaces further agent iterations.
+                # All emitted calls still have tool results, including skipped calls.
+                self.req.func_tool = None
+                self._skill_like_raw_tool_set = None
+                self._tool_schema_param_set = None
+                self.run_context.messages.append(
+                    Message(
+                        role="user",
+                        content=(
+                            "[Tool failure limit] The same tool failed three consecutive "
+                            "times with the same effective arguments. Stop using tools. "
+                            "Briefly explain what could not be completed and the missing "
+                            "requirement. Do not claim success or repeat any action.\n"
+                            + self._tool_failure_summary
+                        ),
+                    )
+                )
+                final_response = LLMResponse(
+                    role="assistant",
+                    completion_text="这次工具连续失败，没能完成。请补充所需参数后再试。",
+                )
+                try:
+                    generated = await self._await_or_stop(
+                        asyncio.wait_for(
+                            self.provider.text_chat(
+                                contexts=self._sanitize_contexts_for_provider(
+                                    self.run_context.messages
+                                ),
+                                func_tool=None,
+                                model=self.req.model,
+                                session_id=self.req.session_id,
+                                abort_signal=self._abort_signal,
+                                request_max_retries=0,
+                            ),
+                            timeout=30,
+                        )
+                    )
+                    if self._is_stop_requested():
+                        yield await self._finalize_aborted_step()
+                        return
+                    if (
+                        generated
+                        and generated.role == "assistant"
+                        and not generated.tools_call_name
+                        and generated.completion_text.strip()
+                    ):
+                        final_response = generated
+                    if generated and generated.usage:
+                        self.stats.token_usage += generated.usage
+                        self.stats.current_context_tokens = generated.usage.input
+                except Exception as exc:
+                    logger.warning(
+                        "Tool failure final response failed: %s", type(exc).__name__
+                    )
+                await self._complete_with_assistant_response(final_response)
+                chain = final_response.result_chain
+                if not chain and final_response.completion_text:
+                    chain = MessageChain().message(final_response.completion_text)
+                if chain:
+                    yield AgentResponse(
+                        type="llm_result", data=AgentResponseData(chain=chain)
+                    )
+                    if self.streaming:
+                        yield AgentResponse(
+                            type="streaming_delta", data=AgentResponseData(chain=chain)
+                        )
+                return
 
     async def step_until_done(
+        self, max_step: int
+    ) -> T.AsyncGenerator[AgentResponse, None]:
+        try:
+            async for response in self._step_until_done(max_step):
+                yield response
+        finally:
+            self._finish_proactive_request()
+
+    async def _step_until_done(
         self, max_step: int
     ) -> T.AsyncGenerator[AgentResponse, None]:
         """Process steps until the agent is done."""
@@ -1127,6 +1378,12 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         logger.info(f"Agent 使用工具: {llm_response.tools_call_name}")
 
         def _append_tool_call_result(tool_call_id: str, content: str) -> None:
+            for previous in tool_call_result_blocks:
+                if previous.tool_call_id == tool_call_id:
+                    previous.content = (
+                        f"{previous.content}\n\n{self._merge_follow_up_notice(content)}"
+                    )
+                    return
             tool_call_result_blocks.append(
                 ToolCallMessageSegment(
                     role="tool",
@@ -1141,11 +1398,18 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
             llm_response.tools_call_args,
             llm_response.tools_call_ids,
         ):
+            event = getattr(self.run_context.context, "event", None)
+            if not is_current(event):
+                self.request_stop()
+                return
             tool_result_blocks_start = len(tool_call_result_blocks)
-            tool_call_streak = self._track_tool_call_streak(
-                func_tool_name,
-                func_tool_args,
-            )
+            tool_reserved = False
+            tool_call_streak = 1
+            valid_params = {} if func_tool_args is None else func_tool_args
+            call_failed = False
+            call_blocked = False
+            failure_reason = ""
+            failure_key = (func_tool_name, "")
             yield _HandleFunctionToolsResult.from_message_chain(
                 MessageChain(
                     type="tool_call",
@@ -1162,9 +1426,6 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                 )
             )
             try:
-                if not req.func_tool:
-                    return
-
                 if (
                     self.tool_schema_mode == "skills_like"
                     and self._skill_like_raw_tool_set
@@ -1174,8 +1435,12 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                     func_tool = self._skill_like_raw_tool_set.get_tool(func_tool_name)
                     available_tools = self._skill_like_raw_tool_set.names()
                 else:
-                    func_tool = req.func_tool.get_tool(func_tool_name)
-                    available_tools = req.func_tool.names()
+                    func_tool = (
+                        req.func_tool.get_tool(func_tool_name)
+                        if req.func_tool
+                        else None
+                    )
+                    available_tools = req.func_tool.names() if req.func_tool else []
 
                 #  Some API may return None for tools with no parameters
                 if func_tool_args is None:
@@ -1184,6 +1449,19 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
 
                 if not func_tool:
                     logger.warning(f"未找到指定的工具: {func_tool_name}，将跳过。")
+                    call_failed = True
+                    failure_reason = f"Tool {func_tool_name} not found."
+                    failure_key = (
+                        func_tool_name,
+                        json.dumps(valid_params, sort_keys=True, default=str),
+                    )
+                    if failure_key in self._blocked_failed_tool_keys:
+                        call_blocked = True
+                        _append_tool_call_result(
+                            func_tool_id,
+                            "error: Repeated identical tool failure; execution skipped after three failures.",
+                        )
+                        continue
                     _append_tool_call_result(
                         func_tool_id,
                         f"error: Tool {func_tool_name} not found. Available tools are: {', '.join(available_tools)}",
@@ -1218,6 +1496,57 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                     # 如果没有 handler（如 MCP 工具），使用所有参数
                     valid_params = func_tool_args
 
+                normalized_params = dict(valid_params)
+                for name, spec in (
+                    (func_tool.parameters or {}).get("properties", {}).items()
+                ):
+                    if (
+                        name not in normalized_params
+                        and isinstance(spec, dict)
+                        and "default" in spec
+                    ):
+                        normalized_params[name] = spec["default"]
+                failure_key = (
+                    func_tool_name,
+                    json.dumps(normalized_params, sort_keys=True, default=str),
+                )
+                tool_call_streak = self._track_tool_call_streak(
+                    func_tool_name, normalized_params
+                )
+                if failure_key in self._blocked_failed_tool_keys:
+                    call_blocked = True
+                    _append_tool_call_result(
+                        func_tool_id,
+                        "error: Repeated identical tool failure; execution skipped after three failures.",
+                    )
+                    continue
+                missing = [
+                    name
+                    for name in (func_tool.parameters or {}).get("required", [])
+                    if name not in valid_params
+                ]
+                if missing:
+                    raise ValueError(
+                        f"Missing required tool arguments: {', '.join(missing)}"
+                    )
+
+                if not is_current(event):
+                    self.request_stop()
+                    return
+                found, cached_result = get_tool_result(
+                    event, func_tool_name, normalized_params
+                )
+                if not found:
+                    tool_reserved = begin_tool(event, func_tool_name, normalized_params)
+                    if not tool_reserved:
+                        cached_result = await wait_tool_result(
+                            event, func_tool_name, normalized_params
+                        )
+                        found = True
+                if found:
+                    _append_tool_call_result(func_tool_id, cached_result)
+                    continue
+
                 try:
                     await self.agent_hooks.on_tool_start(
                         self.run_context,
@@ -1226,6 +1555,12 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                     )
                 except Exception as e:
                     logger.error(f"Error in on_tool_start hook: {e}", exc_info=True)
+
+                if not is_current(event):
+                    release_tool(event, func_tool_name, normalized_params)
+                    tool_reserved = False
+                    self.request_stop()
+                    return
 
                 executor = self.tool_executor.execute(
                     tool=func_tool,
@@ -1238,7 +1573,27 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                     if isinstance(resp, CallToolResult):
                         res = resp
                         _final_resp = resp
+                        result_text = "\n".join(
+                            item.text
+                            for item in res.content
+                            if isinstance(item, TextContent)
+                        )
+                        if res.isError or re.match(
+                            r"\s*(?:error\s*:|error (?:executing|managing)|failed\s*:)",
+                            result_text,
+                            re.I,
+                        ):
+                            call_failed = True
+                            failure_reason = (
+                                result_text[:600] or "Tool reported an error."
+                            )
+                            _append_tool_call_result(
+                                func_tool_id, f"error: {failure_reason}"
+                            )
+                            continue
                         if not res.content:
+                            call_failed = True
+                            failure_reason = "The tool returned no content."
                             _append_tool_call_result(
                                 func_tool_id,
                                 "The tool returned no content.",
@@ -1328,6 +1683,8 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                             ),
                         )
                     else:
+                        call_failed = True
+                        failure_reason = "The tool returned an unsupported type."
                         # 不应该出现其他类型
                         logger.warning(
                             f"Tool 返回了不支持的类型: {type(resp)}。",
@@ -1353,13 +1710,67 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                 if isinstance(e, _ToolExecutionInterrupted):
                     raise
                 logger.warning(traceback.format_exc())
+                call_failed = True
+                failure_reason = str(e)[:600]
                 _append_tool_call_result(
                     func_tool_id,
-                    f"error: {e!s}"
+                    f"error: {failure_reason}"
                     + self._build_repeated_tool_call_guidance(
                         func_tool_name, tool_call_streak
                     ),
                 )
+            finally:
+                if tool_reserved:
+                    content = (
+                        str(tool_call_result_blocks[-1].content)
+                        if len(tool_call_result_blocks) > tool_result_blocks_start
+                        else "Tool execution ended without a confirmed result. Do not repeat the action."
+                    )
+                    record_tool_result(
+                        event, func_tool_name, normalized_params, content
+                    )
+                if not call_blocked:
+                    if call_failed:
+                        if failure_key == self._last_failed_tool_key:
+                            self._same_tool_failure_streak += 1
+                        else:
+                            self._last_failed_tool_key = failure_key
+                            self._same_tool_failure_streak = 1
+                            self._repeated_failed_call_ids = []
+                        self._repeated_failed_call_ids.append(func_tool_id)
+                        if (
+                            self._same_tool_failure_streak
+                            >= self.REPEATED_TOOL_FAILURE_LIMIT
+                        ):
+                            self._blocked_failed_tool_keys.add(failure_key)
+                            self._tool_failure_summary = (
+                                f"{func_tool_name}: {failure_reason[:300]}"
+                            )
+                            failed_ids = set(self._repeated_failed_call_ids)
+                            # Shorten result bodies, never remove one side of a pair.
+                            for previous in self.run_context.messages:
+                                if (
+                                    previous.role == "tool"
+                                    and previous.tool_call_id in failed_ids
+                                ):
+                                    old = str(previous.content)
+                                    if "[SYSTEM NOTICE]" not in old:
+                                        previous.content = "error: Repeated identical tool failure (details in final summary)."
+                            for previous in tool_call_result_blocks:
+                                if (
+                                    previous.tool_call_id in failed_ids
+                                    and "[SYSTEM NOTICE]" not in str(previous.content)
+                                ):
+                                    previous.content = "error: Repeated identical tool failure (details in final summary)."
+                            logger.warning(
+                                "Tool failure limit reached: tool=%s failures=%s",
+                                func_tool_name,
+                                self._same_tool_failure_streak,
+                            )
+                    else:
+                        self._last_failed_tool_key = None
+                        self._same_tool_failure_streak = 0
+                        self._repeated_failed_call_ids = []
 
             if len(tool_call_result_blocks) > tool_result_blocks_start:
                 tool_result_content = str(tool_call_result_blocks[-1].content)
@@ -1499,7 +1910,10 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         self._abort_signal.set()
 
     def _is_stop_requested(self) -> bool:
-        return self._abort_signal.is_set()
+        event = getattr(self.run_context.context, "event", None)
+        return self._abort_signal.is_set() or (
+            event is not None and not is_current(event)
+        )
 
     def was_aborted(self) -> bool:
         return self._aborted
@@ -1558,7 +1972,9 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
             return await anext(executor)
 
         while True:
-            if self._is_stop_requested():
+            event = getattr(self.run_context.context, "event", None)
+            stale_reserved_tool = event is not None and not is_current(event)
+            if self._is_stop_requested() and not stale_reserved_tool:
                 await self._close_executor(executor)
                 raise _ToolExecutionInterrupted(
                     "Tool execution interrupted before reading the next tool result."
@@ -1573,6 +1989,13 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                 )
 
                 if abort_task in done:
+                    if event is not None and not is_current(event):
+                        # A started operation must finish once; replacement reuses its result.
+                        try:
+                            yield await next_result_task
+                        except StopAsyncIteration:
+                            return
+                        continue
                     if not next_result_task.done():
                         next_result_task.cancel()
                         with suppress(asyncio.CancelledError, StopAsyncIteration):

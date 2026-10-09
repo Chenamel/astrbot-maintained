@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from astrbot.core import logger
-from astrbot.core.agent.message import ImageURLPart
+from astrbot.core.agent.message import ImageURLPart, TextPart
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.provider.entities import ProviderRequest
 from astrbot.core.utils.media_utils import (
@@ -105,6 +105,34 @@ async def prepare_request_images(
             part = {**part, "image_url": {**part["image_url"], "url": path}}
         parts.append(part)
     req.extra_user_content_parts = parts
+    has_visual_input = bool(req.image_urls) or any(
+        isinstance(part, ImageURLPart)
+        or isinstance(part, dict)
+        and part.get("type") == "image_url"
+        for part in parts
+    )
+    has_caption = any(
+        "<image_caption>"
+        in (
+            part.text
+            if isinstance(part, TextPart)
+            else part.get("text", "")
+            if isinstance(part, dict)
+            else ""
+        )
+        for part in parts
+    )
+    if has_visual_input or has_caption:
+        req.image_input_unavailable = False
+        if event.get_extra("_enhance_visual_requested", False):
+            event.set_extra("_enhance_visual_unavailable", False)
+    elif failed or event.get_extra("_enhance_visual_unavailable", False):
+        req.image_input_unavailable = True
+        event.set_extra("_enhance_visual_unavailable", True)
+        logger.info(
+            "Image input unavailable | message_id=%s | action=notice_or_proactive_skip",
+            getattr(event.message_obj, "message_id", "unknown"),
+        )
     if (
         failed
         and not (req.prompt or "").strip()

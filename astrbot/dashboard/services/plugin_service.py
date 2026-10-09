@@ -27,6 +27,10 @@ from astrbot.core.star.filter.command import CommandFilter
 from astrbot.core.star.filter.command_group import CommandGroupFilter
 from astrbot.core.star.filter.permission import PermissionTypeFilter
 from astrbot.core.star.filter.regex import RegexFilter
+from astrbot.core.star.maintenance import (
+    LocalMaintenanceProtectionError,
+    assert_plugin_update_allowed,
+)
 from astrbot.core.star.star import StarMetadata
 from astrbot.core.star.star_handler import EventType, star_handlers_registry
 from astrbot.core.star.star_manager import (
@@ -1777,6 +1781,10 @@ class PluginService:
         payload = data if isinstance(data, dict) else {}
         plugin_name = payload["name"]
         proxy: str | None = payload.get("proxy", None)
+        try:
+            assert_plugin_update_allowed(plugin_name)
+        except LocalMaintenanceProtectionError as exc:
+            raise PluginServiceError(str(exc)) from exc
         update_info = await self.resolve_market_update_info(plugin_name)
         download_url = str(update_info.get("download_url") or "").strip()
         repo_url = str(update_info.get("repo") or "").strip()
@@ -1808,6 +1816,7 @@ class PluginService:
         async def _update_one(name: str):
             async with sem:
                 try:
+                    assert_plugin_update_allowed(name)
                     logger.info(f"Updating plugin {name} as part of a batch update.")
                     update_info = await self.resolve_market_update_info(name)
                     download_url = str(update_info.get("download_url") or "").strip()
@@ -1823,6 +1832,9 @@ class PluginService:
                         update_info,
                     )
                     return {"name": name, "status": "ok", "message": "更新成功"}
+                except LocalMaintenanceProtectionError as exc:
+                    logger.info("Skipped locally maintained plugin %s: %s", name, exc)
+                    return {"name": name, "status": "skipped", "message": str(exc)}
                 except PluginServiceError as exc:
                     logger.error(
                         f"/api/plugin/update-all: Failed to update plugin {name}: {exc}",
@@ -1866,13 +1878,16 @@ class PluginService:
                 results.append(result)
 
         failed = [result for result in results if result["status"] == "error"]
-        if len(failed) < len(results):
+        skipped = [result for result in results if result["status"] == "skipped"]
+        if any(result["status"] == "ok" for result in results):
             await self.sync_skills_after_plugin_change()
         message = (
             "批量更新完成，全部成功。"
             if not failed
             else f"批量更新完成，其中 {len(failed)}/{len(results)} 个插件失败。"
         )
+        if skipped:
+            message += f" 已跳过 {len(skipped)} 个本地维护插件，请通过维护仓库更新。"
 
         return {"results": results}, message
 

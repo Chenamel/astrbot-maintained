@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 import traceback
 import typing as T
@@ -7,6 +8,7 @@ from astrbot.core.message.message_event_result import CommandResult, MessageEven
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.star.star import star_map
 from astrbot.core.star.star_handler import EventType, star_handlers_registry
+from astrbot.core.utils.direct_turns import is_current
 
 
 async def call_handler(
@@ -93,15 +95,29 @@ async def call_event_hook(
         plugins_name=event.plugins_name,
     )
     for handler in handlers:
+        if hook_type in {
+            EventType.OnLLMResponseEvent,
+            EventType.OnDecoratingResultEvent,
+        } and not is_current(event):
+            event.stop_event()
+            return True
         try:
             assert inspect.iscoroutinefunction(handler.handler)
             logger.debug(
                 f"hook({hook_type.name}) -> {star_map[handler.handler_module_path].name} - {handler.handler_name}",
             )
             await handler.handler(event, *args, **kwargs)
+        except asyncio.CancelledError:
+            raise
         except BaseException:
             logger.error(traceback.format_exc())
 
+        if hook_type in {
+            EventType.OnLLMResponseEvent,
+            EventType.OnDecoratingResultEvent,
+        } and not is_current(event):
+            event.stop_event()
+            return True
         if event.is_stopped():
             logger.info(
                 f"{star_map[handler.handler_module_path].name} - "

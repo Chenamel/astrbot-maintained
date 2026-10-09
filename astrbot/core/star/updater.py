@@ -21,6 +21,7 @@ from astrbot.core.utils.io import ensure_dir, remove_dir
 
 from ..star.star import StarMetadata
 from ..zip_updater import _RepoZipUpdater
+from .maintenance import assert_plugin_update_allowed
 
 PLUGIN_METADATA_FILENAMES = ("metadata.yaml", "metadata.yml")
 PLUGIN_METADATA_REQUIRED_FIELDS = ("name", "desc", "version", "author")
@@ -267,6 +268,7 @@ class _PluginUpdater(_RepoZipUpdater):
                 unavailable.
             Exception: If the update cannot be downloaded, validated, or applied.
         """
+        assert_plugin_update_allowed(plugin.name, plugin.root_dir_name or "")
         repo_url = repo_url or plugin.repo
 
         if not repo_url and not download_url:

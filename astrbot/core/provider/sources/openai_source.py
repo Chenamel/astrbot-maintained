@@ -28,7 +28,13 @@ from astrbot.core.agent.message import (
 from astrbot.core.agent.tool import ToolSet
 from astrbot.core.exceptions import EmptyModelOutputError
 from astrbot.core.message.message_event_result import MessageChain
-from astrbot.core.provider.entities import LLMResponse, TokenUsage, ToolCallsResult
+from astrbot.core.provider.entities import (
+    IMAGE_INPUT_UNAVAILABLE_MESSAGE,
+    IMAGE_INPUT_UNAVAILABLE_NOTICE,
+    LLMResponse,
+    TokenUsage,
+    ToolCallsResult,
+)
 from astrbot.core.utils.media_utils import (
     describe_media_ref,
     resolve_media_ref_to_base64_data,
@@ -146,6 +152,44 @@ class ProviderOpenAIOfficial(Provider):
                 }:
                     return True
         return False
+
+    @staticmethod
+    def _context_has_unavailable_image(contexts: list[dict]) -> bool:
+        # A failed image in stored history must not cancel a later text request.
+        for context in reversed(contexts):
+            if context.get("role") != "user":
+                continue
+            content = context.get("content")
+            if not isinstance(content, list):
+                return False
+            if any(
+                isinstance(part, dict)
+                and (
+                    part.get("type") == "image_url"
+                    or (
+                        part.get("type") == "text"
+                        and "<image_caption>" in part.get("text", "")
+                    )
+                )
+                for part in content
+            ):
+                return False
+            return any(
+                isinstance(part, dict)
+                and part.get("type") == "text"
+                and part.get("text") == IMAGE_INPUT_UNAVAILABLE_NOTICE
+                for part in content
+            )
+        return False
+
+    @staticmethod
+    def _unavailable_image_response(usage: TokenUsage | None = None) -> LLMResponse:
+        return LLMResponse(
+            role="assistant",
+            completion_text=IMAGE_INPUT_UNAVAILABLE_MESSAGE,
+            image_input_unavailable=True,
+            usage=usage,
+        )
 
     def _is_invalid_attachment_error(self, error: Exception) -> bool:
         body = getattr(error, "body", None)
@@ -330,14 +374,20 @@ class ProviderOpenAIOfficial(Provider):
             reason,
         )
         new_contexts = await self._remove_image_from_context(context_query)
+        new_contexts.append(
+            {"role": "system", "content": IMAGE_INPUT_UNAVAILABLE_NOTICE}
+        )
         payloads["messages"] = new_contexts
+        payloads.pop("tools", None)
+        payloads.pop("tool_choice", None)
+        payloads.pop("parallel_tool_calls", None)
         return (
             False,
             chosen_key,
             available_api_keys,
             payloads,
             new_contexts,
-            func_tool,
+            None,
             image_fallback_used,
         )
 
@@ -1203,6 +1253,8 @@ class ProviderOpenAIOfficial(Provider):
             extra_user_content_parts=extra_user_content_parts,
             **kwargs,
         )
+        if self._context_has_unavailable_image(context_query):
+            return self._unavailable_image_response()
         if func_tool and not func_tool.empty():
             payloads["tool_choice"] = tool_choice
 
@@ -1252,6 +1304,8 @@ class ProviderOpenAIOfficial(Provider):
             if last_exception is None:
                 raise Exception("未知错误")
             raise last_exception
+        if image_fallback_used:
+            return self._unavailable_image_response(llm_response.usage)
         return llm_response
 
     async def text_chat_stream(
@@ -1280,6 +1334,9 @@ class ProviderOpenAIOfficial(Provider):
             model=model,
             **kwargs,
         )
+        if self._context_has_unavailable_image(context_query):
+            yield self._unavailable_image_response()
+            return
         if func_tool and not func_tool.empty():
             payloads["tool_choice"] = tool_choice
 
@@ -1293,12 +1350,30 @@ class ProviderOpenAIOfficial(Provider):
         for retry_cnt in range(max_retries):
             try:
                 self.client.api_key = chosen_key
+                buffered_responses = []
+                buffer_images = image_fallback_used or self._context_contains_image(
+                    context_query
+                )
                 async for response in self._query_stream(
                     payloads,
                     func_tool,
                     request_max_retries=request_max_retries,
                 ):
-                    yield response
+                    if buffer_images:
+                        # _query_stream reuses its chunk object. Capture each state
+                        # until image processing succeeds, including the final result.
+                        buffered_responses.append(copy.deepcopy(response))
+                    else:
+                        yield response
+                if image_fallback_used:
+                    usage = next(
+                        (r.usage for r in reversed(buffered_responses) if r.usage),
+                        None,
+                    )
+                    yield self._unavailable_image_response(usage)
+                else:
+                    for response in buffered_responses:
+                        yield response
                 break
             except Exception as e:
                 last_exception = e
@@ -1334,7 +1409,7 @@ class ProviderOpenAIOfficial(Provider):
         """从上下文中删除所有带有 image 的记录"""
         new_contexts = []
 
-        for context in contexts:
+        for context in copy.deepcopy(contexts):
             if "content" in context and isinstance(context["content"], list):
                 # continue
                 new_content = []
@@ -1344,7 +1419,9 @@ class ProviderOpenAIOfficial(Provider):
                     new_content.append(item)
                 if not new_content:
                     # 用户只发了图片
-                    new_content = [{"type": "text", "text": "[图片]"}]
+                    new_content = [
+                        {"type": "text", "text": IMAGE_INPUT_UNAVAILABLE_NOTICE}
+                    ]
                 context["content"] = new_content
             new_contexts.append(context)
         return new_contexts
@@ -1369,6 +1446,9 @@ class ProviderOpenAIOfficial(Provider):
 
         # 构建内容块列表
         content_blocks = []
+        image_requested = bool(image_urls) or any(
+            isinstance(part, ImageURLPart) for part in extra_user_content_parts or []
+        )
 
         # 1. 用户原始发言（OpenAI 建议：用户发言在前）
         if text:
@@ -1412,6 +1492,13 @@ class ProviderOpenAIOfficial(Provider):
                 audio_part = await self._resolve_audio_part(audio_path)
                 if audio_part:
                     content_blocks.append(audio_part)
+
+        if image_requested and not any(
+            part.get("type") == "image_url" for part in content_blocks
+        ):
+            content_blocks.append(
+                {"type": "text", "text": IMAGE_INPUT_UNAVAILABLE_NOTICE}
+            )
 
         # 如果只有主文本且没有额外内容块和图片，返回简单格式以保持向后兼容
         if (

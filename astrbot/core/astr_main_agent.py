@@ -29,6 +29,7 @@ from astrbot.core.astr_main_agent_resources import (
     TOOL_CALL_PROMPT,
     TOOL_CALL_PROMPT_SKILLS_LIKE_MODE,
 )
+from astrbot.core.code_delivery_policy import apply_execution_policy
 from astrbot.core.computer.booters.local import resolve_windows_shell
 from astrbot.core.conversation_mgr import Conversation
 from astrbot.core.db import BaseDatabase
@@ -40,7 +41,10 @@ from astrbot.core.persona_error_reply import (
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.platform.message_type import MessageType
 from astrbot.core.provider import Provider
-from astrbot.core.provider.entities import ProviderRequest
+from astrbot.core.provider.entities import (
+    IMAGE_INPUT_UNAVAILABLE_NOTICE,
+    ProviderRequest,
+)
 from astrbot.core.provider.register import llm_tools
 from astrbot.core.skills.skill_manager import (
     SkillInfo,
@@ -519,6 +523,90 @@ def _filter_skills_for_current_config(
     return filtered
 
 
+def _is_lightweight_proactive_request(event: AstrMessageEvent) -> bool:
+    """Accept the enhancement plugin's live trigger, never message text claims."""
+    if (
+        event.get_extra("_enhance_proactive_lightweight") is not True
+        or event.get_extra("_enhance_active_reply_triggered") is not True
+        or event.get_extra("_enhance_followup_direct") is True
+        or getattr(event, "is_at_or_wake_command", False) is True
+    ):
+        return False
+    for metadata in star_registry:
+        if (
+            metadata.activated
+            and metadata.root_dir_name == "astrbot_plugin_astrbot_enhance_mode"
+            and metadata.star_cls is not None
+        ):
+            validate = getattr(
+                metadata.star_cls, "is_trusted_lightweight_proactive", None
+            )
+            if callable(validate):
+                try:
+                    return validate(event) is True
+                except Exception as exc:
+                    logger.warning(
+                        "Lightweight proactive validation failed (%s).",
+                        type(exc).__name__,
+                    )
+            return False
+    return False
+
+
+# Tools that are useful for an unsolicited group reply and have no host,
+# moderation, file, or outbound-message side effects.  The proactive path is
+# intentionally narrower than a direct @/wake request, but it must still be
+# able to answer requests such as "放一首歌" or "查一下天气".
+_LIGHTWEIGHT_PROACTIVE_TOOL_NAMES = {
+    "play_song_by_name",
+    "query_lyrics_by_name",
+    "enhance_use_image",
+    "enhance_memory_rag_read",
+    "get_group_message_history",
+    "image_studio_get_capabilities",
+    "image_studio_view_asset",
+    "recall_long_term_memory",
+    "grok_web_search",
+    "enhance_get_ban_list_status",
+    "uapi_weather",
+    "uapi_ip_query",
+    "uapi_mc_server",
+    "uapi_mc_player",
+    "uapi_mc_bedrock",
+    "uapi_whois",
+    "uapi_icp",
+    "uapi_tracking",
+    "uapi_holiday",
+    "uapi_github",
+    "uapi_github_user",
+    "uapi_steam",
+    "uapi_bilibili",
+    "uapi_answer_book",
+    "uapi_hitokoto",
+    "uapi_epic_free",
+    "uapi_random_string",
+    "uapi_hotboard",
+    "uapi_ocr",
+}
+
+
+def _apply_lightweight_proactive_tools(
+    req: ProviderRequest, plugin_context: Context, persona: dict | None
+) -> None:
+    """Attach the safe, read-only/plugin-query tools to proactive requests."""
+    tool_mgr = plugin_context.get_llm_tool_manager()
+    safe_tools = ToolSet()
+    allowed = persona.get("tools") if persona else None
+    for tool in tool_mgr.get_full_tool_set().tools:
+        if (
+            tool.active
+            and tool.name in _LIGHTWEIGHT_PROACTIVE_TOOL_NAMES
+            and (allowed is None or tool.name in allowed)
+        ):
+            safe_tools.add_tool(tool)
+    req.func_tool = safe_tools if safe_tools.tools else None
+
+
 async def _ensure_persona_and_skills(
     req: ProviderRequest,
     cfg: dict,
@@ -562,6 +650,11 @@ async def _ensure_persona_and_skills(
         and event.get_extra("enable_default_system_prompt") is not False
     ):
         req.system_prompt += CHATUI_SPECIAL_DEFAULT_PERSONA_PROMPT
+
+    if _is_lightweight_proactive_request(event):
+        # Keep persona tool permissions while omitting host and skill prompts.
+        _apply_lightweight_proactive_tools(req, plugin_context, persona)
+        return
 
     # Inject skills prompt
     runtime = cfg.get("computer_use_runtime", "none")
@@ -712,6 +805,8 @@ async def _request_img_caption(
         prompt=img_cap_prompt,
         image_urls=image_urls,
     )
+    if llm_resp.image_input_unavailable is True:
+        raise ValueError("Image caption provider received no usable image evidence")
     return llm_resp.completion_text
 
 
@@ -721,6 +816,8 @@ async def _ensure_img_caption(
     cfg: dict,
     plugin_context: Context,
     image_caption_provider: str,
+    *,
+    preserve_native_images: bool = False,
 ) -> None:
     try:
         caption = await _request_img_caption(
@@ -729,16 +826,26 @@ async def _ensure_img_caption(
             req.image_urls,
             plugin_context,
         )
-        if caption:
-            req.extra_user_content_parts.append(
-                TextPart(text=f"<image_caption>{caption}</image_caption>")
-            )
-            req.image_urls = []
+        if not isinstance(caption, str) or not caption.strip():
+            raise ValueError("Image caption provider returned an empty caption")
+        req.extra_user_content_parts.append(
+            TextPart(text=f"<image_caption>{caption.strip()}</image_caption>")
+        )
+        req.image_input_unavailable = False
     except Exception as exc:  # noqa: BLE001
         logger.error("处理图片描述失败: %s", exc)
-        req.extra_user_content_parts.append(TextPart(text="[Image Captioning Failed]"))
+        if preserve_native_images and req.image_urls:
+            req.image_input_unavailable = False
+            logger.info("Image caption failed; retaining native image payload")
+            return
+        req.image_input_unavailable = True
+        req.func_tool = None
+        req.extra_user_content_parts.append(
+            TextPart(text=IMAGE_INPUT_UNAVAILABLE_NOTICE)
+        )
     finally:
-        req.image_urls = []
+        if not preserve_native_images:
+            req.image_urls = []
 
 
 def _append_quoted_image_attachment(req: ProviderRequest, image_path: str) -> None:
@@ -959,21 +1066,21 @@ async def _decorate_llm_request(
 
     await _ensure_persona_and_skills(req, cfg, plugin_context, event)
 
-    if req.conversation:
-        if img_cap_prov_id and req.image_urls and not main_provider_supports_image:
-            await _ensure_img_caption(
-                event,
-                req,
-                cfg,
-                plugin_context,
-                img_cap_prov_id,
-            )
+    if img_cap_prov_id and req.image_urls and not main_provider_supports_image:
+        await _ensure_img_caption(
+            event,
+            req,
+            cfg,
+            plugin_context,
+            img_cap_prov_id,
+        )
 
     tz = config.timezone
     if tz is None:
         tz = plugin_context.get_config().get("timezone")
     _append_system_reminders(event, req, cfg, tz)
-    await _apply_workspace_extra_prompt(event, req, plugin_context)
+    if not _is_lightweight_proactive_request(event):
+        await _apply_workspace_extra_prompt(event, req, plugin_context)
 
 
 def _plugin_tool_fix(event: AstrMessageEvent, req: ProviderRequest) -> None:
@@ -1565,6 +1672,7 @@ async def build_main_agent(
             )
         return None
 
+    lightweight_proactive = _is_lightweight_proactive_request(event)
     collected_request = req is None or (
         any(isinstance(part, Reply) for part in event.message_obj.message)
         and not any(
@@ -1626,20 +1734,22 @@ async def build_main_agent(
         )
     await _decorate_llm_request(event, req, plugin_context, config, provider=provider)
 
-    await _apply_kb(event, req, plugin_context, config)
+    if not lightweight_proactive or not config.kb_agentic_mode:
+        await _apply_kb(event, req, plugin_context, config)
 
     if not req.session_id:
         req.session_id = event.unified_msg_origin
 
     _plugin_tool_fix(event, req)
-    await _apply_web_search_tools(event, req, plugin_context)
+    if not lightweight_proactive:
+        await _apply_web_search_tools(event, req, plugin_context)
 
     if config.llm_safety_mode:
         _apply_llm_safety_mode(config, req)
 
-    if config.computer_use_runtime == "sandbox":
+    if not lightweight_proactive and config.computer_use_runtime == "sandbox":
         _apply_sandbox_tools(config, req, req.session_id)
-    elif config.computer_use_runtime == "local":
+    elif not lightweight_proactive and config.computer_use_runtime == "local":
         _apply_local_env_tools(req, plugin_context)
 
     agent_runner = AgentRunner()
@@ -1648,10 +1758,10 @@ async def build_main_agent(
         event=event,
     )
 
-    if config.add_cron_tools:
+    if config.add_cron_tools and not lightweight_proactive:
         _proactive_cron_job_tools(req, plugin_context)
 
-    if event.platform_meta.support_proactive_message:
+    if event.platform_meta.support_proactive_message and not lightweight_proactive:
         if req.func_tool is None:
             req.func_tool = ToolSet()
         req.func_tool.add_tool(
@@ -1664,8 +1774,10 @@ async def build_main_agent(
         "provider_ltm_settings",
         {},
     )
-    if event.get_message_type() == MessageType.GROUP_MESSAGE and ltm_settings.get(
-        "group_message_history_enable", False
+    if (
+        not lightweight_proactive
+        and event.get_message_type() == MessageType.GROUP_MESSAGE
+        and ltm_settings.get("group_message_history_enable", False)
     ):
         if req.func_tool is None:
             req.func_tool = ToolSet()
@@ -1700,6 +1812,15 @@ async def build_main_agent(
     if event.get_platform_name() == "webchat":
         asyncio.create_task(_handle_webchat(event, req, provider))
 
+    if lightweight_proactive:
+        _plugin_tool_fix(event, req)
+        logger.info(
+            "Main agent lightweight proactive request: origin=%s msg_id=%s tools=%s",
+            event.unified_msg_origin,
+            event.message_obj.message_id,
+            [tool.name for tool in req.func_tool.tools] if req.func_tool else [],
+        )
+
     if req.func_tool and req.func_tool.tools:
         tool_prompt = (
             TOOL_CALL_PROMPT
@@ -1707,7 +1828,7 @@ async def build_main_agent(
             else TOOL_CALL_PROMPT_SKILLS_LIKE_MODE
         )
 
-        if config.computer_use_runtime == "local":
+        if config.computer_use_runtime == "local" and not lightweight_proactive:
             workspace_root = await _get_workspace_path_for_umo(
                 event.unified_msg_origin,
                 plugin_context,
@@ -1729,6 +1850,10 @@ async def build_main_agent(
         req.system_prompt += f"\n{LIVE_MODE_SYSTEM_PROMPT}\n"
 
     _apply_web_search_citation_prompt(event, req)
+
+    apply_execution_policy(
+        event, plugin_context.get_config(umo=event.unified_msg_origin), req
+    )
 
     reset_coro = agent_runner.reset(
         provider=provider,
