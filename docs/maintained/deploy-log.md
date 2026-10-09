@@ -54,10 +54,45 @@ RESTORE.md       # 选择性回滚说明
 
 **遗留风险**：
 
-1. ⚠️ **铁律 6 冲突（未处理，待用户决定）**：`data/config/astrbot_plugin_astrbot_enhance_mode_config.json`
-   的 `active_reply.enable` 当前为 **`true`**，而 `installed_manifest.json` 明载
-   `proactive_must_remain_disabled = true`。该文件 mtime 为 10-08 23:45（晚于 core 被覆盖的 23:42），
-   **非本次操作所致**。插件一旦加载成功，主动回复即会生效——与铁律 6 冲突。
+1. ⚠️ **铁律 6 冲突**：`data/config/astrbot_plugin_astrbot_enhance_mode_config.json`
+   的 `active_reply.enable` 曾为 **`true`**，该文件 mtime 为 10-08 23:45（晚于 core 被覆盖的 23:42），
+   **非止血操作所致**。
+
+**验证结果（机器人启动后补记）**：
+
+| 检查 | 结果 |
+|---|---|
+| 机器人进程 | ✅ PID 211524，监听 `0.0.0.0:6199`（OneBot）、`127.0.0.1:6185`（面板） |
+| **插件加载成功** | ✅ 监听 `127.0.0.1:6196` = 该插件的 `memory_rag_webui.port`，**插件本体已运行** |
+| 启动时间旁证 | `data/plugins.json` 时间戳 `2026-10-09T14:12:20`；`data/temp/` 有 13:44 的媒体文件 |
+
+> 探测注记：本机 PowerShell 的 `Get-Process` / `Get-CimInstance` 在沙箱下**静默返回空**，
+> 曾据此误判"机器人未运行"。**进程与端口探测一律用 `netstat -ano` 交叉验证**。
+
+---
+
+## 2026-10-09 · 主动回复开关关闭（防调试期误发）
+
+**原因**：机器人恢复运行后，`active_reply.enable = true` 会让主动回复真实生效；
+调试阶段存在误发风险（可能被群管理员踢出机器人）。用户要求关闭。
+
+**操作**：
+
+| 项 | 值 |
+|---|---|
+| 目标文件 | `<INST>/core/data/config/astrbot_plugin_astrbot_enhance_mode_config.json` |
+| 变更 | `active_reply.enable`: `true` → `false`（BOM 保留，其余 22 个字段与 8 个顶层键不变） |
+| 备份 | `<INST>/optimization_backups/20261009_142013_CST_proactive_off/` |
+
+**未改动**：`active_reply.batch_enable`（仍为 `true`）——它与主动回复开关是否独立，待用户确认。
+
+**待确认（重要）**：插件进程正在运行，AstrBot 的插件配置在启动时载入内存。
+**仅改磁盘文件可能不会即时生效**，且插件/机器人下次停止或保存配置时，
+内存中的旧值（`enable=true`）**可能回写覆盖本次修改**。需要在面板插件配置页关闭开关，
+或重启机器人，改后应复查文件值。
+
+## 其它遗留项
+
 2. ⚠️ **R3（启动器覆盖）**：10-08 的故障正是 core 被覆盖引起。启动器内**不要点「更新核心」**，
    否则本次恢复会被再次覆盖。阶段 6 的 `check_drift` 会提供一键检测与重打。
 3. 阶段 5 仍需把插件那 3 处私有 import 改为 `astrbot.api.*` + 软依赖，
