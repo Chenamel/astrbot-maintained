@@ -13,6 +13,14 @@
 
 ### 新增
 
+- **阶段 3 API 层**：`astrbot/api/` 下新增六个文件（**未修改任何既有 api 文件**）：
+  - `_bridge.py` — 内部能力桥（惰性解析 core 符号 + 能力清单，**非公开面**）
+  - `media/` — 图片输入契约（**修复 P1**：插件不再需要 import core 私有路径；同时集中 `IMAGE_CAPTION_MARKER`）
+  - `turns/` — 直报回合状态读取与 `reset` / `reset_all`
+  - `delivery/` — 交付策略纯函数
+  - `permissions/` — 权限与执行授权（补丁缺席时**回退管理员判定，不降级为放行**）
+  - `proactive/` — 轻量主动判定（开关恒关，模块内不存在 enable 入口）
+  - 契约见 `docs/maintained/api-contract.md`；测试 `tests/maintained/`（47 项）
 - **阶段 2 存量治理产出**：
   - `docs/maintained/inventory.md` — 26 文件逐条分级表（✅必须留 core 17 / 🟡重写保留 4 / ⚪可上移 api 2 / 🔵非 core 前端 4）+ 跨文件共性问题 P1–P10 + 对交接包 5 处事实修正。
   - `docs/maintained/knowledge/` — 存量补丁知识库（11 篇）：三条业务线的业务/技术全景 + 两组成对专题流程（消息合并与取代、图片不可用降级）。
