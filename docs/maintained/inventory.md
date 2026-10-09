@@ -138,6 +138,30 @@
 | P8 | 魔法数字未提取 | `timeout=30`、`16000`、`15s`、图片上限 2、`quiet_sec=4`、`max_wait_sec=15` | 提取常量或配置项 |
 | P9 | `maintenance` fail-open | registry 文件缺失即放行；`uninstall_plugin` 无闸门 | 缺失改 fail-closed 或至少 warn；补卸载闸门 |
 | P10 | 手写正则做安全判定 | `SAFETY_REFUSAL_PATTERN`、`execution_denial` 中文祈使句 | 明确误判容限并补测试（阶段 3 必做） |
+| **P11** | **维护版 core 打破上游 17 项测试预期**（阶段 7 新发现） | 见下方对照表 | **登记不改**：属补丁质量证据，须在"插件重写"批次统一处理；任何 core 打磨都必须以"不新增失败"为验收 |
+
+### P11 证据（2026-10-09 对照实验）
+
+用 `git worktree` 检出**纯基线** `baseline/v4.28.2`（`3c7adafa`）与维护版工作树，
+在**同一测试环境**下跑同一批上游测试：
+
+| 上游测试文件 | 纯基线 | 维护版 | 差异 |
+|---|---|---|---|
+| `tests/unit/test_astr_main_agent.py` | **134 passed** | 9 failed / 125 passed | **9 项回归** |
+| `tests/test_tool_loop_agent_runner.py` | **53 passed** | 8 failed / 45 passed | **8 项回归** |
+| `tests/test_process_stage_images.py` | 125 passed | 125 passed | 无 |
+
+失败集中在 `test_skills_like_requery_reply_reaches_stream_bridge_once`
+（断言 `hooks_at_emission` 期望 `[False, False, True, True]`，实测 `[True, True, True, True]`），
+指向 `tool_loop_agent_runner.py` 中交付/钩子时序被补丁改变。
+
+**结论与处置**：
+
+1. 这是**补丁自身的既存回归**，与阶段 7 的 P4/P5/P7/P8 打磨无关（打磨前后均为 17 项失败）。
+2. 因此阶段 7 的 core 打磨验收标准为「**不新增失败**（17 → 17）」，而非"上游测试全绿"。
+3. 与 `inventory.md` 对 `tool_loop_agent_runner.py` 的判定一致（该文件被列为需**拆分重写**的 🟡 项）；
+   真正的修复应在"插件/补丁重写"批次统一做，避免在零测试保护下动交付时序。
+4. **副作用提示**：`tests/test_process_stage_images.py` 全绿，说明图片降级链路的上游预期未被破坏。
 
 ## 5. 证据来源
 

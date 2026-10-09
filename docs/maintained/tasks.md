@@ -82,7 +82,7 @@
 | T7-02 | P1 | T6-04 | tests/maintained/test_api_frozen.py | 回归护栏②：上游 api 相对 baseline 零改动 | 白名单=9 新增文件，其余零改动 | pytest | 否 | ✅ | test(maintained): freeze upstream astrbot/api against baseline |
 | T7-03 | P0 | T7-01 | docs/maintained/{api-contract,design,proposal,tasks}.md | 文档对齐现实（14 处不一致） | 数字/清单/前置依赖自洽 | 目视+评审 | 否 | ✅ | docs(maintained): correct api-contract drift 等 |
 | T7-04 | P0 | T7-03 | docs/maintained/project_rules.md, .gitignore | 自检正则收紧 + `.gitignore` 锚定与去重 | 自检 grep 实测为空 | 命令 | 否 | ✅ | docs(maintained): tighten secret-scan regex / chore: anchor ignores |
-| T7-05 | P1 | T7-03 | provider/entities.py 等 4 文件 + api/media | **P4** `IMAGE_CAPTION_MARKER` 下沉 core，4 处改引 + api/media 改 resolve（零行为变化） | 值不变、上游三件套测试全绿、台账同步 | pytest+台账 | 是 | ⬜ | refactor(core): centralize image caption marker constant |
+| T7-05 | P1 | T7-03 | provider/entities.py 等 4 文件 + api/media | **P4** `IMAGE_CAPTION_MARKER` 下沉 core，4 处改引 + api/media 改 resolve（零行为变化） | 值不变、上游测试**无新增失败（17→17）**、台账同步 | pytest+台账 | 是 | ✅ | refactor(core): centralize image caption marker constant |
 | T7-06 | P1 | T7-05 | tool_loop_agent_runner.py | **P5** `_proactive_delivery_deferred` 提升为正式字段（零行为变化） | 默认值与 getattr 兜底一致 | pytest+台账 | 是 | ⬜ | refactor(core): declare proactive delivery deferral attribute |
 | T7-07 | P1 | T7-06 | respond/stage.py, context_utils.py, aiocqhttp_message_event.py | **P7** 门禁静默 return 补 logger.debug（零行为变化） | 仅新增日志、控制流不变 | pytest+台账 | 是 | ⬜ | refactor(core): log silent gate returns at debug level |
 | T7-08 | P1 | T7-07 | tool_loop_agent_runner.py 等 4 文件 | **P8** 魔法数字提取具名常量（值逐字节不变） | 逐项人工比对数值一致 | pytest+台账 | 是 | ⬜ | refactor(core): name magic numbers in agent/turn paths |
