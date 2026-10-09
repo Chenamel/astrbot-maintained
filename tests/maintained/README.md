@@ -9,31 +9,31 @@
 
 ## 如何运行
 
-需要一个**既有 AstrBot 运行时依赖**、又有 **pytest** 的解释器。本机实测可行的组合是
-「实例 venv 的 python + 托管工具 venv 的 pytest」：
+### 方式 A（推荐）：专用测试 venv
 
-```bash
-IV="<AstrBot 实例>/venv/Scripts/python.exe"          # 提供运行依赖（deprecated/aiohttp/...）
-EV="<托管工具 venv>"                                  # 提供 pytest / pytest-asyncio
-
-cd <本仓库根>
-PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
-```
-
-Windows + Git Bash 示例（本机实际值）：
+本机已建好一个**独立**测试环境（Python 3.12.13，与运行环境同版本；含 AstrBot 全部运行依赖 + pytest + pytest-asyncio）：
 
 ```bash
 cd /d/asbot_core_for_fork
-PYTHONPATH="C:/Users/philia093/.workbuddy/binaries/python/envs/default/Lib/site-packages" \
-"C:/Users/philia093/.astrbot_launcher/instances/83ca721d-26d2-4dd0-9932-ef9299d8829d/venv/Scripts/python.exe" \
--m pytest tests/maintained -q
+"C:/Users/philia093/.workbuddy/binaries/python/envs/astrbot-test/Scripts/python.exe" -m pytest tests/maintained -q
 ```
 
-**为什么这样组合**：上游 `tests/conftest.py` 需要 `pytest-asyncio`；而实例 venv 内**不允许安装**任何包
-（会污染运行环境），托管 venv 又缺少 AstrBot 的第三方依赖。用 `PYTHONPATH` 把纯 Python 的 pytest
-借给实例解释器是零污染的做法。
+它既不是运行环境（不动实例 venv），也不是工具 venv（ruff 所在），互不污染。
 
-阶段 6 会把它固化成 `maintained/tools/` 里的一个可复现脚本；届时若需要隔离环境，可另建专用测试 venv。
+### 方式 B（备用）：借包给实例 venv
+
+```bash
+IV="<AstrBot 实例>/venv/Scripts/python.exe"          # 提供运行依赖
+EV="<托管工具 venv>"                                  # 提供 pytest / pytest-asyncio
+PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
+```
+
+两种方式结果一致（均 47 项通过）。方式 B 不需要额外磁盘，依赖实例 venv 存在。
+
+**为什么不用实例 venv 直接跑**：实例 venv 内**不允许安装**任何包（会污染运行环境）；
+上游 `tests/conftest.py` 又需要 `pytest-asyncio`，故必须有独立环境。
+
+阶段 6 会把运行方式固化成 `maintained/tools/` 里的一个脚本。
 
 ## 现阶段测试清单
 
