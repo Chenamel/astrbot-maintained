@@ -5,10 +5,13 @@ contracted names, and never leak the internal bridge into the public surface.
 """
 
 import astrbot.api._bridge as bridge
+import astrbot.api.content as content
 import astrbot.api.delivery as delivery
+import astrbot.api.embedding as embedding
 import astrbot.api.media as media
 import astrbot.api.permissions as permissions
 import astrbot.api.proactive as proactive
+import astrbot.api.runtime as runtime
 import astrbot.api.turns as turns
 
 EXPECTED_ALL = {
@@ -48,6 +51,24 @@ EXPECTED_ALL = {
         "is_lightweight_proactive",
         "proactive_switch_is_disabled",
     },
+    "content": {
+        "ImageURLPart",
+        "TextPart",
+        "available",
+        "is_image_part",
+        "is_text_part",
+    },
+    "runtime": {
+        "available",
+        "download_image_by_url",
+        "extract_quoted_message_images",
+        "get_astrbot_data_path",
+    },
+    "embedding": {
+        "EmbeddingProvider",
+        "available",
+        "is_embedding_provider",
+    },
 }
 
 MODULES = {
@@ -56,6 +77,9 @@ MODULES = {
     "delivery": delivery,
     "permissions": permissions,
     "proactive": proactive,
+    "content": content,
+    "runtime": runtime,
+    "embedding": embedding,
 }
 
 CAPABILITY_KEYS = {
@@ -64,6 +88,9 @@ CAPABILITY_KEYS = {
     "permissions.execution_policy",
     "proactive.lightweight",
     "media.unavailable_contract",
+    "content.parts",
+    "runtime.helpers",
+    "embedding.provider",
 }
 
 
