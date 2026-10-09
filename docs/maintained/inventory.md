@@ -163,6 +163,19 @@
    真正的修复应在"插件/补丁重写"批次统一做，避免在零测试保护下动交付时序。
 4. **副作用提示**：`tests/test_process_stage_images.py` 全绿，说明图片降级链路的上游预期未被破坏。
 
+#### P11 逐类归因（2026-10-09 补充）
+
+三类失败，全部是**行为有意偏离**，非崩溃：
+
+| 组 | 数量 | 断言在测什么 | 维护版做了什么 | 影响 |
+|---|---|---|---|---|
+| **α 执行工具授权收紧** | 9（`test_proactive_agent_respects_runtime_and_safety_settings` ×8 + `test_persona_empty_tools_keeps_local_runtime_builtin_tools` ×1） | `runtime == "local"` 时工具集应含 `astrbot_execute_python` / `astrbot_execute_shell` | `apply_execution_policy`（`astr_main_agent.py:1857`，**无任何条件、每次请求都调用**）在 `execution_denial` 非空时过滤掉 `EXECUTION_TOOL_NAMES`（python/ipython/shell/shell_session） | **有真实影响且对全部对话生效**：非管理员**永远**拿不到执行工具；管理员也必须在**当前消息里明确要求运行/执行**（写代码、解释、引言都不算授权）。属**有意的安全加固**（防"引用的代码被当授权执行"），方向是**更严格** |
+| **β hook 发射时序** | 8（`test_skills_like_requery_reply_reaches_stream_bridge_once`） | 前两次发射时 hook 标记应为 `False`（"保持既有 `llm_result` 顺序，只有新增的流式增量跟在 hook 之后"） | 维护版里 hook 标记**更早**被置 True（实测四个发射点全为 `True`） | ⚠️ **唯一踩到插件兼容性的一类**：挂在 agent run hook 上的插件，观察到的**顺序/次数可能与上游不同**，理论上可致副作用重复或错序。重写批次应优先对齐 |
+
+**净评估**：边界清晰（3 类、集中在 `astr_main_agent.py` 与 `tool_loop_agent_runner.py` 两个文件），
+其中 9 项是**朝更安全方向**偏离；无崩溃、无数据损坏。真正需要处理的只有 β（插件契约）。
+**未重开主动回复前，α 中与主动场景相关的部分不会生效；但 α 的"执行工具收紧"对所有对话生效。**
+
 ## 5. 证据来源
 
 - diff：`git diff --no-index <归档>/baseline_source/core <归档>/maintained_source/core`
