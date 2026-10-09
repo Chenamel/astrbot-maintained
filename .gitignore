@@ -104,5 +104,10 @@ astrbot_plugin_content_safety_guard/
 optimization_backups/
 maintained/.tmp/
 
+# 上游的 `data` 规则未锚定，会匹配任意层级（含 tests/**/data/）。
+# 显式放行本 fork 自有的测试数据目录，避免将来加固定数据时被静默忽略。
+!tests/maintained/data/
+!tests/maintained/data/**
+
 # WorkBuddy local state (never published)
 .workbuddy/
