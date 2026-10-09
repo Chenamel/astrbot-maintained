@@ -29,6 +29,7 @@ from astrbot.core.agent.tool import ToolSet
 from astrbot.core.exceptions import EmptyModelOutputError
 from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.provider.entities import (
+    IMAGE_CAPTION_MARKER,
     IMAGE_INPUT_UNAVAILABLE_MESSAGE,
     IMAGE_INPUT_UNAVAILABLE_NOTICE,
     LLMResponse,
@@ -168,7 +169,7 @@ class ProviderOpenAIOfficial(Provider):
                     part.get("type") == "image_url"
                     or (
                         part.get("type") == "text"
-                        and "<image_caption>" in part.get("text", "")
+                        and IMAGE_CAPTION_MARKER in part.get("text", "")
                     )
                 )
                 for part in content

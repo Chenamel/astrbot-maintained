@@ -44,6 +44,9 @@ IMAGE_INPUT_UNAVAILABLE_NOTICE = (
     "Do not infer or describe the image from history, filenames or surrounding text. "
     f"Reply only: {IMAGE_INPUT_UNAVAILABLE_MESSAGE}]"
 )
+# Marker wrapped around a generated image description inside request content.
+# Single source of truth: astrbot.api.media re-exports this value.
+IMAGE_CAPTION_MARKER = "<image_caption>"
 
 
 @dataclass
@@ -311,7 +314,8 @@ class ProviderRequest:
 
         has_image = any(block.get("type") == "image_url" for block in content_blocks)
         has_caption = any(
-            block.get("type") == "text" and "<image_caption>" in block.get("text", "")
+            block.get("type") == "text"
+            and IMAGE_CAPTION_MARKER in block.get("text", "")
             for block in content_blocks
         )
         if has_image or has_caption:

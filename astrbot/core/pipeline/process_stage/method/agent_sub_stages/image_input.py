@@ -5,7 +5,7 @@ from pathlib import Path
 from astrbot.core import logger
 from astrbot.core.agent.message import ImageURLPart, TextPart
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
-from astrbot.core.provider.entities import ProviderRequest
+from astrbot.core.provider.entities import IMAGE_CAPTION_MARKER, ProviderRequest
 from astrbot.core.utils.media_utils import (
     MediaResolver,
     is_recoverable_image_error,
@@ -112,7 +112,7 @@ async def prepare_request_images(
         for part in parts
     )
     has_caption = any(
-        "<image_caption>"
+        IMAGE_CAPTION_MARKER
         in (
             part.text
             if isinstance(part, TextPart)

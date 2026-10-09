@@ -33,7 +33,14 @@ __all__ = [
 ]
 
 #: Marker wrapped around a generated image description inside request content.
-IMAGE_CAPTION_MARKER = "<image_caption>"
+#: The authoritative definition lives in the core
+#: (``astrbot.core.provider.entities``); this layer mirrors it and falls back to
+#: the same literal when the core does not provide it.
+IMAGE_CAPTION_MARKER: str = resolve(
+    "astrbot.core.provider.entities",
+    "IMAGE_CAPTION_MARKER",
+    "<image_caption>",
+)
 
 #: Text shown to the user when the current image has no usable visual evidence.
 IMAGE_INPUT_UNAVAILABLE_MESSAGE: str = resolve(

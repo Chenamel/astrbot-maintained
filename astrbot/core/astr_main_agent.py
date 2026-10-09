@@ -42,6 +42,7 @@ from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.platform.message_type import MessageType
 from astrbot.core.provider import Provider
 from astrbot.core.provider.entities import (
+    IMAGE_CAPTION_MARKER,
     IMAGE_INPUT_UNAVAILABLE_NOTICE,
     ProviderRequest,
 )
@@ -829,7 +830,9 @@ async def _ensure_img_caption(
         if not isinstance(caption, str) or not caption.strip():
             raise ValueError("Image caption provider returned an empty caption")
         req.extra_user_content_parts.append(
-            TextPart(text=f"<image_caption>{caption.strip()}</image_caption>")
+            TextPart(
+                text=f"{IMAGE_CAPTION_MARKER}{caption.strip()}</image_caption>"
+            )
         )
         req.image_input_unavailable = False
     except Exception as exc:  # noqa: BLE001
