@@ -390,6 +390,8 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         self._blocked_failed_tool_keys: set[tuple[str, str]] = set()
         self._tool_failure_summary = ""
         self._proactive_request_finished = False
+        # Set by astr_agent_run_util while a proactive reply is being delivered.
+        self._proactive_delivery_deferred = False
 
         # These two are used for tool schema mode handling
         # We now have two modes:
