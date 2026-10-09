@@ -90,4 +90,8 @@
 | T7-10 | P0 | T7-09 | 实例 core | 部署（apply_patches --apply）+ 重启 + 只读信号复核 | check_drift 双段 NO DRIFT、三端口在听、active_reply.enable 仍 false | 命令+用户实操 | 否 | ✅ | （实例侧，见 deploy-log.md） |
 | T7-11 | P1 | T7-10 | CHANGELOG.md | 补阶段 6/7 条目、修正测试项数、22→31 注记 | 与台账/测试实测一致 | 目视 | 否 | ✅ | docs: update changelog for phases 6-7 |
 | T7-12 | P0 | T7-11 | — | **阶段门禁：停下汇报 ≤10 行，等确认** | 已汇报且确认 | 对话记录 | 否 | ⬜ | — |
-| T7-90 | P2 | — | — | **暂缓（用户决定）**：转公开 / 脱敏 / P2·P3·P6·P9·P10 | 用户另行决定 | — | — | ⏸ 暂缓 | — |
+| T7-13 | P0 | T7-12 | docs/maintained/{project_rules,proposal}.md | **重定项目定位**：面向社区开源的轻量级/高灵活度/集成增强版；核心价值=补官方缺的底层扩展 API | 两份文档均有定位节且互相一致 | 目视 + 评审 | 否 | ✅ | docs: restate the project positioning for community use |
+| T7-14 | P0 | T7-13 | docs/maintained/inventory.md | **β hook 时序登记为核心架构优化**：保留现状、坚决不改回上游、严禁上游合并时覆盖 | P11 有明确标记；`project_rules.md` §5 列为合并红线 | 目视 | 否 | ✅ | docs: protect the beta hook-timing optimisation from upstream merges |
+| T7-15 | P0 | T7-13 | docs/maintained/{project_rules,api-contract}.md + astrbot/api/** | **api 面文档门槛**（§9）：模块 docstring/`__all__`/逐符号 docstring/常量 `#:` 注释；禁止野路子公开名 | 机械测试 `test_api_doc_gate.py` 全绿；已修 `permissions._EXECUTION_POLICY_UNAVAILABLE` 与 `turns._logger` | pytest + 评审 | 否 | ✅ | feat(api): enforce the public-surface documentation gate |
+| T7-91 | P2 | T7-13 | README_MAINTAINED.md 等对外材料 | 把新定位同步到对外材料（README/NOTICE 措辞） | 与定位一致 | 目视 | 是 | ⬜ | docs: align public-facing material with the new positioning |
+| T7-90 | P2 | — | — | **暂缓（用户决定）**：脱敏 / P2·P3·P6·P9·P10；**「转公开」现与项目定位直接绑定（定位为面向社区开源），时间点待用户确认** | 用户另行决定 | — | — | ⏸ 暂缓 | — |
