@@ -67,20 +67,16 @@ GenieData/
 dashboard/bun.lock
 
 # --- maintained fork additions (append-only) ---
-.astrbot/
-astrbot.lock
+# 只列上游段未覆盖的条目；重复项已移除，避免同一规则两处维护。
+
+# Runtime artifacts that must never enter the public fork
+# 锚定到仓库根：否则任意层级的 data/ 都会被静默忽略（例如将来 tests/**/data/）
+/data/
 *.db
 *.sqlite
 *.sqlite3
 .env
 .env.*
-cmd_config.json
-
-# Runtime artifacts that must never enter the public fork
-data/
-data_v2.db
-data_v3.db
-configs/config.yaml
 configs/session/
 
 # Large binaries
