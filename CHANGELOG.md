@@ -22,6 +22,11 @@
 
 ### 变更
 
+- `README.md` 替换为本 fork 说明（GitHub 首页渲染入口）。这是**唯一**被修改的上游既有文件：
+  `.gitattributes` 声明 `README.md merge=ours` 并配置对应 merge driver，
+  上游对 README 的改动永不覆盖本 fork 版本；其余全部上游文件（含 `docs/`、
+  `AGENTS.md`、多语言 README 等，合计约 2.4MB 的 md）**保持原样不删**——
+  它们已永久存在于 git 历史，删除不节省空间，只会制造三方合并冲突。
 - 台账脱敏：剔除 `data/plugins/**`（39 条）与 `dashboard/**`（4 条），只保留 `astrbot/**`（22 条）。
   理由：本仓是 core 项目，第三方插件无许可证、其文件清单不宜公开；完整台账留在归档仓与私有仓。
 - 移除 `maintained/tools/update_local.py`：该脚本含 enhance/safety 分支与插件名，

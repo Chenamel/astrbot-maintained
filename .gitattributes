@@ -1,6 +1,9 @@
 # Normalize to LF on checkin; keep repository bytes identical to upstream on checkout.
 * text=auto eol=lf
 
+# Fork identity: upstream README changes must never overwrite our fork README.
+/README.md merge=ours
+
 *.png  binary
 *.jpg  binary
 *.jpeg binary

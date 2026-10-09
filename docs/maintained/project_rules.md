@@ -38,7 +38,13 @@ baseline : tag v4.28.2 = 3c7adafa1397e182d60b1016bf88759265113c8a
 - 本 fork 自有内容一律走**新增路径**：
   `NOTICE` / `CHANGELOG.md` / `README_MAINTAINED.md` / `maintained/**` / `docs/maintained/**` / `tests/maintained/**`。
 - **禁止修改上游既有文件**，除非属于已登记的 core 补丁。
+- **唯一例外：`README.md`**（GitHub 首页渲染入口，代表本 fork 身份）。
+  已替换为 fork 说明，并在 `.gitattributes` 声明 `README.md merge=ours`、
+  本仓配置 `merge.ours.driver`，上游对 README 的改动**永不覆盖本 fork 版本**；
+  上游原文可从 `upstream/master` 或 git 历史随时取回。
 - **禁止** `git add --renormalize .`；**禁止**批量 reformat。
+- **不删上游 md/docs**：全部 md 合计约 2.4MB 且已永久存在于 git 历史，
+  删工作区文件不节省空间，只会制造 delete/modify 合并冲突。
 
 ## 4. 隔离红线
 
