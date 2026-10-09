@@ -1,6 +1,6 @@
-# API 契约 · `astrbot/api/**` 新增模块（阶段 3）
+# API 契约 · `astrbot/api/**` 新增模块（阶段 3 + 阶段 5 追加）
 
-> 本文件是阶段 3 的**唯一规格来源**。代码必须与本文件一致；不一致时先改本文件。
+> 本文件是新增 api 面的**唯一规格来源**。代码必须与本文件一致；不一致时先改本文件。
 > 设计约束：对外冻结 + 只做加法；新模块一律落在 `astrbot/api/**`，**不修改任何既有 api 文件**。
 
 ## 1. 设计原则
@@ -30,6 +30,9 @@ def capabilities() -> dict[str, bool]: ...
 | `permissions.execution_policy` | `astrbot.core.code_delivery_policy.execution_denial` | ❌ False | ✅ True |
 | `proactive.lightweight` | `astrbot.core.astr_main_agent._is_lightweight_proactive_request` | ❌ False | ✅ True |
 | `media.unavailable_contract` | `astrbot.core.provider.entities.IMAGE_INPUT_UNAVAILABLE_NOTICE` | ❌ False | ✅ True |
+| `content.parts` | `astrbot.core.agent.message.TextPart` | ❌ False | ✅ True |
+| `runtime.helpers` | `astrbot.core.utils.io.download_image_by_url` | ❌ False | ✅ True |
+| `embedding.provider` | `astrbot.core.provider.provider.EmbeddingProvider` | ❌ False | ✅ True |
 
 ## 3. 模块清单
 
@@ -60,6 +63,8 @@ def capabilities() -> dict[str, bool]: ...
 | `available() -> bool` | 函数 | `False` |
 | `TextPart` | 类（转发） | `None`（导入不报错） |
 | `ImageURLPart` | 类（转发） | `None` |
+| `is_text_part(part) -> bool` | 函数 | `False` |
+| `is_image_part(part) -> bool` | 函数 | 仅识别 OpenAI 风格 `{"type": "image_url"}` |
 
 > 注意：`TextPart`/`ImageURLPart` 在缺席时为 `None`，`isinstance(x, None)` 会抛 `TypeError`。
 > 插件侧须用本模块提供的 `is_text_part(x)` / `is_image_part(x)` 做判定（缺席时返回 `False`），
@@ -95,7 +100,7 @@ def capabilities() -> dict[str, bool]: ...
 
 | 符号 | 类型 | 语义 |
 |---|---|---|
-| `IMAGE_CAPTION_MARKER` | `str` | 图片描述标记，固定 `"<image_caption>"` |
+| `IMAGE_CAPTION_MARKER` | `str` | 图片描述标记，固定 `"<image_caption>"`。**权威定义在 core**（`astrbot.core.provider.entities`），本层经 `resolve` 转发、缺失时用同值字面量兜底 |
 | `IMAGE_INPUT_UNAVAILABLE_MESSAGE` | `str` | 给**用户**看的文案 |
 | `IMAGE_INPUT_UNAVAILABLE_NOTICE` | `str` | 给**模型**看的防幻觉指令 |
 | `has_visual_input(request) -> bool` | 函数 | `request` 是否携带真实视觉证据（`image_urls` 或 `ImageURLPart` / `image_url` dict） |
@@ -152,6 +157,7 @@ def capabilities() -> dict[str, bool]: ...
 | `available() -> bool` | 函数 | 执行策略引擎是否就位 | `False` |
 | `is_admin(event, config) -> bool` | 函数 | 纯判定：发送者是否在 `config["admins_id"]` | 本函数**不依赖补丁**，始终可用 |
 | `execution_denial(event, config) -> str \| None` | 函数 | `None`=放行；否则为拒绝原因文本 | **回退为纯管理员判定**：非管理员返回拒绝文本，管理员放行 |
+| `EXECUTION_NOT_AUTHORIZED` | `str` | 无法授权时的固定拒绝原因（可读、可断言） | 本地常量，始终可用 |
 
 > **安全语义**：`execution_denial` 在补丁缺席时**不降级为放行**，而是回退到"仅管理员"这一上游既有强度。
 > 本函数返回 `None` **不构成授权**——调用方（工具）仍须执行自身的权限闸门。
@@ -170,19 +176,25 @@ def capabilities() -> dict[str, bool]: ...
 
 - **不修改** `astrbot/api/__init__.py`、`all.py`、`message_components.py`、`web.py` 及 `{event,star,provider,util,platform}/`。
 - **不提供**主动回复的开启/注册入口。
-- **不复制** core 的实现逻辑（除两个常量镜像外，一律转发）。
+- **不复制** core 的实现逻辑（除常量镜像外，一律转发；**镜像的权威定义在 core**，本层只做转发 + 同值兜底）。
 - **不新增**依赖、不动配置 schema、不改任何既有符号签名。
 
 ## 5. 测试要求（`tests/maintained/`）
 
 | 测试文件 | 覆盖 |
 |---|---|
-| `test_api_surface.py` | 五个模块可导入；`__all__` 与本文档一致；`_bridge` 不出现在 `__all__` |
+| `test_api_surface.py` | 八个模块可导入；`__all__` 与本文档一致；`_bridge` 不出现在 `__all__`；能力清单键齐全 |
 | `test_api_media.py` | 常量非空且 `NOTICE` 含 `MESSAGE`；`IMAGE_CAPTION_MARKER` 正确；`has_visual_input` / `has_image_caption` 对伪造对象判定正确 |
 | `test_api_turns.py` | 补丁缺席时 `is_current → True`、`mark_sent` no-op、`merged_*` 返回空、`reset* → False`、`available → False` |
 | `test_api_delivery.py` | 缺席时 `code_task_spec → None`、`has_code_delivery → False`、`CODE_DELIVERY_FAILURE` 非空 |
 | `test_api_permissions.py` | `is_admin` 判定正确；缺席时非管理员被拒、管理员放行（**不得**降级为无条件放行） |
 | `test_api_proactive.py` | `proactive_switch_is_disabled → True`；缺席时 `is_lightweight_proactive → False` |
+| `test_api_content.py` | 缺席时 `is_text_part` / `is_image_part` 判定与容错；OpenAI 风格 dict |
+| `test_api_runtime.py` | 数据目录为绝对路径；缺席时下载**响亮失败**、引用图返回空表 |
+| `test_api_embedding.py` | 缺席时 `is_embedding_provider → False`；容错 |
+| `test_manifest_guard.py` | 仓工作树↔台账自洽；台账只含 core、`proactive_must_remain_disabled` 为 `True`、条数钉 |
+| `test_api_frozen.py` | 上游 api 文件相对 `baseline/v4.28.2` 零改动（白名单=9 个新增文件） |
+| `test_tools_check_drift.py` / `test_tools_apply_patches.py` | 工具链：漂移检测、预演不写、写前备份、源损坏中止、退出码 |
 
 **测试不依赖运行中的 AstrBot**：用 `SimpleNamespace` 伪造 event / request / part。
 **基线预期**：全部通过（因为断言的是"降级行为"）；阶段 4 恢复补丁后，`available()` 类断言会自动翻转，故此类断言写成"与 `available()` 一致"而非硬编码 `False`。
