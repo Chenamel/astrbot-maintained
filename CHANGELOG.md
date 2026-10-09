@@ -13,6 +13,11 @@
 
 ### 新增
 
+- **阶段 5 插件正规化（api 层部分）**：新增 `astrbot/api/{content,runtime,embedding}/`
+  三个模块（纯新增，未改既有 api 文件），把插件剩余的 core 依赖全部纳入公开面。
+  契约见 [`docs/maintained/api-contract.md`](./docs/maintained/api-contract.md) §3.0。
+  台账 28 → 31 条；`tests/maintained/` 47 → 62 项全绿。
+  插件侧改造记录见 [`docs/maintained/deploy-log.md`](./docs/maintained/deploy-log.md)。
 - **阶段 3 API 层**：`astrbot/api/` 下新增六个文件（**未修改任何既有 api 文件**）：
   - `_bridge.py` — 内部能力桥（惰性解析 core 符号 + 能力清单，**非公开面**）
   - `media/` — 图片输入契约（**修复 P1**：插件不再需要 import core 私有路径；同时集中 `IMAGE_CAPTION_MARKER`）
