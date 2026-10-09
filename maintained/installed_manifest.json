@@ -1,11 +1,14 @@
 {
   "proactive_must_remain_disabled": true,
   "files": {
-    "astrbot/api/_bridge.py": "2b7a408c7ed663ed3ba988fac8c92e543613d58f08612c51416fe48524b29042",
+    "astrbot/api/_bridge.py": "86b7f55ec580e62f3dee448be88cac7169042210f26b8dc045fb111a2a9274c8",
+    "astrbot/api/content/__init__.py": "0278cd6931e16fd3fc456fc0fea305f1950942e92df0807eb1753225778a8ee0",
     "astrbot/api/delivery/__init__.py": "3774f7cb029cff83bc18eda1f581233534c7acf1ad170eab713cc49a3c310db9",
+    "astrbot/api/embedding/__init__.py": "c1593a28c6541584b63e2d1ae822f7a83f1c6ed11140203086ab6a612574f889",
     "astrbot/api/media/__init__.py": "377eea3ac3988cf82cff8c7f0e5e19ce90b971933ea8253c2ce2c2b467ccb542",
     "astrbot/api/permissions/__init__.py": "925c18497da83f0117922f9ecdd390940a9f46bb1d05fd6abd5974d98069bb5f",
     "astrbot/api/proactive/__init__.py": "b05da0ffa7147143bc0190fe254e08b1cd11fbc14d473bc10193951c6365ea9f",
+    "astrbot/api/runtime/__init__.py": "8abe034f8f534a96c0b0fc86a5ccdd42fd8dcf5186eccb9f181695f17b3b58c9",
     "astrbot/api/turns/__init__.py": "a7ebd485504e0e3aa9424043c796513a7cb882a7cafe4e377c3eeb20c53f4bc4",
     "astrbot/core/agent/runners/tool_loop_agent_runner.py": "a6458a6b5b4c9a704ad80eeac7adbcce6aaba4b84a899d13755627853d22dac0",
     "astrbot/core/astr_agent_run_util.py": "3ee9d36a324159c1e0d7bb891257b5f343d9ff220510c0ea80b1b2f11dfc738c",
