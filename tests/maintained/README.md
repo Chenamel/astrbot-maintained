@@ -28,23 +28,31 @@ EV="<托管工具 venv>"                                  # 提供 pytest / pyte
 PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 ```
 
-两种方式结果一致（均 47 项通过）。方式 B 不需要额外磁盘，依赖实例 venv 存在。
+两种方式结果一致（均 **94** 项通过）。方式 B 不需要额外磁盘，依赖实例 venv 存在。
 
 **为什么不用实例 venv 直接跑**：实例 venv 内**不允许安装**任何包（会污染运行环境）；
 上游 `tests/conftest.py` 又需要 `pytest-asyncio`，故必须有独立环境。
 
-阶段 6 会把运行方式固化成 `maintained/tools/` 里的一个脚本。
+> 运行方式没有额外的包装脚本：直接用上面的命令即可，
+> 实例侧的漂移检测与恢复工具见 [`../../docs/maintained/tools.md`](../../docs/maintained/tools.md)。
 
-## 现阶段测试清单
+## 现阶段测试清单（13 个文件 / 94 项）
 
 | 文件 | 覆盖 |
 |---|---|
-| `test_api_surface.py` | 五模块可导入、`__all__` 与契约一致、`_bridge` 不外露、能力清单键齐全、`resolve` 默认值语义 |
+| `test_api_surface.py` | 八个模块可导入、`__all__` 与契约一致、`_bridge` 不外露、能力清单键齐全、`resolve` 默认值语义 |
 | `test_api_media.py` | 契约常量非空且 `NOTICE` 含 `MESSAGE`；`IMAGE_CAPTION_MARKER`；视觉输入/描述判定；显式 flag 优先 |
 | `test_api_turns.py` | `is_current` fail-open 且不抛；`mark_sent` 安全；`merged_*` 读取与类型过滤；`reset*` 缺席返回 False |
 | `test_api_delivery.py` | `CODE_DELIVERY_FAILURE` 非空；`code_task_spec` / `has_code_delivery` 缺席时返回安全默认值 |
 | `test_api_permissions.py` | `is_admin` 多维判定；**非管理员恒被拒绝**（安全不变量）；`execution_denial` 不抛 |
 | `test_api_proactive.py` | 开关恒为关闭；模块**不存在任何 enable 入口**；分类器 fail-closed |
+| `test_api_content.py` | `is_text_part` / `is_image_part` 缺席与容错；OpenAI 风格 dict 识别 |
+| `test_api_runtime.py` | 数据目录为绝对路径；缺席时下载响亮失败、引用图返回空表 |
+| `test_api_embedding.py` | `is_embedding_provider` 缺席与容错 |
+| `test_manifest_guard.py` | 仓工作树↔台账自洽；台账只含 core；`proactive_must_remain_disabled`；条数钉 |
+| `test_api_frozen.py` | 上游 api 相对 `baseline/v4.28.2` 零改动（白名单=9 新增文件） |
+| `test_tools_check_drift.py` | 漂移检测：ok/mismatch/missing、退出码、JSON 输出、路径解析 |
+| `test_tools_apply_patches.py` | 源校验中止、预演不写、备份收据、写回后复核、端到端修复 |
 
 ## 断言约定
 
