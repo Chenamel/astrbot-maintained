@@ -83,11 +83,11 @@
 | T7-03 | P0 | T7-01 | docs/maintained/{api-contract,design,proposal,tasks}.md | 文档对齐现实（14 处不一致） | 数字/清单/前置依赖自洽 | 目视+评审 | 否 | ✅ | docs(maintained): correct api-contract drift 等 |
 | T7-04 | P0 | T7-03 | docs/maintained/project_rules.md, .gitignore | 自检正则收紧 + `.gitignore` 锚定与去重 | 自检 grep 实测为空 | 命令 | 否 | ✅ | docs(maintained): tighten secret-scan regex / chore: anchor ignores |
 | T7-05 | P1 | T7-03 | provider/entities.py 等 4 文件 + api/media | **P4** `IMAGE_CAPTION_MARKER` 下沉 core，4 处改引 + api/media 改 resolve（零行为变化） | 值不变、上游测试**无新增失败（17→17）**、台账同步 | pytest+台账 | 是 | ✅ | refactor(core): centralize image caption marker constant |
-| T7-06 | P1 | T7-05 | tool_loop_agent_runner.py | **P5** `_proactive_delivery_deferred` 提升为正式字段（零行为变化） | 默认值与 getattr 兜底一致 | pytest+台账 | 是 | ⬜ | refactor(core): declare proactive delivery deferral attribute |
-| T7-07 | P1 | T7-06 | respond/stage.py, context_utils.py, aiocqhttp_message_event.py | **P7** 门禁静默 return 补 logger.debug（零行为变化） | 仅新增日志、控制流不变 | pytest+台账 | 是 | ⬜ | refactor(core): log silent gate returns at debug level |
-| T7-08 | P1 | T7-07 | tool_loop_agent_runner.py 等 4 文件 | **P8** 魔法数字提取具名常量（值逐字节不变） | 逐项人工比对数值一致 | pytest+台账 | 是 | ⬜ | refactor(core): name magic numbers in agent/turn paths |
-| T7-09 | P0 | T7-08 | D:/asbot_extras | 插件删死导入/死变量 + 新增只读 enhance api-status 自检 | 插件 183+ 测试全绿、命令只读 | pytest+重载 | 否 | ⬜ | refactor(plugin): drop unused api import and flag / feat(plugin): add read-only api capability self-check command |
+| T7-06 | P1 | T7-05 | tool_loop_agent_runner.py | **P5** `_proactive_delivery_deferred` 提升为正式字段（零行为变化） | 默认值与 getattr 兜底一致 | pytest+台账 | 是 | ✅ | refactor(core): declare proactive delivery deferral attribute |
+| T7-07 | P1 | T7-06 | respond/stage.py, context_utils.py, aiocqhttp_message_event.py | **P7** 门禁静默 return 补 logger.debug（零行为变化） | 仅新增日志、控制流不变 | pytest+台账 | 是 | ✅ | refactor(core): log silent gate returns at debug level |
+| T7-08 | P1 | T7-07 | tool_loop_agent_runner.py 等 4 文件 | **P8** 魔法数字提取具名常量（值逐字节不变） | 逐项人工比对数值一致 | pytest+台账 | 是 | ✅ | refactor(core): name magic numbers in agent/turn paths |
+| T7-09 | P0 | T7-08 | D:/asbot_extras | 插件删死导入/死变量 + 新增只读 enhance api-status 自检 | 插件 183+ 测试全绿、命令只读 | pytest+重载 | 否 | ✅ | refactor(plugin): drop unused api import and flag / feat(plugin): add read-only api capability self-check command |
 | T7-10 | P0 | T7-09 | 实例 core | 部署（apply_patches --apply）+ 重启 + 只读信号复核 | check_drift 双段 NO DRIFT、三端口在听、active_reply.enable 仍 false | 命令+用户实操 | 否 | ⬜ | （实例侧，见 deploy-log.md） |
-| T7-11 | P1 | T7-10 | CHANGELOG.md | 补阶段 6/7 条目、修正测试项数、22→31 注记 | 与台账/测试实测一致 | 目视 | 否 | ⬜ | docs: update changelog for phases 6-7 |
+| T7-11 | P1 | T7-10 | CHANGELOG.md | 补阶段 6/7 条目、修正测试项数、22→31 注记 | 与台账/测试实测一致 | 目视 | 否 | ✅ | docs: update changelog for phases 6-7 |
 | T7-12 | P0 | T7-11 | — | **阶段门禁：停下汇报 ≤10 行，等确认** | 已汇报且确认 | 对话记录 | 否 | ⬜ | — |
 | T7-90 | P2 | — | — | **暂缓（用户决定）**：转公开 / 脱敏 / P2·P3·P6·P9·P10 | 用户另行决定 | — | — | ⏸ 暂缓 | — |
