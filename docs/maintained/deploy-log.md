@@ -281,3 +281,33 @@ live core）。这既违反「单一真相源」，也与 `design.md §1`（维�
 
 **意义**：把「启动器覆盖 core」的处置从**人工排查半小时**压缩为**两条命令**（检测 + 一键重打）。
 工具**不试图拦启动器**（拦不住），定位是事后快速检测与恢复。
+
+---
+
+## 2026-10-09 · 阶段 7 打磨成果部署（等待重启）
+
+**部署内容**：C1–C4 的 12 个 core 文件（P4 常量下沉、P5 正式字段、P7 debug 日志、P8 具名常量）。
+
+| 步骤 | 结果 |
+|---|---|
+| 全量质量门（部署前） | maintained **94 passed** / ruff `All checks passed` / 上游 **17 failed（= 基线，无新增）** / 插件 **188 passed** |
+| `check_drift`（部署前） | 实例 `19 ok / 12 mismatch` → **DRIFT DETECTED**；仓内 `31/31` → NO DRIFT |
+| `apply_patches` 预演 | 正确列出 12 个待更新文件，**未写任何东西** |
+| `apply_patches --apply` | 备份 `<INST>/optimization_backups/20261009_201439_CST_apply_patches/` → 写回 → `verify: 31 -> 31 ok` |
+| 部署后 `check_drift` | 实例 **31/31 NO DRIFT**；仓内 **31/31 NO DRIFT**（双端一致） |
+| 插件同步 | `main.py` + `tests/test_api_status.py` 已同步到实例；删除残留 `main.cpython-313.pyc` |
+
+**待用户实操**：
+
+1. **重启 AstrBot**（当前 PID 200188），使 core 改动生效；
+2. 面板**重载插件**，使 `enhance api-status` 与新代码生效。
+
+**重启后只读复核清单**（无需 QQ 实测）：
+
+```bash
+netstat -ano | grep -E ":6185|:6199|:6196"                       # 三端口 LISTENING（PID 应变）
+python maintained/tools/check_drift.py --instance <INST> --check-repo   # 双端 NO DRIFT
+ls -la <INST>/core/astrbot/core/provider/__pycache__/entities.cpython-312.pyc   # pyc 应晚于部署时刻
+```
+
+**注记**：`.pytest_cache` 曾被误同步进实例插件目录，已删除并为 extras 仓补上忽略规则（提交 `f79a81a`）。
