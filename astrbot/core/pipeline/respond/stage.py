@@ -172,6 +172,10 @@ class RespondStage(Stage):
         event: AstrMessageEvent,
     ) -> None | AsyncGenerator[None, None]:
         if not is_current(event):
+            logger.debug(
+                "respond stage dropped a superseded turn | message_id=%s",
+                getattr(getattr(event, "message_obj", None), "message_id", "unknown"),
+            )
             event.clear_result()
             return
         result = event.get_result()

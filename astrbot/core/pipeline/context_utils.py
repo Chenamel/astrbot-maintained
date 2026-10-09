@@ -99,6 +99,11 @@ async def call_event_hook(
             EventType.OnLLMResponseEvent,
             EventType.OnDecoratingResultEvent,
         } and not is_current(event):
+            logger.debug(
+                "hook dropped: turn no longer current | hook=%s handler=%s",
+                hook_type.name,
+                handler.handler_name,
+            )
             event.stop_event()
             return True
         try:
@@ -116,6 +121,11 @@ async def call_event_hook(
             EventType.OnLLMResponseEvent,
             EventType.OnDecoratingResultEvent,
         } and not is_current(event):
+            logger.debug(
+                "hook dropped after execution: turn no longer current | hook=%s handler=%s",
+                hook_type.name,
+                handler.handler_name,
+            )
             event.stop_event()
             return True
         if event.is_stopped():

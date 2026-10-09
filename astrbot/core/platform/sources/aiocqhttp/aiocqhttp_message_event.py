@@ -154,6 +154,10 @@ class AiocqhttpMessageEvent(AstrMessageEvent):
                 return
             if owner_event is not None:
                 if not is_current(owner_event):
+                    logger.debug(
+                        "aiocqhttp send dropped: turn no longer current | session=%s",
+                        session_id,
+                    )
                     return
                 if message_chain.type not in ("tool_call", "tool_call_result"):
                     mark_sent(owner_event)
@@ -169,6 +173,10 @@ class AiocqhttpMessageEvent(AstrMessageEvent):
                 payload = await seg.to_dict()
                 if owner_event is not None:
                     if not is_current(owner_event):
+                        logger.debug(
+                            "aiocqhttp send dropped: turn no longer current | session=%s",
+                            session_id,
+                        )
                         return
                     mark_sent(owner_event)
 
@@ -186,6 +194,10 @@ class AiocqhttpMessageEvent(AstrMessageEvent):
                 d = await cls._from_segment_to_dict(seg)
                 if owner_event is not None:
                     if not is_current(owner_event):
+                        logger.debug(
+                            "aiocqhttp send dropped: turn no longer current | session=%s",
+                            session_id,
+                        )
                         return
                     mark_sent(owner_event)
                 await cls._dispatch_send(bot, event, is_group, session_id, [d])
@@ -195,6 +207,10 @@ class AiocqhttpMessageEvent(AstrMessageEvent):
                     continue
                 if owner_event is not None:
                     if not is_current(owner_event):
+                        logger.debug(
+                            "aiocqhttp send dropped: turn no longer current | session=%s",
+                            session_id,
+                        )
                         return
                     mark_sent(owner_event)
                 await cls._dispatch_send(bot, event, is_group, session_id, messages)
@@ -203,6 +219,10 @@ class AiocqhttpMessageEvent(AstrMessageEvent):
     async def send(self, message: MessageChain) -> None:
         """发送消息"""
         if not is_current(self):
+            logger.debug(
+                "aiocqhttp send dropped at entry: turn no longer current | session=%s",
+                self.get_group_id() or self.get_sender_id(),
+            )
             return
         event = getattr(self.message_obj, "raw_message", None)
 
