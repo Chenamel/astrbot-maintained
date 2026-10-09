@@ -71,7 +71,7 @@
 | T5-04 | P0 | T5-00 | astrbot/api/runtime | 新建 runtime 模块 + 3 个运行时工具 | 缺席时降级语义如契约 §3.0.2 | pytest | 是 | ✅ | feat(api): expose runtime helpers |
 | T5-05 | P1 | T5-00 | astrbot/api/embedding | 新建 embedding 模块 + `is_embedding_provider` | 缺席时导入不报错 | pytest | 是 | ✅ | feat(api): expose embedding provider type |
 | T5-06 | P0 | T5-02..05 | tests/maintained/ | 三模块测试 + 插件侧 import 扫描测试 | 全绿且覆盖降级分支 | pytest | 否 | ✅ | test(api): cover phase 5 api additions |
-| T5-07 | P0 | T5-06 | 实例插件目录 | 仓 → 实例同步 + 重载插件 + 验证加载 | 插件正常加载、无 ImportError | 重载后查端口/日志 | 否 | ⏳ 文件已同步，待重载插件验证 | （实例侧，见 deploy-log.md） |
+| T5-07 | P0 | T5-06 | 实例插件目录 | 仓 → 实例同步 + 重载插件 + 验证加载 | 插件正常加载、无 ImportError | 重载后查端口/日志 | 否 | ✅ | （重启后复核通过，见 deploy-log.md） |
 | T5-08 | P0 | T5-07 | — | **阶段门禁：停下汇报 ≤10 行，等确认** | 已汇报且确认 | 对话记录 | 否 | ⬜ | — |
 | T6-01 | P2 | T5-01 | maintained/tools/ | check_drift / apply_patches 工具 | 一键校验与重打可用 | 实测 | 是 | ⬜ | 待定 |
 | T7-01 | P1 | T6-01 | NOTICE / CHANGELOG / tag | CHANGELOG、§13 README、打 tag、转公开 | 仓库公开且 §13 义务满足 | 目视 | 否 | ⬜ | 待定 |
