@@ -35,7 +35,9 @@ EXECUTION_NOT_AUTHORIZED = (
 )
 
 #: Reason returned when the policy engine is present but failed to decide.
-EXECUTION_POLICY_UNAVAILABLE = (
+#: Deliberately module-private: it is an internal fail-closed fallback and must
+#: not become part of the versioned public surface (see api-contract.md §3.4).
+_EXECUTION_POLICY_UNAVAILABLE = (
     "Execution authorization could not be verified; the operation was blocked."
 )
 
@@ -105,7 +107,7 @@ def execution_denial(event: Any, config: Any) -> str | None:
         try:
             reason = decider(event, config)
         except Exception:  # noqa: BLE001 - fail closed on an unusable policy
-            return EXECUTION_POLICY_UNAVAILABLE
+            return _EXECUTION_POLICY_UNAVAILABLE
         if isinstance(reason, str) and reason.strip():
             return reason
         return None

@@ -27,7 +27,7 @@ from typing import Any
 
 from astrbot.api._bridge import resolve
 
-logger = logging.getLogger("astrbot")
+_logger = logging.getLogger("astrbot")
 
 __all__ = [
     "available",
@@ -83,7 +83,7 @@ def is_current(event: Any) -> bool:
     try:
         return bool(checker(event))
     except Exception as exc:  # noqa: BLE001 - never block delivery on a check error
-        logger.warning("direct turn is_current check failed: %s", exc)
+        _logger.warning("direct turn is_current check failed: %s", exc)
         return True
 
 
@@ -99,7 +99,7 @@ def mark_sent(event: Any) -> None:
     try:
         marker(event)
     except Exception as exc:  # noqa: BLE001 - bookkeeping must not break sending
-        logger.warning("direct turn mark_sent failed: %s", exc)
+        _logger.warning("direct turn mark_sent failed: %s", exc)
 
 
 def turn_version(event: Any) -> int | None:
@@ -158,7 +158,7 @@ def reset(unified_msg_origin: str) -> bool:
     try:
         coordinator.reset(unified_msg_origin)
     except Exception as exc:  # noqa: BLE001 - reset is best effort
-        logger.warning("direct turn reset failed: %s", exc)
+        _logger.warning("direct turn reset failed: %s", exc)
         return False
     return True
 
@@ -175,6 +175,6 @@ def reset_all() -> bool:
     try:
         coordinator.reset_all()
     except Exception as exc:  # noqa: BLE001 - reset is best effort
-        logger.warning("direct turn reset_all failed: %s", exc)
+        _logger.warning("direct turn reset_all failed: %s", exc)
         return False
     return True
