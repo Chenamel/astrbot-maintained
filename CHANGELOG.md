@@ -13,6 +13,17 @@
 
 ### 新增
 
+- **阶段 8 存量治理与重构（进行中）**：
+  - **P11 定型（T8-01）**：维护版 core 相对上游的 **17 项有意偏离**改为 `xfail(strict=True)` ——
+    α 9 项（执行工具授权收紧）、β 8 项（hook 完成时序 = 核心架构优化，保留现状）。
+    落地靠**新增文件**：仓库根 `conftest.py` + `maintained/p11_deviations.py` 注册表，
+    **上游测试文件一字未改**（零冲突原则）；`strict=True` 让"意外通过"判红，
+    即「偏离被回退 / 被上游合并覆盖」的机械报警。
+    新护栏 `tests/maintained/test_p11_deviations.py` 守护注册表本身（分组数、nodeid 仍存在、
+    理由含组别、β 红线文档仍在、core 锚点仍在、命中数 17/17）。
+  - 套件口径：`tests/maintained` **186 项**全绿（新增 38 项）；上游口径
+    `170 passed, 17 xfailed`、γ 对照 `tests/test_process_stage_images.py` 125 全绿。
+    **本阶段不改 core ⇒ 台账 31 条不动、无需重新部署。**
 - **阶段 7 安全打磨 + 可用性验证**（发布暂缓，仓库保持私有）：
   - **回归护栏**：`tests/maintained/test_manifest_guard.py`（仓工作树↔台账自洽、台账只含 core、
     `proactive_must_remain_disabled`、条数钉）与 `test_api_frozen.py`（上游 `astrbot/api` 相对

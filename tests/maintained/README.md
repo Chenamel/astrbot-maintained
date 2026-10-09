@@ -28,7 +28,10 @@ EV="<托管工具 venv>"                                  # 提供 pytest / pyte
 PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 ```
 
-两种方式结果一致（均 **94** 项通过）。方式 B 不需要额外磁盘，依赖实例 venv 存在。
+两种方式结果一致（均 **186** 项通过）。方式 B 不需要额外磁盘，依赖实例 venv 存在。
+
+> 另有 **1 项** `test_every_deviation_was_matched_when_upstream_runs` 只在**同时收集到上游那两个
+> 测试文件**时才有意义（断言 17 条 xfail 全部命中），单独跑本目录时会 `skip`——属预期行为。
 
 **为什么不用实例 venv 直接跑**：实例 venv 内**不允许安装**任何包（会污染运行环境）；
 上游 `tests/conftest.py` 又需要 `pytest-asyncio`，故必须有独立环境。
@@ -36,7 +39,7 @@ PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 > 运行方式没有额外的包装脚本：直接用上面的命令即可，
 > 实例侧的漂移检测与恢复工具见 [`../../docs/maintained/tools.md`](../../docs/maintained/tools.md)。
 
-## 现阶段测试清单（13 个文件 / 94 项）
+## 现阶段测试清单（15 个文件 / 186 项）
 
 | 文件 | 覆盖 |
 |---|---|
@@ -50,9 +53,24 @@ PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 | `test_api_runtime.py` | 数据目录为绝对路径；缺席时下载响亮失败、引用图返回空表 |
 | `test_api_embedding.py` | `is_embedding_provider` 缺席与容错 |
 | `test_manifest_guard.py` | 仓工作树↔台账自洽；台账只含 core；`proactive_must_remain_disabled`；条数钉 |
+| `test_p11_deviations.py` | P11 注册表守护：α 9 / β 8 条数、nodeid 仍指向真实上游用例、理由含组别、β 红线文档与 core 锚点仍在、命中数 17/17 |
 | `test_api_frozen.py` | 上游 api 相对 `baseline/v4.28.2` 零改动（白名单=9 新增文件） |
 | `test_tools_check_drift.py` | 漂移检测：ok/mismatch/missing、退出码、JSON 输出、路径解析 |
 | `test_tools_apply_patches.py` | 源校验中止、预演不写、备份收据、写回后复核、端到端修复 |
+
+## 与仓库根 `conftest.py` 的关系
+
+上游有 **17 项**测试本 fork **有意**不通过（P11，见 `docs/maintained/inventory.md` §4）。
+按零冲突原则**上游测试文件一字未改**，改由仓库根 `conftest.py` 在收集阶段按
+`maintained/p11_deviations.py` 的注册表打上 `xfail(strict=True)`：
+
+- 失败 → `xfailed`（绿）；**意外通过 → `XPASS(strict)` 判红**（＝偏离被回退 / 被上游合并覆盖，报警）。
+- 所以"全绿"的完整口径是：本目录全绿 **且** 上游那两个文件输出 `170 passed, 17 xfailed`。
+
+```bash
+"$TV" -m pytest tests/maintained -q
+"$TV" -m pytest tests/unit/test_astr_main_agent.py tests/test_tool_loop_agent_runner.py -q
+```
 
 ## 断言约定
 
