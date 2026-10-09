@@ -25,13 +25,13 @@ maintained/v4.28.2  (长期主干)
 
 | 需求ID | 需求描述 | 方案要点 | 落点文件 | 触碰对外可见路径 | 兼容影响 | 验证测试 |
 |---|---|---|---|---|---|---|
-| R-01 | 插件顶层 import 私有常量导致整体加载失败 | 在 `astrbot/api/**` 暴露该契约常量，插件改从 api 导入 | `astrbot/api/…` | 否（仅新增） | 无 | `tests/maintained/test_api_surface.py` |
-| R-02 | 函数内 import 私有 `direct_turns.coordinator` | api 层提供访问入口 + try/except 降级 | `astrbot/api/…` | 否 | 无 | 同上 |
-| R-03 | 在途 LLM 取消能力（需 `runner.request_stop`） | core 补丁 + api 层封装 | `astrbot/core/…` + `astrbot/api/…` | 否 | 无（默认关闭） | `tests/maintained/test_turns.py` |
-| R-04 | 空参重复工具调用 14 次 | `REPEATED_TOOL_FAILURE_LIMIT` 补丁 | `astrbot/core/agent/runners/…` | 否 | 无 | `tests/maintained/test_tool_loop.py` |
-| R-05 | provider 内部图片降级 / QQ 图片本地化 | core 补丁 | `astrbot/core/provider/…`、`astrbot/core/platform/…` | 否 | 无 | `tests/maintained/test_media.py` |
-| R-06 | 维护保护（拦启动器覆盖） | `star/maintenance.py` + `updater` 保护 | `astrbot/core/star/…` | 否 | 无 | `tests/maintained/test_maintenance.py` |
-| R-07 | 补丁完整性可校验 | SHA-256 台账 + 比对脚本 | `maintained/installed_manifest.json` | 否 | 无 | 台账比对 |
+| R-01 | 插件顶层 import 私有常量导致整体加载失败 | 在 `astrbot/api/**` 暴露该契约常量，插件改从 api 导入 | `astrbot/api/…` | 否（仅新增） | 无 | `tests/maintained/test_api_media.py` |
+| R-02 | 函数内 import 私有 `direct_turns.coordinator` | api 层提供访问入口 + try/except 降级 | `astrbot/api/…` | 否 | 无 | `tests/maintained/test_api_turns.py` |
+| R-03 | 在途 LLM 取消能力（需 `runner.request_stop`） | core 补丁 + api 层封装 | `astrbot/core/…` + `astrbot/api/…` | 否 | 无（默认关闭） | `tests/maintained/test_api_turns.py` |
+| R-04 | 空参重复工具调用 14 次 | `REPEATED_TOOL_FAILURE_LIMIT` 补丁 | `astrbot/core/agent/runners/…` | 否 | 无 | 上游 `tests/test_tool_loop_agent_runner.py` |
+| R-05 | provider 内部图片降级 | core 补丁 | `astrbot/core/provider/…` | 否 | 无 | `tests/maintained/test_api_media.py`、上游 `tests/test_process_stage_images.py` |
+| R-06 | 维护保护（拦面板覆盖插件） | `star/maintenance.py` + `updater` 保护 | `astrbot/core/star/…` | 否 | 无 | 离线：`maintained/tools/check_drift.py` |
+| R-07 | 补丁完整性可校验 | SHA-256 台账 + 比对脚本 | `maintained/installed_manifest.json` | 否 | 无 | `tests/maintained/test_manifest_guard.py` |
 
 ## 3. 兼容边界与冻结清单
 
@@ -53,7 +53,7 @@ maintained/v4.28.2  (长期主干)
 
 必须同时满足：shim 转发 + `DeprecationWarning` + 测试 + **单独提交**并在 commit message 说明理由。
 
-## 4. 新增模块清单（阶段 3 落）
+## 4. 新增模块清单（阶段 3 落 + 阶段 5 追加）
 
 **接口契约以 [`api-contract.md`](./api-contract.md) 为唯一规格**（含签名、降级语义、测试要求）。
 
@@ -65,8 +65,12 @@ maintained/v4.28.2  (长期主干)
 | `astrbot/api/delivery/` | 交付策略纯函数 | P3 的一部分 |
 | `astrbot/api/permissions/` | 权限与执行授权 | P6 |
 | `astrbot/api/proactive/` | 轻量主动判定（**开关恒关**） | 铁律 6 |
+| `astrbot/api/content/` | 内容部件类型 + `is_*` 判定 | 阶段 5 追加 |
+| `astrbot/api/runtime/` | 运行时工具（数据目录 / 下载 / 引用图） | 阶段 5 追加 |
+| `astrbot/api/embedding/` | 嵌入提供者类型 | 阶段 5 追加 |
 
-**关键约束**：五个模块均为**新增目录**，**不修改**任何既有 api 文件；core 侧补丁在基线 4.28.2 上不存在，api 层必须降级可用、补丁就位后自动生效。
+**关键约束**：以上模块均为**新增文件**，**不修改**任何既有 api 文件（由 `tests/maintained/test_api_frozen.py` 守护）；
+core 侧补丁在基线 4.28.2 上不存在，api 层必须降级可用、补丁就位后自动生效。
 
 ## 5. core 内部改动策略
 
