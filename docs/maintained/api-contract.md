@@ -202,3 +202,36 @@ def capabilities() -> dict[str, bool]: ...
 ## 6. 台账要求
 
 新增文件全部位于 `astrbot/**`，属受保护 core 文件 → **必须登记进 `maintained/installed_manifest.json`**（六铁律第 5 条）。
+
+## 7. 消费方自检（只读）
+
+维护版插件（私有仓 `astrbot-extras`）提供一条**只读**自检命令，用于运行时确认公开面是否就位：
+
+```
+enhance api-status        # 仅管理员
+```
+
+**实现约束**（发布前请对齐）：
+
+1. **只读**：仅调用各模块公开的 `available()`，不写任何状态；
+2. **只走公开面**：遍历 `astrbot.api.{content,delivery,embedding,media,permissions,proactive,runtime,turns}`，
+   **禁止 import `astrbot.api._bridge`**（非公开面）；
+3. **不碰开关**：尤其不得读写 `active_reply` 相关配置（六铁律第 6 条）；
+4. **可降级**：任一模块缺失时只报告 `unavailable`，不抛异常、不影响插件加载。
+
+**输出语义**：`installed` = 维护版 core 提供了该能力；`degraded` = core 侧支持缺失（对应功能自动降级）。
+
+**实测样例**（维护版实例，8 个模块全部就位）：
+
+```
+Maintained AstrBot API surface (read-only)
+
+  astrbot.api.content: installed
+  astrbot.api.delivery: installed
+  astrbot.api.embedding: installed
+  astrbot.api.media: installed
+  astrbot.api.permissions: installed
+  astrbot.api.proactive: installed
+  astrbot.api.runtime: installed
+  astrbot.api.turns: installed
+```
