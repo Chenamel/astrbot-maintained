@@ -21,6 +21,12 @@
     即「偏离被回退 / 被上游合并覆盖」的机械报警。
     新护栏 `tests/maintained/test_p11_deviations.py` 守护注册表本身（分组数、nodeid 仍存在、
     理由含组别、β 红线文档仍在、core 锚点仍在、命中数 17/17）。
+  - **`hook_timing_mode` 开关落地（T8-07）**：配置项 `agent_runner.config.misc.hook_timing_mode`
+    （默认 `enhanced` / 可选 `legacy`），沿 `tool_schema_mode` 的既有链路传到 runner；
+    **legacy 只在「上游有对照的路径」延后钩子——即 `tool_loop_agent_runner.py` 的 1130 一处**
+    （基线 972 在 yield 之后）；fork 独有的 977（图片降级兜底）与 1325（末轮补生成）保留优化，
+    1093 与基线 913 逐字相同故一行不动 ⇒ **legacy 精确等于上游**。
+    新增测试 `tests/maintained/test_hook_timing_mode.py` 双模式断言（legacy 下 yield 时钩子未触发＝上游语义）。
   - **β 影响面排查（T8-01R）**：新文档 `docs/maintained/hook-timing-impact.md` —— 精确更正 β 根因为
     runner **1130** 行（基线 972 在 yield 之后）；本机 17 个插件**硬风险 0**、受益 2、需观察 1；
     官方生态抽样 71 个仓库（受益 7 / 有风险 3 + 2 待复核），推测真正受损 ≤20–40；
