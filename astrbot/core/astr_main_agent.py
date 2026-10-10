@@ -218,6 +218,9 @@ class MainAgentBuildConfig:
     timezone: str | None = None
     max_quoted_fallback_images: int = 20
     """Maximum number of images injected from quoted-message fallback extraction."""
+    hook_timing_mode: str = "enhanced"
+    """When to fire the agent-completion hook: ``enhanced`` (before the reply is
+    emitted) or ``legacy`` (upstream timing on paths that have a counterpart)."""
 
 
 @dataclass(slots=True)
@@ -1878,6 +1881,7 @@ async def build_main_agent(
         truncate_turns=config.dequeue_context_length,
         enforce_max_turns=config.max_context_length,
         tool_schema_mode=config.tool_schema_mode,
+        hook_timing_mode=config.hook_timing_mode,
         fallback_providers=fallback_providers,
         request_max_retries=config.request_max_retries,
         tool_result_overflow_dir=(

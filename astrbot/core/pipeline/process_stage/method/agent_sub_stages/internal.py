@@ -25,7 +25,11 @@ from astrbot.core.astr_main_agent import (
     build_main_agent,
     collect_initial_request,
 )
-from astrbot.core.config.agent_runner import resolve_context_compression_config
+from astrbot.core.config.agent_runner import (
+    normalize_hook_timing_mode,
+    resolve_context_compression_config,
+    set_hook_timing_mode,
+)
 from astrbot.core.message.components import At, File, Image, Record, Reply, Video
 from astrbot.core.message.message_event_result import (
     MessageChain,
@@ -92,6 +96,12 @@ class InternalAgentSubStage(Stage):
             self.tool_schema_mode = "full"
         if isinstance(self.max_step, bool):  # workaround: #2622
             self.max_step = 30
+        # ``normalize_hook_timing_mode`` rejects unknown values, so a bad config
+        # keeps the fork default instead of silently switching semantics.
+        self.hook_timing_mode: str = normalize_hook_timing_mode(
+            misc_config.get("hook_timing_mode")
+        )
+        set_hook_timing_mode(self.hook_timing_mode)
         self.show_tool_use: bool = settings.get("show_tool_use_status", True)
         self.show_tool_call_result: bool = settings.get("show_tool_call_result", False)
         self.buffer_intermediate_messages: bool = settings.get(
@@ -129,6 +139,7 @@ class InternalAgentSubStage(Stage):
         self.main_agent_cfg = MainAgentBuildConfig(
             tool_call_timeout=self.tool_call_timeout,
             tool_schema_mode=self.tool_schema_mode,
+            hook_timing_mode=self.hook_timing_mode,
             sanitize_context_by_modalities=self.sanitize_context_by_modalities,
             kb_agentic_mode=self.kb_agentic_mode,
             file_extract_enabled=self.file_extract_enabled,
