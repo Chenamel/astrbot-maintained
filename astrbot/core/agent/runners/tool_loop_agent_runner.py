@@ -36,6 +36,7 @@ from astrbot.core.code_delivery_policy import (
     code_task_spec,
     has_code_delivery,
 )
+from astrbot.core.config.agent_runner import normalize_hook_timing_mode
 from astrbot.core.exceptions import EmptyModelOutputError
 from astrbot.core.message.components import Json
 from astrbot.core.message.message_event_result import (
@@ -328,6 +329,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         custom_token_counter: TokenCounter | None = None,
         custom_compressor: ContextCompressor | None = None,
         tool_schema_mode: str | None = "full",
+        hook_timing_mode: str | None = None,
         fallback_providers: list[Provider] | None = None,
         request_max_retries: int | None = None,
         tool_result_overflow_dir: str | None = None,
@@ -405,6 +407,9 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         #   This can reduce token usage when tools have large descriptions.
         # See #4681
         self.tool_schema_mode = tool_schema_mode
+        # "enhanced" fires the completion hook before the reply is emitted;
+        # "legacy" restores the upstream timing on paths that have a counterpart.
+        self.hook_timing_mode = normalize_hook_timing_mode(hook_timing_mode)
         self._tool_schema_param_set = None
         self._skill_like_raw_tool_set = None
         if tool_schema_mode == "skills_like":
@@ -1127,7 +1132,12 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                     logger.warning(
                         "skills_like tool re-query returned no tool calls; fallback to assistant response."
                     )
-                    await self._complete_with_assistant_response(llm_resp)
+                    # "enhanced" (default) fires the completion hook before the
+                    # reply is emitted; "legacy" defers it until right after the
+                    # llm_result yields, which is where upstream calls it.
+                    legacy_timing = self.hook_timing_mode == "legacy"
+                    if not legacy_timing:
+                        await self._complete_with_assistant_response(llm_resp)
                     if llm_resp.reasoning_content:
                         yield AgentResponse(
                             type="llm_result",
@@ -1149,6 +1159,9 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                                 chain=MessageChain().message(llm_resp.completion_text),
                             ),
                         )
+
+                    if legacy_timing:
+                        await self._complete_with_assistant_response(llm_resp)
 
                     # Re-query uses text_chat(), so its reply has no stream chunks.
                     # Supply them after hooks without changing llm_result ordering.
