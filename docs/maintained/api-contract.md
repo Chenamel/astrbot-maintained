@@ -78,6 +78,19 @@ def capabilities() -> dict[str, bool]: ...
 | `get_astrbot_data_path() -> str` | 函数 | 回退到 `Path.cwd()/data` 的字面量路径 |
 | `download_image_by_url(url, ...) -> Any` | 协程 | `raise RuntimeError`（明确失败，不静默） |
 | `extract_quoted_message_images(event, comp) -> Any` | 协程 | 返回空列表（降级为"没有引用图"） |
+| `HOOK_TIMING_ENHANCED` | `str` 常量 | 字面量 `"enhanced"`（与 core 同值） |
+| `HOOK_TIMING_LEGACY` | `str` 常量 | 字面量 `"legacy"`（与 core 同值） |
+| `hook_timing_mode() -> str` | 函数 | 返回 `"enhanced"`（＝本 fork 默认；非法值同样回落） |
+
+**`hook_timing_mode()` 语义**：返回当前生效的「agent 完成钩子时序模式」。
+
+- `enhanced`（默认）：完成钩子在**回复发出之前**触发，让审计/改写类插件先拿到控制权
+  —— 这是本 fork 的架构优化（见 `hook-timing-impact.md`）。
+- `legacy`：在**上游有对照的路径**上把钩子恢复到「回复先出、钩子后到」，
+  行为与官方原版逐点一致；fork 独有的路径（图片降级兜底、末轮补生成）保留优化。
+
+插件用法：自检当前模式，遇 `legacy` 时自行走保守路径或提示用户，避免静默故障。
+该函数**不依赖 `_bridge` 能力键**，core 缺席/抛异常/返回非法值一律回落 `"enhanced"`。
 
 ### 3.0.3 `astrbot/api/embedding/` — 嵌入提供者
 

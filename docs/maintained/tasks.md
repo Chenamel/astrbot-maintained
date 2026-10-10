@@ -112,7 +112,8 @@
 | T8-04 | P1 | T8-03 | P3 区域 | **工具名硬编码白名单 → 工具自声明**（执行类 / 轻量主动类） | 白名单不再写死在 core | 评审 + pytest | 是 | ⬜ | 待定 |
 | T8-05 | P1 | T8-04 | P6 区域 | **权限双模型统一入口**（目标语义需用户先定：仅统一命名 vs 统一判定强度） | 单一判定入口 | pytest | 是 | ⬜ | 待定 |
 | T8-06 | P1 | T8-05 | P9 区域 | **maintenance fail-open → warning**；`uninstall_plugin` 补闸门 | 更新/安装/卸载三入口闸门齐备 | 实测 | 是 | ⬜ | 待定 |
-| T8-07 | P0 | T8-06 | 🟡 4 文件 | **拆分重写**（含 runner 拆分）；**β 的 hook 完成时序优化必须原样保留**（P11 红线） | 行为等价、全量测试全绿、P11 复核无回退 | pytest + P11 复核 | 否 | ⬜ | 待定 |
+| T8-07 | P0 | T8-01R | `config/agent_runner.py`、`config/default.py`、`astr_main_agent.py`、`.../agent_sub_stages/internal.py`、`agent/runners/tool_loop_agent_runner.py`、`api/runtime/__init__.py` | **落地 `hook_timing_mode` 开关**（默认 `enhanced` / 可选 `legacy`）：misc 配置项 → 沿 `tool_schema_mode` 既有链路传参 → runner 在 **1130** 加 legacy 分支 → `astrbot.api.runtime` 只读暴露。**只在「上游有对照的路径」延后（仅 1130）；fork 独有路径（977 / 1325）保留优化；1093 一行不动** | legacy 在有对照路径上逐点等于上游；fork 独有路径保留优化；maintained 全绿、上游 `170 passed + 17 xfailed` 不变、台账 4 条哈希同步、双端 31/31 | pytest + drift + 用户重启复核 | 否 | 🔄 进行中 | 待定 |
+| T8-12 | P1 | T8-07 | 🟡 4 文件 | **拆分重写**（含 runner 拆分；原 T8-07 内容，因开关任务插队而顺延）；**β 的 hook 完成时序优化必须原样保留**（P11 红线） | 行为等价、全量测试全绿、P11 复核无回退 | pytest + P11 复核 | 否 | ⬜ | 待定 |
 | T8-08 | P0 | T8-07 | — | **阶段门禁：停下汇报 ≤10 行，等确认** → 之后才回到 T7-90 评估 | 已汇报且确认 | 对话记录 | 否 | ⬜ | — |
 
 > **定位变更提示（2026-10-10）**：项目已重定位为「面向社区开源的集成增强版 AstrBot」（见 `project_rules.md` 置顶节）。
