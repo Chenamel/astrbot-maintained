@@ -39,3 +39,30 @@ async def test_download_fails_loudly_when_absent():
         return
     with pytest.raises(RuntimeError):
         await runtime.download_image_by_url("https://example.com/a.png")
+
+
+def test_hook_timing_constants_match_the_contract():
+    assert runtime.HOOK_TIMING_ENHANCED == "enhanced"
+    assert runtime.HOOK_TIMING_LEGACY == "legacy"
+    assert runtime.hook_timing_mode() in (
+        runtime.HOOK_TIMING_ENHANCED,
+        runtime.HOOK_TIMING_LEGACY,
+    )
+
+
+def test_hook_timing_mode_falls_back_when_core_is_absent(monkeypatch):
+    monkeypatch.setattr(runtime, "resolve", lambda *args, **kwargs: None)
+    assert runtime.hook_timing_mode() == runtime.HOOK_TIMING_ENHANCED
+
+
+def test_hook_timing_mode_round_trips_and_rejects_unknown_values():
+    core_config = pytest.importorskip("astrbot.core.config.agent_runner")
+    original = runtime.hook_timing_mode()
+    try:
+        core_config.set_hook_timing_mode(runtime.HOOK_TIMING_LEGACY)
+        assert runtime.hook_timing_mode() == runtime.HOOK_TIMING_LEGACY
+        # An invalid mode must keep the fork default instead of switching semantics.
+        core_config.set_hook_timing_mode("not-a-mode")
+        assert runtime.hook_timing_mode() == runtime.HOOK_TIMING_ENHANCED
+    finally:
+        core_config.set_hook_timing_mode(original)
