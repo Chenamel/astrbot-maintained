@@ -59,10 +59,13 @@ EXPECTED_ALL = {
         "is_text_part",
     },
     "runtime": {
+        "HOOK_TIMING_ENHANCED",
+        "HOOK_TIMING_LEGACY",
         "available",
         "download_image_by_url",
         "extract_quoted_message_images",
         "get_astrbot_data_path",
+        "hook_timing_mode",
     },
     "embedding": {
         "EmbeddingProvider",
