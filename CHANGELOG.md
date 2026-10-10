@@ -21,6 +21,11 @@
     即「偏离被回退 / 被上游合并覆盖」的机械报警。
     新护栏 `tests/maintained/test_p11_deviations.py` 守护注册表本身（分组数、nodeid 仍存在、
     理由含组别、β 红线文档仍在、core 锚点仍在、命中数 17/17）。
+  - **β 影响面排查（T8-01R）**：新文档 `docs/maintained/hook-timing-impact.md` —— 精确更正 β 根因为
+    runner **1130** 行（基线 972 在 yield 之后）；本机 17 个插件**硬风险 0**、受益 2、需观察 1；
+    官方生态抽样 71 个仓库（受益 7 / 有风险 3 + 2 待复核），推测真正受损 ≤20–40；
+    规划 `hook_timing_mode`（默认 `enhanced` / 可选 `legacy`）的配置、传参与 api 暴露接入点。
+    **本轮只出报告，未改 core、未动台账。**
   - 套件口径：`tests/maintained` **186 项**全绿（新增 38 项）；上游口径
     `170 passed, 17 xfailed`、γ 对照 `tests/test_process_stage_images.py` 125 全绿。
     **本阶段不改 core ⇒ 台账 31 条不动、无需重新部署。**

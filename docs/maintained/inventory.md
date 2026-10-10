@@ -187,6 +187,12 @@
 **实测更正**：承载该钩子的 `ToolLoopAgentRunner._complete_with_assistant_response()`
 在**基线与维护版中逐行相同**（顺序均为：追加 assistant 消息 → 调 `on_agent_done` → `_resolve_unconsumed_follow_ups()`）。
 所以**钩子本身没有被挪位**；真正变化的是**"这一轮何时被判定为完成"**——
+
+> **精确行号（2026-10-10 T8-01R 补）**：β 根因是 **`tool_loop_agent_runner.py:1130`**
+> （skills_like 重查询无工具调用的兜底路径）——基线同逻辑的调用在 **972**，位于 llm_result
+> yield **之后**；维护版把它移到了 yield **之前**。另外 3 处调用点：
+> **977**（图片不可用早退，fork 新增）、**1093**（= 基线 913，相对位置未变）、
+> **1325**（工具连败最终回复，fork 新增）。详见 `docs/maintained/hook-timing-impact.md` §2。
 补丁新增的代码交付修复 / 末轮补生成逻辑（该方法上方的 `language` / `outcome` 记录与修复路径）
 使 `_complete_with_assistant_response` 在更早的一步被调用，于是当最终两条 `llm_result`
 经过 `step()` 时，钩子标记已经是 `True`。

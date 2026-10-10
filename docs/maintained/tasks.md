@@ -104,7 +104,8 @@
 | 编号 | 优先级 | 前置依赖 | 涉及文件 | 工作内容 | 完成标准 | 验证方式 | 可否并行 | 状态 | 提交信息 |
 |---|---|---|---|---|---|---|---|---|---|
 | T8-01 | P0 | — | tests/, conftest.py, maintained/p11_deviations.py | **P11 定型**：α 9 项标 `xfail(strict)`（设计使然的预期失败）；β 8 项标 `xfail(strict)` 并登记为核心架构优化、保留现状——给"测试全绿"一个明确定义 | 套件输出 = maintained 全绿 + 上游 `170 passed, 17 xfailed`，无未解释的红 | pytest | 否 | ✅ | docs(maintained): classify the 17 upstream deviations as expected failures / test(maintained): mark known upstream deviations as strict xfails / docs: update changelog and test inventory for phase 8 |
-| T8-01R | P1 | T8-01 | docs/maintained/hook-timing-impact.md | **β 影响面排查**（本机插件 / 官方插件市场 / 判据）+ `hook_timing_mode` 开关（默认 `enhanced`，可选 `legacy`）的**接入点规划**；**本轮只出报告、不写 core 代码**，开关实施并入 T8-07 | 报告含影响清单与接入点，用户确认 | 评审 | 是 | ⬜ | 待定 |
+| T8-01R | P1 | T8-01 | docs/maintained/hook-timing-impact.md | **β 影响面排查**（本机插件 / 官方插件市场 / 判据）+ `hook_timing_mode` 开关（默认 `enhanced`，可选 `legacy`）的**接入点规划**；**本轮只出报告、不写 core 代码**，开关实施并入 T8-07 | 报告含影响清单与接入点，用户确认 | 评审 | 是 | ✅ | docs(maintained): report hook-timing impact and plan the mode switch |
+| T8-09 | P2 | T8-01R | 实例插件 `livingmemory` | **观察项**：其反射入库（`main.py:345`）可能早于 `content_safety_guard` 审计，存到未审计文本；确认优先级并在必要时加审计后校正 / 调低优先级 | 入库文本已确保为审计后文本 | 实测 + 评审 | 是 | ⬜ | 待定 |
 | T8-02 | P0 | T8-01 | P10 区域 | **手写正则安全判定**：先补测试把当前行为钉死（误判容限显式化），再谈优化 | 行为被测试覆盖 | pytest | 否 | ⬜ | 待定 |
 | T8-03 | P0 | T8-02 | P2 区域 | **core 反向硬依赖插件目录名（2 处）→ 注册表/钩子化**；完成后解锁"插件名守卫测试"（严格版） | core 内零插件目录名 | grep + pytest | 否 | ⬜ | 待定 |
 | T8-04 | P1 | T8-03 | P3 区域 | **工具名硬编码白名单 → 工具自声明**（执行类 / 轻量主动类） | 白名单不再写死在 core | 评审 + pytest | 是 | ⬜ | 待定 |
