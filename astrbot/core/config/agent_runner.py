@@ -3,6 +3,17 @@ from __future__ import annotations
 import copy
 from typing import Any
 
+#: Accepted values for ``agent_runner.config.misc.hook_timing_mode``.
+HOOK_TIMING_MODES = ("enhanced", "legacy")
+
+#: Default mode: the agent-completion hook fires **before** the reply is emitted,
+#: so audit and rewrite plugins get control first. This is a fork optimisation.
+HOOK_TIMING_MODE_DEFAULT = "enhanced"
+
+#: Mode that restores the upstream timing ("reply first, completion hook after")
+#: on every code path that has an upstream counterpart.
+HOOK_TIMING_MODE_LEGACY = "legacy"
+
 AGENT_RUNNER_TYPES = ("local", "dify", "coze", "dashscope", "deerflow")
 THIRD_PARTY_AGENT_RUNNER_TYPES = AGENT_RUNNER_TYPES[1:]
 
@@ -32,6 +43,7 @@ AGENT_RUNNER_CONFIG_DEFAULTS: dict[str, dict[str, Any]] = {
             "tool_schema_mode": "full",
             "tool_call_timeout": 120,
             "sanitize_context_by_modalities": False,
+            "hook_timing_mode": HOOK_TIMING_MODE_DEFAULT,
         },
     },
     "dify": {
@@ -199,3 +211,51 @@ def normalize_agent_runner(agent_runner: object) -> dict[str, Any]:
         if normalized["compression"]["trim_turns"] < 1:
             normalized["compression"]["trim_turns"] = 1
     return {"runner_type": runner_type, "config": normalized}
+
+
+#: Mode recorded by the most recent main agent build (see :func:`set_hook_timing_mode`).
+_CURRENT_HOOK_TIMING_MODE = HOOK_TIMING_MODE_DEFAULT
+
+
+def normalize_hook_timing_mode(value: Any) -> str:
+    """Return a supported hook timing mode, falling back to the default.
+
+    Args:
+        value: The raw configured value.
+
+    Returns:
+        ``value`` when it is one of :data:`HOOK_TIMING_MODES`, otherwise
+        :data:`HOOK_TIMING_MODE_DEFAULT`. Invalid values therefore keep the
+        current behaviour instead of silently switching semantics.
+    """
+    if isinstance(value, str) and value in HOOK_TIMING_MODES:
+        return value
+    return HOOK_TIMING_MODE_DEFAULT
+
+
+def hook_timing_mode() -> str:
+    """Return the hook timing mode used by the most recent main agent build.
+
+    The agent runner configuration is process-wide, so every conversation shares
+    one mode. Plugins read this to detect whether the completion hook fires
+    before (``enhanced``) or after (``legacy``) the reply is emitted.
+
+    Returns:
+        The current mode; :data:`HOOK_TIMING_MODE_DEFAULT` before the first
+        main agent build or when the last recorded value became invalid.
+    """
+    return normalize_hook_timing_mode(_CURRENT_HOOK_TIMING_MODE)
+
+
+def set_hook_timing_mode(value: Any) -> str:
+    """Record the hook timing mode of a main agent build and return it.
+
+    Args:
+        value: The raw configured value.
+
+    Returns:
+        The normalized mode that is now in effect.
+    """
+    global _CURRENT_HOOK_TIMING_MODE
+    _CURRENT_HOOK_TIMING_MODE = normalize_hook_timing_mode(value)
+    return _CURRENT_HOOK_TIMING_MODE
