@@ -130,7 +130,7 @@
 |---|---|---|---|
 | P1 | **插件顶层 import core 私有常量** → core 漂移即插件整体下线 | 存量插件 `main.py:28` | ① 常量上移 `astrbot.api.provider`；② 插件改 `try/except ImportError` 软依赖 |
 | P2 | **core 反向硬依赖插件目录名** | 实测 **2 处**：`astr_main_agent._is_lightweight_proactive_request`、`tool_loop_agent_runner._finish_proactive_request`（早期清单写的「×2 + ×1」有误） | ✅ **已处置（T8-03）**：改为**能力契约解析** —— 只按约定的能力方法名发现插件（`is_trusted_lightweight_proactive` / `finish_proactive_request`），core 零插件名、行为逐点等价、无需改插件。契约与守卫见 `docs/maintained/plugin-capability-lookup.md` |
-| P3 | **工具名硬编码白名单** | `code_delivery_policy.EXECUTION_TOOL_NAMES`、`_LIGHTWEIGHT_PROACTIVE_TOOL_NAMES` | 改为工具/插件自行声明 |
+| P3 | **工具名硬编码白名单** | `code_delivery_policy.EXECUTION_TOOL_NAMES`（4 个，全 core 自带）、`astr_main_agent._LIGHTWEIGHT_PROACTIVE_TOOL_NAMES`（28 个，**多为第三方插件工具**） | ✅ **已处置（T8-04）**：分两半 —— 执行类**纯自声明**；轻量主动类**自声明 + 配置名单并集**（第三方插件不会来声明，纯自声明会让主动回复静默失去工具）。声明字段 `FunctionTool.is_execution_tool` / `is_lightweight_proactive_safe`（照 `is_background_task` 先例，默认关闭）；配置兜底 `agent_runner.config.misc.lightweight_proactive_tools`（默认 28 个）。详见 `docs/maintained/tool-capability-declaration.md` |
 | P4 | **隐式字符串协议** | `"<image_caption>"` 在 5 处硬编码；`"<quote>"`/`"<mention>"` 亦无共享常量 | 抽共享常量 |
 | P5 | **跨模块写私有属性** | `astr_agent_run_util` 写 `agent_runner._proactive_delivery_deferred` | 提升为正式字段 + 公开方法 |
 | P6 | 权限双模型并存 | `check_admin_permission` 与 `check_execution_permission` 并存（`fs.py` 仍只用前者） | 统一权限入口，按工具敏感度分级 |
