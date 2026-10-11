@@ -61,6 +61,7 @@ def _redirect_background_stdout_command(
 class ExecuteShellTool(FunctionTool):
     name: str = "astrbot_execute_shell"
     description: str = "Execute a command in the shell."
+    is_execution_tool: bool = True
     parameters: dict = field(
         default_factory=lambda: {
             "type": "object",
@@ -260,6 +261,7 @@ class ShellSessionTool(FunctionTool):
         "Sessions are isolated to the current conversation and sender. "
         "Administrators can manage all sessions in the conversation."
     )
+    is_execution_tool: bool = True
     parameters: dict = field(
         default_factory=lambda: {
             "type": "object",

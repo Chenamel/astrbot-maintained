@@ -84,6 +84,7 @@ class PythonTool(FunctionTool):
     name: str = "astrbot_execute_ipython"
     description: str = f"Run codes in an IPython shell. Current OS: {_OS_NAME}."
     parameters: dict = field(default_factory=lambda: param_schema)
+    is_execution_tool: bool = True
 
     async def call(
         self,
@@ -124,6 +125,7 @@ class LocalPythonTool(FunctionTool):
     )
 
     parameters: dict = field(default_factory=lambda: param_schema)
+    is_execution_tool: bool = True
 
     async def call(
         self,

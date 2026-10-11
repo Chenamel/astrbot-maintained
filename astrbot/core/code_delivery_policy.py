@@ -5,14 +5,6 @@ import re
 from astrbot import logger
 from astrbot.core.message.components import Plain
 
-EXECUTION_TOOL_NAMES = frozenset(
-    {
-        "astrbot_execute_python",
-        "astrbot_execute_ipython",
-        "astrbot_execute_shell",
-        "astrbot_shell_session",
-    }
-)
 CODE_DELIVERY_FAILURE = "这次没生成完整代码，可以再试一次"
 #: Maximum number of task-text characters kept for delivery checks.
 TASK_TEXT_MAX_CHARS = 16000
@@ -193,16 +185,17 @@ def apply_execution_policy(event, config, request) -> None:
     error = execution_denial(event, config)
     removed = []
     if error and request.func_tool:
+        # Tools declare themselves as execution tools, so core keeps no name list.
         removed = [
             tool.name
             for tool in request.func_tool.tools
-            if tool.name in EXECUTION_TOOL_NAMES
+            if getattr(tool, "is_execution_tool", False)
         ]
         request.func_tool = ToolSet(
             [
                 tool
                 for tool in request.func_tool.tools
-                if tool.name not in EXECUTION_TOOL_NAMES
+                if not getattr(tool, "is_execution_tool", False)
             ]
         )
     request.system_prompt += (

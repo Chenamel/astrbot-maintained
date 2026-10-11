@@ -63,6 +63,19 @@ class FunctionTool(ToolSchema, Generic[TContext]):
     Declare this tool as a background task. Background tasks return immediately
     with a task identifier while the real work continues asynchronously.
     """
+    is_execution_tool: bool = False
+    """
+    Declare this tool as code or command execution. Execution tools need an
+    explicit run request in the current message and are dropped from the tool
+    set when that authorization is missing.
+    """
+    is_lightweight_proactive_safe: bool = False
+    """
+    Declare this tool as safe for an unsolicited proactive reply: no host,
+    moderation, file, or outbound-message side effects. Tools that do not
+    declare it stay out of the proactive path unless their name is listed in
+    ``agent_runner.config.misc.lightweight_proactive_tools``.
+    """
 
     def __repr__(self) -> str:
         return f"FuncTool(name={self.name}, parameters={self.parameters}, description={self.description})"
