@@ -32,9 +32,9 @@
     "astrbot/core/star/maintenance.py": "9dfde79480d9eb89959b995216717c76f832b63d2cb993bcf08c70a623ffcbdf",
     "astrbot/core/star/star_manager.py": "b47eb9f33c0028d72991197faa082442d9bd3dc156c634be69c746b1d3aced56",
     "astrbot/core/star/updater.py": "b0aa31701e8920b1aeab378705c3f6e8c42873fa3dad4322d26f3549ae238db3",
-    "astrbot/core/tools/computer_tools/python.py": "8be1e4e82cda4b1bd8b259a659b44e036a1ad01e5db5d03ed3e520b9e588c883",
-    "astrbot/core/tools/computer_tools/shell.py": "0f901f578682fad794dee9058e628e2498f383b97d570c0705d15a8a03dcd082",
-    "astrbot/core/tools/computer_tools/util.py": "9f0fd2a1ec67c1f9decae58fde43e3b65d75287cabe7f2bd4eac0c9d66ba6f64",
+    "astrbot/core/tools/computer_tools/python.py": "ad1ec10471e1a7c83c9134480f34418e2363407055bac83438d638b19e94300c",
+    "astrbot/core/tools/computer_tools/shell.py": "fbdc78a1c5c357e29a05d83653fe54cab99adc147e6f323cbb6c1b254b16085e",
+    "astrbot/core/tools/computer_tools/util.py": "812c88a8cbe53387ba4ddf46dadcc830ec3a925afb3cd9d32e97ea9f9e32452a",
     "astrbot/core/utils/direct_turns.py": "b14bba4a7932ba81594a78f2c558d1aed148cffa4edc311f6b75c60075be0824",
     "astrbot/dashboard/services/plugin_service.py": "3568f5a720f0c8f7490cc4a31d7cfcb68523b876e54e8d682a24dcc872b328fa"
   }
