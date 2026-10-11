@@ -8,7 +8,7 @@
 | 白名单 | 数量 | 工具来源 | 用途 |
 |---|---|---|---|
 | `code_delivery_policy.EXECUTION_TOOL_NAMES` | 4 | **全是 core 自带**（`computer_tools/python.py` ×2、`shell.py` ×2） | 未获当前消息授权时，从工具集里移除这些工具 |
-| `astr_main_agent._LIGHTWEIGHT_PROACTIVE_TOOL_NAMES` | 28 | **绝大多数是第三方插件工具**（`uapi_*` ×14、`enhance_*` ×3、`image_studio_*` ×2、`grok_web_search`、`recall_long_term_memory`、`get_group_message_history`、`play_song_by_name`、`query_lyrics_by_name`） | 轻量主动回复只允许这批"无副作用"工具 |
+| `astr_main_agent._LIGHTWEIGHT_PROACTIVE_TOOL_NAMES` | 29 | **绝大多数是第三方插件工具**（`uapi_*` ×14、`enhance_*` ×3、`image_studio_*` ×2、`grok_web_search`、`recall_long_term_memory`、`get_group_message_history`、`play_song_by_name`、`query_lyrics_by_name`） | 轻量主动回复只允许这批"无副作用"工具 |
 
 ## 2. 为什么两半边处置不同
 
@@ -35,7 +35,7 @@
 
 - 配置键：`agent_runner.config.misc.lightweight_proactive_tools`（字符串数组）
 - 默认值常量：`astrbot/core/config/agent_runner.py` 的 `DEFAULT_LIGHTWEIGHT_PROACTIVE_TOOLS`
-  （= 原 28 个名字），并登记进 `AGENT_RUNNER_CONFIG_DEFAULTS["local"]["misc"]`
+  （= 原 29 个名字），并登记进 `AGENT_RUNNER_CONFIG_DEFAULTS["local"]["misc"]`
 - `normalize_agent_runner` 对 list 类型**原样保留用户值**（`_normalize_value` 的 list 分支），
   所以用户可在配置里增删；WebUI schema 同步在 `config/default.py`（`type: list` + `items: string`）
 - 判定：`tool.is_lightweight_proactive_safe or tool.name in configured_names`

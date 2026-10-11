@@ -62,6 +62,19 @@
     新增 `tests/maintained/test_plugin_capability_lookup.py`（18 项）：能力发现、
     找不到/未激活/抛异常一律 **fail-closed**、只认字面 `True`、收尾只跑一次；
     **零插件名守卫**（扫 `astrbot/core/**`，命中即红，白名单为空；已反向验证会判红）。
+  - **P3 工具名硬编码白名单 → 能力自声明（T8-04）**：两张名单分两半处置 ——
+    **A 执行类**（`EXECUTION_TOOL_NAMES`，4 个，**全是 core 自带**）→ **纯自声明**：
+    新增 `FunctionTool.is_execution_tool`（照 `is_background_task` 先例，默认关闭），
+    4 个工具自己声明，core 改读字段，**不再有任何工具名**；第三方执行工具本来也不在名单里，无回归。
+    **B 轻量主动类**（29 个，**绝大多数是第三方插件工具**）→ **自声明 + 配置名单并集**：
+    新增 `FunctionTool.is_lightweight_proactive_safe`，并新增配置
+    `agent_runner.config.misc.lightweight_proactive_tools`（默认 = 原 29 个，用户可增删）；
+    **纯自声明会让主动回复静默失去这批工具**（插件不会来声明），故配置名单必须兜底。
+    判定一律 `getattr(tool, <field>, False)` 兜底＝未声明。
+    详见 `docs/maintained/tool-capability-declaration.md`。新增
+    `tests/maintained/test_tool_capability_declaration.py`（11 项，含「名字不在任何名单里的
+    自声明工具也要被移除」这一反回归断言 + 「旧常量不许复活」守卫）。
+    **默认配置下行为零变化**（core 自带已声明 + 默认名单 = 原 29 个）。
   - **β 影响面排查（T8-01R）**：新文档 `docs/maintained/hook-timing-impact.md` —— 精确更正 β 根因为
     runner **1130** 行（基线 972 在 yield 之后）；本机 17 个插件**硬风险 0**、受益 2、需观察 1；
     官方生态抽样 71 个仓库（受益 7 / 有风险 3 + 2 待复核），推测真正受损 ≤20–40；
@@ -70,9 +83,9 @@
     977 经实测为独立的图片降级早退路径故保持 `enhanced` —— **legacy 精确等于上游行为**。
     另登记 **T8-10**：`execution_denial` 误放行（引用文档即授权执行，**提权风险**），单独排期，本阶段不改。
     **本轮只出报告，未改 core、未动台账。**
-  - 套件口径（截至 T8-03）：`tests/maintained` **264 项**全绿（19 个文件）；上游口径
+  - 套件口径（截至 T8-04）：`tests/maintained` **275 项**全绿（20 个文件）；上游口径
     `295 passed, 17 xfailed`（含 γ 对照 `tests/test_process_stage_images.py` 125）；
-    台账 **35 条**（T8-07 +4、T8-11 +2），双端 NO DRIFT。
+    台账 **36 条**（T8-07 +4、T8-11 +2、T8-04 +1），双端 NO DRIFT。
 - **阶段 7 安全打磨 + 可用性验证**（发布暂缓，仓库保持私有）：
   - **回归护栏**：`tests/maintained/test_manifest_guard.py`（仓工作树↔台账自洽、台账只含 core、
     `proactive_must_remain_disabled`、条数钉）与 `test_api_frozen.py`（上游 `astrbot/api` 相对
