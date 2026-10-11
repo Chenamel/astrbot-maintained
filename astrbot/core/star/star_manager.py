@@ -1678,6 +1678,7 @@ class PluginManager:
         plugin_name: str,
         delete_config: bool = False,
         delete_data: bool = False,
+        force: bool = False,
     ) -> None:
         """卸载指定的插件。
 
@@ -1685,9 +1686,12 @@ class PluginManager:
             plugin_name (str): 要卸载的插件名称
             delete_config (bool): 是否删除插件配置文件，默认为 False
             delete_data (bool): 是否删除插件数据，默认为 False
+            force (bool): 跳过本地维护版保护闸门，默认为 False。仅维护脚本使用，
+                面板不暴露该开关，以免误删本地维护版。
 
         Raises:
-            Exception: 当插件不存在、是保留插件时，或删除插件文件夹失败时抛出异常
+            Exception: 当插件不存在、是保留插件、受本地维护保护（且未 force）时，
+                或删除插件文件夹失败时抛出异常
 
         """
         async with self._pm_lock:
@@ -1697,6 +1701,8 @@ class PluginManager:
             if plugin.reserved:
                 raise Exception("该插件是 AstrBot 保留插件，无法卸载。")
             root_dir_name = plugin.root_dir_name
+            if not force:
+                assert_plugin_update_allowed(plugin_name, root_dir_name or "")
             ppath = self.plugin_store_path
 
             # 终止插件
@@ -1738,8 +1744,21 @@ class PluginManager:
         dir_name: str,
         delete_config: bool = False,
         delete_data: bool = False,
+        force: bool = False,
     ) -> None:
-        """卸载加载失败的插件（按目录名）。"""
+        """卸载加载失败的插件（按目录名）。
+
+        Args:
+            dir_name (str): 插件目录名
+            delete_config (bool): 是否删除插件配置文件，默认为 False
+            delete_data (bool): 是否删除插件数据，默认为 False
+            force (bool): 跳过本地维护版保护闸门，默认为 False。仅维护脚本使用。
+
+        Raises:
+            Exception: 当插件不在失败列表、是保留插件、受本地维护保护（且未 force）时，
+                或删除插件目录失败时抛出异常
+
+        """
         async with self._pm_lock:
             failed_info = self.failed_plugin_dict.get(dir_name)
             if not failed_info:
@@ -1751,6 +1770,9 @@ class PluginManager:
                 raise Exception(
                     format_plugin_error("reserved_plugin_cannot_uninstall"),
                 )
+
+            if not force:
+                assert_plugin_update_allowed(dir_name, dir_name)
 
             self._cleanup_plugin_state(dir_name)
 
