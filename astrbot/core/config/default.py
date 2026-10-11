@@ -4136,6 +4136,16 @@ CONFIG_METADATA_3 = {
                             "agent_runner.runner_type": "local",
                         },
                     },
+                    "agent_runner.config.misc.lightweight_proactive_tools": {
+                        "description": "轻量主动回复可用工具",
+                        "type": "list",
+                        "items": {"type": "string"},
+                        "hint": "非 @/唤醒的主动回复只保留这批工具。列表之外的工具可由插件自行声明 "
+                        "（FunctionTool.is_lightweight_proactive_safe）后加入。",
+                        "condition": {
+                            "agent_runner.runner_type": "local",
+                        },
+                    },
                     "agent_runner.config.misc.hook_timing_mode": {
                         "description": "Agent 完成钩子时序",
                         "type": "string",

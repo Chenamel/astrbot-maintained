@@ -14,6 +14,42 @@ HOOK_TIMING_MODE_DEFAULT = "enhanced"
 #: on every code path that has an upstream counterpart.
 HOOK_TIMING_MODE_LEGACY = "legacy"
 
+#: Fallback allowlist for unsolicited proactive replies. Most of these tools
+#: ship with plugins, which cannot declare themselves, so the list stays
+#: configurable instead of living in core logic. Tools may also declare
+#: ``is_lightweight_proactive_safe`` to opt in without being listed here.
+DEFAULT_LIGHTWEIGHT_PROACTIVE_TOOLS = (
+    "play_song_by_name",
+    "query_lyrics_by_name",
+    "enhance_use_image",
+    "enhance_memory_rag_read",
+    "get_group_message_history",
+    "image_studio_get_capabilities",
+    "image_studio_view_asset",
+    "recall_long_term_memory",
+    "grok_web_search",
+    "enhance_get_ban_list_status",
+    "uapi_weather",
+    "uapi_ip_query",
+    "uapi_mc_server",
+    "uapi_mc_player",
+    "uapi_mc_bedrock",
+    "uapi_whois",
+    "uapi_icp",
+    "uapi_tracking",
+    "uapi_holiday",
+    "uapi_github",
+    "uapi_github_user",
+    "uapi_steam",
+    "uapi_bilibili",
+    "uapi_answer_book",
+    "uapi_hitokoto",
+    "uapi_epic_free",
+    "uapi_random_string",
+    "uapi_hotboard",
+    "uapi_ocr",
+)
+
 AGENT_RUNNER_TYPES = ("local", "dify", "coze", "dashscope", "deerflow")
 THIRD_PARTY_AGENT_RUNNER_TYPES = AGENT_RUNNER_TYPES[1:]
 
@@ -44,6 +80,9 @@ AGENT_RUNNER_CONFIG_DEFAULTS: dict[str, dict[str, Any]] = {
             "tool_call_timeout": 120,
             "sanitize_context_by_modalities": False,
             "hook_timing_mode": HOOK_TIMING_MODE_DEFAULT,
+            "lightweight_proactive_tools": list(
+                DEFAULT_LIGHTWEIGHT_PROACTIVE_TOOLS
+            ),
         },
     },
     "dify": {

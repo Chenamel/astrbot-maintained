@@ -31,6 +31,7 @@ from astrbot.core.astr_main_agent_resources import (
 )
 from astrbot.core.code_delivery_policy import apply_execution_policy
 from astrbot.core.computer.booters.local import resolve_windows_shell
+from astrbot.core.config.agent_runner import DEFAULT_LIGHTWEIGHT_PROACTIVE_TOOLS
 from astrbot.core.conversation_mgr import Conversation
 from astrbot.core.db import BaseDatabase
 from astrbot.core.message.components import File, Image, Record, Reply, Video
@@ -566,56 +567,44 @@ def _is_lightweight_proactive_request(event: AstrMessageEvent) -> bool:
     return False
 
 
-# Tools that are useful for an unsolicited group reply and have no host,
-# moderation, file, or outbound-message side effects.  The proactive path is
-# intentionally narrower than a direct @/wake request, but it must still be
-# able to answer requests such as "放一首歌" or "查一下天气".
-_LIGHTWEIGHT_PROACTIVE_TOOL_NAMES = {
-    "play_song_by_name",
-    "query_lyrics_by_name",
-    "enhance_use_image",
-    "enhance_memory_rag_read",
-    "get_group_message_history",
-    "image_studio_get_capabilities",
-    "image_studio_view_asset",
-    "recall_long_term_memory",
-    "grok_web_search",
-    "enhance_get_ban_list_status",
-    "uapi_weather",
-    "uapi_ip_query",
-    "uapi_mc_server",
-    "uapi_mc_player",
-    "uapi_mc_bedrock",
-    "uapi_whois",
-    "uapi_icp",
-    "uapi_tracking",
-    "uapi_holiday",
-    "uapi_github",
-    "uapi_github_user",
-    "uapi_steam",
-    "uapi_bilibili",
-    "uapi_answer_book",
-    "uapi_hitokoto",
-    "uapi_epic_free",
-    "uapi_random_string",
-    "uapi_hotboard",
-    "uapi_ocr",
-}
-
-
 def _apply_lightweight_proactive_tools(
-    req: ProviderRequest, plugin_context: Context, persona: dict | None
+    req: ProviderRequest,
+    plugin_context: Context,
+    persona: dict | None,
+    misc: dict,
 ) -> None:
-    """Attach the safe, read-only/plugin-query tools to proactive requests."""
+    """Attach the safe, read-only/plugin-query tools to proactive requests.
+
+    The proactive path is intentionally narrower than a direct @/wake request,
+    but it must still answer requests such as "放一首歌" or "查一下天气".
+    A tool qualifies by declaring ``is_lightweight_proactive_safe`` or by being
+    listed in ``agent_runner.config.misc.lightweight_proactive_tools``; most
+    entries there ship with plugins, which cannot declare themselves.
+
+    Args:
+        req: The provider request whose tool set is replaced.
+        plugin_context: Plugin context providing the tool manager.
+        persona: Selected persona, whose ``tools`` list narrows the result.
+        misc: The ``agent_runner.config.misc`` section.
+    """
     tool_mgr = plugin_context.get_llm_tool_manager()
     safe_tools = ToolSet()
     allowed = persona.get("tools") if persona else None
+    configured = misc.get("lightweight_proactive_tools")
+    listed = (
+        set(configured)
+        if isinstance(configured, list)
+        else set(DEFAULT_LIGHTWEIGHT_PROACTIVE_TOOLS)
+    )
     for tool in tool_mgr.get_full_tool_set().tools:
-        if (
-            tool.active
-            and tool.name in _LIGHTWEIGHT_PROACTIVE_TOOL_NAMES
-            and (allowed is None or tool.name in allowed)
+        if not tool.active:
+            continue
+        if not (
+            getattr(tool, "is_lightweight_proactive_safe", False)
+            or tool.name in listed
         ):
+            continue
+        if allowed is None or tool.name in allowed:
             safe_tools.add_tool(tool)
     req.func_tool = safe_tools if safe_tools.tools else None
 
@@ -666,7 +655,12 @@ async def _ensure_persona_and_skills(
 
     if _is_lightweight_proactive_request(event):
         # Keep persona tool permissions while omitting host and skill prompts.
-        _apply_lightweight_proactive_tools(req, plugin_context, persona)
+        _apply_lightweight_proactive_tools(
+            req,
+            plugin_context,
+            persona,
+            cfg.get("agent_runner", {}).get("config", {}).get("misc", {}),
+        )
         return
 
     # Inject skills prompt
