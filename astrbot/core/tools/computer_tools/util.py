@@ -1,3 +1,4 @@
+import enum
 from pathlib import Path
 
 from astrbot import logger
@@ -56,37 +57,54 @@ def is_local_runtime(context: ContextWrapper[AstrAgentContext]) -> bool:
     return runtime == "local"
 
 
-def check_admin_permission(
-    context: ContextWrapper[AstrAgentContext], operation_name: str
-) -> str | None:
-    cfg = context.context.context.get_config(
-        umo=context.context.event.unified_msg_origin
-    )
-    provider_settings = cfg.get("provider_settings", {})
-    require_admin = provider_settings.get("computer_use_require_admin", True)
-    if require_admin and context.context.event.role != "admin":
-        return (
-            f"error: Permission denied. {operation_name} is only allowed for admin users. "
-            "Tell user to set admins in `AstrBot WebUI -> Config -> General Config` by adding their user ID to the admins list if they need this feature. "
-            f"User's ID is: {context.context.event.get_sender_id()}. User's ID can be found by using /sid command."
-        )
-    return None
+class ToolPermissionLevel(enum.Enum):
+    """Permission check applied by :func:`check_tool_permission`.
+
+    Attributes:
+        IDENTITY: Accept administrators only, driven by the
+            ``computer_use_require_admin`` provider setting.
+        EXECUTION: Re-check whether the current message authorizes an
+            execution-style operation.
+    """
+
+    #: Admin-only gate reading ``provider_settings.computer_use_require_admin``.
+    IDENTITY = "identity"
+    #: Current-message authorization gate reading the execution policy.
+    EXECUTION = "execution"
 
 
-def check_execution_permission(
-    context: ContextWrapper[AstrAgentContext], operation_name: str
+def check_tool_permission(
+    context: ContextWrapper[AstrAgentContext],
+    operation_name: str,
+    level: ToolPermissionLevel,
 ) -> str | None:
-    """Recheck current-message execution authorization at the tool boundary.
+    """Gate a computer-use tool behind the single permission entry.
+
+    Both checks live here so that every tool shares one implementation; each
+    caller still picks exactly one level, keeping its existing strength.
 
     Args:
-        context: Current tool context.
-        operation_name: Operation name for the diagnostic log.
+        context: Tool call context.
+        operation_name: Operation name reported in the denial message.
+        level: Check to apply, see :class:`ToolPermissionLevel`.
 
     Returns:
-        Permission error, or None for an authorized current run request.
+        Error string for the caller to return, or None when allowed.
     """
     event = context.context.event
     config = context.context.context.get_config(umo=event.unified_msg_origin)
+
+    if level is ToolPermissionLevel.IDENTITY:
+        provider_settings = config.get("provider_settings", {})
+        require_admin = provider_settings.get("computer_use_require_admin", True)
+        if require_admin and event.role != "admin":
+            return (
+                f"error: Permission denied. {operation_name} is only allowed for admin users. "
+                "Tell user to set admins in `AstrBot WebUI -> Config -> General Config` by adding their user ID to the admins list if they need this feature. "
+                f"User's ID is: {event.get_sender_id()}. User's ID can be found by using /sid command."
+            )
+        return None
+
     error = execution_denial(event, config)
     logger.info(
         "Execution entry operation=%s message_id=%s allowed=%s",
@@ -95,3 +113,21 @@ def check_execution_permission(
         error is None,
     )
     return error
+
+
+def check_admin_permission(
+    context: ContextWrapper[AstrAgentContext], operation_name: str
+) -> str | None:
+    """Run the admin-only check for callers kept at their upstream spelling.
+
+    Upstream modules and the tools package public surface reference this name,
+    so it stays as a forwarder without its own decision logic.
+
+    Args:
+        context: Tool call context.
+        operation_name: Operation name reported in the denial message.
+
+    Returns:
+        Error string for the caller to return, or None when allowed.
+    """
+    return check_tool_permission(context, operation_name, ToolPermissionLevel.IDENTITY)
