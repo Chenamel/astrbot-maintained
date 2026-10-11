@@ -28,7 +28,7 @@ EV="<托管工具 venv>"                                  # 提供 pytest / pyte
 PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 ```
 
-两种方式结果一致（均 **191** 项通过）。方式 B 不需要额外磁盘，依赖实例 venv 存在。
+两种方式结果一致（均 **303** 项通过 + 1 项 skip）。方式 B 不需要额外磁盘，依赖实例 venv 存在。
 
 > 另有 **1 项** `test_every_deviation_was_matched_when_upstream_runs` 只在**同时收集到上游那两个
 > 测试文件**时才有意义（断言 17 条 xfail 全部命中），单独跑本目录时会 `skip`——属预期行为。
@@ -39,7 +39,7 @@ PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 > 运行方式没有额外的包装脚本：直接用上面的命令即可，
 > 实例侧的漂移检测与恢复工具见 [`../../docs/maintained/tools.md`](../../docs/maintained/tools.md)。
 
-## 现阶段测试清单（21 个文件 / 288 项）
+## 现阶段测试清单（22 个文件 / 304 项）
 
 | 文件 | 覆盖 |
 |---|---|
@@ -59,6 +59,7 @@ PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 | `test_code_delivery_policy.py` | P10 手写正则的**当前实测行为**钉死：执行授权矩阵、拒答识别（含漏判/误报，标注 T8-10 待修）、源码任务与交付判定 |
 | `test_plugin_capability_lookup.py` | P2 能力契约发现：按能力方法名找插件（找不到/未激活/抛异常一律 fail-closed）、收尾只跑一次；**core 零插件目录名守卫**（白名单为空） |
 | `test_tool_capability_declaration.py` | P3 工具能力自声明：执行类声明者未授权即移除（含「名字不在任何名单里」的反回归断言）、轻量主动＝声明或配置名单、默认名单兜底、persona 权限仍收窄、旧硬编码名单不许复活 |
+| `test_tool_permission_entry.py` | P6 权限单一入口：身份/意图两级别各自的行为、**级别互不叠加**、`check_admin_permission` 无自有逻辑、旧并行入口已消失、15 个调点的级别映射不漂移 |
 | `test_maintenance_gate.py` | P9 本地维护保护闸门：名单缺失**必告警**后放行、命中插件名/目录名拒绝、五种损坏形态 **fail-closed**、卸载两入口默认被拦且 `force=True` 可绕过 |
 | `test_api_frozen.py` | 上游 api 相对 `baseline/v4.28.2` 零改动（白名单=9 新增文件） |
 | `test_tools_check_drift.py` | 漂移检测：ok/mismatch/missing、退出码、JSON 输出、路径解析 |

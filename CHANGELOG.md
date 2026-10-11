@@ -85,6 +85,29 @@
     新增 `tests/maintained/test_maintenance_gate.py`（13 项）：缺失必告警、命中插件名/目录名拒绝、
     五种损坏形态 fail-closed、卸载默认被拦 / `force=True` 绕过闸门（用 spy 断言只查一次）。
     详见 `docs/maintained/maintenance-gate.md`。
+  - **P6 权限单一入口（T8-05）**：两套权限判定（身份 / 当前消息意图）合到单一入口
+    `check_tool_permission(context, operation_name, level)`，级别取 `ToolPermissionLevel.IDENTITY` / `EXECUTION`，
+    **无默认级别**（防"忘传就用默认"造成强度漂移）。**判定强度逐点保持现状、行为零变化**（负责人拍板的 A 语义）；
+    明确**不合并成 AND** —— 那会把 `execution_denial` 的已知误判（见 T8-10）扩散到原本不看意图的 11 个调点，
+    与「原版插件 100% 兼容 > fork 优化」冲突。fork 私有的 `check_execution_permission` **删除**，
+    `python.py` / `shell.py` 改调用入口的 `EXECUTION` 级。
+    上游符号 `check_admin_permission` 保留为身份级**转发器**（自身无判定逻辑）：它在
+    `computer_tools.__all__` 导出，且上游测试 `tests/unit/test_cua_computer_use.py` **以该名做 monkeypatch**
+    ⇒ `cua.py` / `fs.py` / `message_tools.py` / `shipyard_neo/*` 这 5 个干净的上游文件**一行未动**
+    （改了既违反零冲突原则，又要让台账从 36 涨到 41 去登记本不需要的改动）。
+    详见 `docs/maintained/tool-permission-entry.md`。新增
+    `tests/maintained/test_tool_permission_entry.py`（16 项）：两个级别各自的行为、**级别互不叠加**、
+    `check_admin_permission` 无自有逻辑、旧并行入口已消失、15 个调点的级别映射不漂移。
+  - **长期记忆入库与内容安全审计的先后（T8-09，观察项）**：**结论 = 不存在"入库早于审计"**，
+    **本轮只落文档、未写 core 代码、未动台账**。证据链：`star_handler` 按 `priority` **降序**执行（缺省 0），
+    审计钩子 `priority=1000` 先于记忆钩子；审计失败时**原地改写同一个 `LLMResponse`**；
+    拦截会 `stop_event()`，事件钩子循环在每个 handler 之后检查 ⇒ 后续钩子（含记忆反射）不再执行；
+    审计重试走 `context.llm_generate()`（直连 provider、**不派发事件钩子**）⇒ 中间被拒文本不会二次入库。
+    真正的脆弱点改写为**覆盖盲区**：审计插件 `group_only=True` ⇒ **私聊零审计**；输入检查关闭 ⇒ **用户发言零审计**
+    （记忆插件用自定义过滤器**被动捕获**群消息，不唤醒 AstrBot）；群聊输出侧实际只剩「LLM 审查 + 1 次重试」。
+    三项均属**插件配置/插件侧**范畴，core 不动。附带发现（**仅记录不修**）：记忆钩子缺 `is_chunk` 判断，
+    当前因该事件只在 `on_agent_done` 派发且传最终聚合响应而不触发。
+    详见 `docs/maintained/livingmemory-audit-order.md`。
   - **β 影响面排查（T8-01R）**：新文档 `docs/maintained/hook-timing-impact.md` —— 精确更正 β 根因为
     runner **1130** 行（基线 972 在 yield 之后）；本机 17 个插件**硬风险 0**、受益 2、需观察 1；
     官方生态抽样 71 个仓库（受益 7 / 有风险 3 + 2 待复核），推测真正受损 ≤20–40；
@@ -93,9 +116,9 @@
     977 经实测为独立的图片降级早退路径故保持 `enhanced` —— **legacy 精确等于上游行为**。
     另登记 **T8-10**：`execution_denial` 误放行（引用文档即授权执行，**提权风险**），单独排期，本阶段不改。
     **本轮只出报告，未改 core、未动台账。**
-  - 套件口径（截至 T8-06）：`tests/maintained` **288 项**全绿（21 个文件）；上游口径
-    `295 passed, 17 xfailed`（含 γ 对照 `tests/test_process_stage_images.py` 125）；
-    台账 **36 条**（T8-07 +4、T8-11 +2、T8-04 +1），双端 NO DRIFT。
+  - 套件口径（截至 T8-05 / T8-09）：`tests/maintained` **304 项**（303 passed + 1 skipped，22 个文件）；
+    上游口径 `295 passed, 17 xfailed`（含 γ 对照 `tests/test_process_stage_images.py` 125）；
+    台账 **36 条**（T8-07 +4、T8-11 +2、T8-04 +1；**T8-05 无新增登记，只同步 3 条哈希**），双端 NO DRIFT。
 - **阶段 7 安全打磨 + 可用性验证**（发布暂缓，仓库保持私有）：
   - **回归护栏**：`tests/maintained/test_manifest_guard.py`（仓工作树↔台账自洽、台账只含 core、
     `proactive_must_remain_disabled`、条数钉）与 `test_api_frozen.py`（上游 `astrbot/api` 相对
