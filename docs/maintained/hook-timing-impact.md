@@ -146,6 +146,33 @@
 **就是 legacy 语义**。实施时给该 reset 加 `hook_timing_mode` 即可双模式覆盖；
 `910` 的 `agent_done_called` 可作粗粒度回归。
 
+### 4.6 cron 与子代理（background）唤醒路径的透传（T8-11）
+
+> 2026-10-11 定稿并实施。
+
+`cron/manager.py` 的 `_woke_main_agent` 与 `astr_agent_tool_exec.py` 的
+`_wake_main_agent_for_background_result` **不走 pipeline 的 `agent_sub_stages/internal.py`**，
+而是各自就地构造 `MainAgentBuildConfig`。T8-07 之后它们仍只从 misc 读
+`max_steps` / `tool_call_timeout`，于是 `hook_timing_mode`（连 `tool_schema_mode` 一起）
+在这两个场景**恒为数据类默认值** —— 即使用户把模式配成 `legacy`，
+**定时任务与后台任务唤醒的 agent 也收不到**，legacy 的逃生舱作用在这两类场景失效。
+
+处置：两处一并读取 misc 的 `tool_schema_mode` 与 `hook_timing_mode`，
+经 `normalize_hook_timing_mode` 归一化（非法值回落 `enhanced`）后传入 `MainAgentBuildConfig`。
+
+| 字段 | 变更前 | 变更后 | 默认配置下的行为变化 |
+|---|---|---|---|
+| `tool_schema_mode` | 恒为数据类默认 `"full"` | 读 `misc.tool_schema_mode` | **无**（配置默认即 `"full"`） |
+| `hook_timing_mode` | 恒为数据类默认 `"enhanced"` | 读 `misc.hook_timing_mode` | **无**（配置默认即 `"enhanced"`） |
+
+⇒ 两者都是「配置驱动、默认值不变」，符合兼容边界的**加法规则**：
+只有显式改配置的用户才会看到差异，而那正是他想要的语义。
+
+**不调用 `set_hook_timing_mode`**：该全局量由 pipeline 初始化（`internal.py:104`）记录，
+语义是「最近一次主对话 agent 构建的时序模式」，供
+`astrbot.api.runtime.hook_timing_mode()` 对外只读查询。定时任务 / 后台任务与聊天会话
+读的是**同一份配置**，值必然相同；让后台路径回写全局只会引入无谓的跨场景副作用。
+
 ## 5. 已知不兼容 / 需观察名单与后续待办
 
 | 项 | 处置 |
