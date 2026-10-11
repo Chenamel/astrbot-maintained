@@ -27,6 +27,18 @@
     （基线 972 在 yield 之后）；fork 独有的 977（图片降级兜底）与 1325（末轮补生成）保留优化，
     1093 与基线 913 逐字相同故一行不动 ⇒ **legacy 精确等于上游**。
     新增测试 `tests/maintained/test_hook_timing_mode.py` 双模式断言（legacy 下 yield 时钩子未触发＝上游语义）。
+  - **cron 与后台任务唤醒路径透传运行时模式（T8-11）**：`cron/manager.py` 的
+    `_woke_main_agent` 与 `astr_agent_tool_exec.py` 的
+    `_wake_main_agent_for_background_result` **自行构造 `MainAgentBuildConfig`、
+    不走 pipeline 的 `agent_sub_stages/internal.py`**，此前不读 misc，于是
+    `hook_timing_mode`（连 `tool_schema_mode` 一起）在**定时任务与后台任务场景恒为
+    默认值** —— 即使用户配了 `legacy`，这两类唤醒也收不到，逃生舱只覆盖聊天会话。
+    现两处一并读 `agent_runner.config.misc`，经 `normalize_hook_timing_mode` 归一化
+    （非法值回落 `enhanced`）；**默认配置下行为零变化**（`enhanced` + `full` 恰是原
+    数据类默认值）。设计记录见 `docs/maintained/hook-timing-impact.md` §4.6；
+    台账 **33 → 35 条**（两文件新登记，守住「改过的 core 必登记」铁规则）；
+    新增 `tests/maintained/test_hook_timing_passthrough.py`（12 项，已反向验证：
+    把读取改回默认值 → legacy 两项判红）。
   - **β 影响面排查（T8-01R）**：新文档 `docs/maintained/hook-timing-impact.md` —— 精确更正 β 根因为
     runner **1130** 行（基线 972 在 yield 之后）；本机 17 个插件**硬风险 0**、受益 2、需观察 1；
     官方生态抽样 71 个仓库（受益 7 / 有风险 3 + 2 待复核），推测真正受损 ≤20–40；
@@ -35,9 +47,9 @@
     977 经实测为独立的图片降级早退路径故保持 `enhanced` —— **legacy 精确等于上游行为**。
     另登记 **T8-10**：`execution_denial` 误放行（引用文档即授权执行，**提权风险**），单独排期，本阶段不改。
     **本轮只出报告，未改 core、未动台账。**
-  - 套件口径：`tests/maintained` **186 项**全绿（新增 38 项）；上游口径
-    `170 passed, 17 xfailed`、γ 对照 `tests/test_process_stage_images.py` 125 全绿。
-    **本阶段不改 core ⇒ 台账 31 条不动、无需重新部署。**
+  - 套件口径（截至 T8-11）：`tests/maintained` **203 项**全绿（17 个文件）；上游口径
+    `295 passed, 17 xfailed`（含 γ 对照 `tests/test_process_stage_images.py` 125）；
+    台账 **35 条**（T8-07 +4、T8-11 +2），双端 NO DRIFT。
 - **阶段 7 安全打磨 + 可用性验证**（发布暂缓，仓库保持私有）：
   - **回归护栏**：`tests/maintained/test_manifest_guard.py`（仓工作树↔台账自洽、台账只含 core、
     `proactive_must_remain_disabled`、条数钉）与 `test_api_frozen.py`（上游 `astrbot/api` 相对
