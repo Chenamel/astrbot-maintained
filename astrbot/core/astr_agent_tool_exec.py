@@ -20,7 +20,10 @@ from astrbot.core.astr_agent_context import AstrAgentContext
 from astrbot.core.astr_main_agent_resources import (
     BACKGROUND_TASK_RESULT_WOKE_SYSTEM_PROMPT,
 )
-from astrbot.core.config.agent_runner import resolve_context_compression_config
+from astrbot.core.config.agent_runner import (
+    normalize_hook_timing_mode,
+    resolve_context_compression_config,
+)
 from astrbot.core.cron.events import CronMessageEvent
 from astrbot.core.message.components import Image
 from astrbot.core.message.message_event_result import (
@@ -560,17 +563,22 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
         persona_config = (
             cfg.get("agent_runner", {}).get("config", {}).get("persona", {})
         )
+        misc_config = cfg.get("agent_runner", {}).get("config", {}).get("misc", {})
         agent_max_step = coerce_int_config(
-            cfg.get("agent_runner", {})
-            .get("config", {})
-            .get("misc", {})
-            .get("max_steps", 30),
+            misc_config.get("max_steps", 30),
             default=30,
             min_value=1,
             field_name="agent_runner.config.misc.max_steps",
         )
+        tool_schema_mode = misc_config.get("tool_schema_mode", "full")
+        if tool_schema_mode not in ("full", "skills_like"):
+            tool_schema_mode = "full"
         config = MainAgentBuildConfig(
             tool_call_timeout=run_context.tool_call_timeout,
+            tool_schema_mode=tool_schema_mode,
+            hook_timing_mode=normalize_hook_timing_mode(
+                misc_config.get("hook_timing_mode")
+            ),
             fallback_provider_ids=cfg.get("agent_runner", {})
             .get("config", {})
             .get("model", {})
