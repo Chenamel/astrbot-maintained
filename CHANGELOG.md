@@ -51,6 +51,17 @@
     非管理员恒拒等安全不变量用普通断言；已知误判项在 docstring 标注「当前行为 / T8-10 待修」，
     **修复 T8-10 时这些断言会变红 —— 那是要同步更新文档与测试的预期信号**。
     **本轮只钉行为，未改任何实现**（T8-10 严格保持不动）。
+  - **P2 core 反向依赖插件目录名 → 能力契约解析（T8-03）**：实测 **2 处**
+    （`astr_main_agent._is_lightweight_proactive_request`、`tool_loop_agent_runner._finish_proactive_request`；
+    早期清单写的「×2 + ×1」有误，已订正）。两处的真实契约其实是**方法名**（鸭子类型），
+    目录名只是「怎么找到它」⇒ 改为在 `star_registry` 里找**已激活且暴露该能力方法**的插件：
+    `is_trusted_lightweight_proactive(event)` / `finish_proactive_request(event)`。
+    **core 内零插件目录名**、行为逐点等价、**无需改插件**（显式注册表要求插件侧改造并重新部署，
+    改造完成前功能会先失效，故本轮采用契约法）。发现规则与理由见
+    `docs/maintained/plugin-capability-lookup.md`。
+    新增 `tests/maintained/test_plugin_capability_lookup.py`（18 项）：能力发现、
+    找不到/未激活/抛异常一律 **fail-closed**、只认字面 `True`、收尾只跑一次；
+    **零插件名守卫**（扫 `astrbot/core/**`，命中即红，白名单为空；已反向验证会判红）。
   - **β 影响面排查（T8-01R）**：新文档 `docs/maintained/hook-timing-impact.md` —— 精确更正 β 根因为
     runner **1130** 行（基线 972 在 yield 之后）；本机 17 个插件**硬风险 0**、受益 2、需观察 1；
     官方生态抽样 71 个仓库（受益 7 / 有风险 3 + 2 待复核），推测真正受损 ≤20–40；
@@ -59,7 +70,7 @@
     977 经实测为独立的图片降级早退路径故保持 `enhanced` —— **legacy 精确等于上游行为**。
     另登记 **T8-10**：`execution_denial` 误放行（引用文档即授权执行，**提权风险**），单独排期，本阶段不改。
     **本轮只出报告，未改 core、未动台账。**
-  - 套件口径（截至 T8-02）：`tests/maintained` **246 项**全绿（18 个文件）；上游口径
+  - 套件口径（截至 T8-03）：`tests/maintained` **264 项**全绿（19 个文件）；上游口径
     `295 passed, 17 xfailed`（含 γ 对照 `tests/test_process_stage_images.py` 125）；
     台账 **35 条**（T8-07 +4、T8-11 +2），双端 NO DRIFT。
 - **阶段 7 安全打磨 + 可用性验证**（发布暂缓，仓库保持私有）：
