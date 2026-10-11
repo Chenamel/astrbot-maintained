@@ -528,7 +528,19 @@ def _filter_skills_for_current_config(
 
 
 def _is_lightweight_proactive_request(event: AstrMessageEvent) -> bool:
-    """Accept the enhancement plugin's live trigger, never message text claims."""
+    """Accept a trusted lightweight proactive trigger, never message text claims.
+
+    The trigger is honoured only when an activated plugin exposes the
+    ``is_trusted_lightweight_proactive`` capability; plugins are found by that
+    contract instead of by directory name
+    (see ``docs/maintained/plugin-capability-lookup.md``).
+
+    Args:
+        event: The incoming message event.
+
+    Returns:
+        Whether this is a lightweight proactive request that may proceed.
+    """
     if (
         event.get_extra("_enhance_proactive_lightweight") is not True
         or event.get_extra("_enhance_active_reply_triggered") is not True
@@ -537,22 +549,19 @@ def _is_lightweight_proactive_request(event: AstrMessageEvent) -> bool:
     ):
         return False
     for metadata in star_registry:
-        if (
-            metadata.activated
-            and metadata.root_dir_name == "astrbot_plugin_astrbot_enhance_mode"
-            and metadata.star_cls is not None
-        ):
+        if metadata.activated and metadata.star_cls is not None:
             validate = getattr(
                 metadata.star_cls, "is_trusted_lightweight_proactive", None
             )
-            if callable(validate):
-                try:
-                    return validate(event) is True
-                except Exception as exc:
-                    logger.warning(
-                        "Lightweight proactive validation failed (%s).",
-                        type(exc).__name__,
-                    )
+            if not callable(validate):
+                continue
+            try:
+                return validate(event) is True
+            except Exception as exc:
+                logger.warning(
+                    "Lightweight proactive validation failed (%s).",
+                    type(exc).__name__,
+                )
             return False
     return False
 

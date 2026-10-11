@@ -930,7 +930,12 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                 self._finish_proactive_request()
 
     def _finish_proactive_request(self) -> None:
-        """Notify the plugin once even if its valid response token became stale."""
+        """Notify the proactive capability owner once, even if its token is stale.
+
+        The plugin is found by the ``finish_proactive_request`` capability
+        rather than by directory name
+        (see ``docs/maintained/plugin-capability-lookup.md``).
+        """
         if getattr(self, "_proactive_delivery_deferred", False):
             return
         if getattr(self, "_proactive_request_finished", False):
@@ -944,20 +949,17 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
 
         self._proactive_request_finished = True
         for metadata in star_registry:
-            if (
-                metadata.activated
-                and metadata.root_dir_name == "astrbot_plugin_astrbot_enhance_mode"
-                and metadata.star_cls is not None
-            ):
+            if metadata.activated and metadata.star_cls is not None:
                 finish = getattr(metadata.star_cls, "finish_proactive_request", None)
-                if callable(finish):
-                    try:
-                        finish(event)
-                    except Exception as exc:
-                        logger.warning(
-                            "Proactive completion cleanup failed (%s).",
-                            type(exc).__name__,
-                        )
+                if not callable(finish):
+                    continue
+                try:
+                    finish(event)
+                except Exception as exc:
+                    logger.warning(
+                        "Proactive completion cleanup failed (%s).",
+                        type(exc).__name__,
+                    )
                 return
 
     async def _step(self):
