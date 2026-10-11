@@ -136,7 +136,7 @@
 | P6 | 权限双模型并存 | `check_admin_permission` 与 `check_execution_permission` 并存（`fs.py` 仍只用前者） | 统一权限入口，按工具敏感度分级 |
 | P7 | 静默丢弃不可观测 | `respond/stage.py`、`aiocqhttp_message_event.py`、`context_utils.py` 门禁均无日志 | 补 debug 日志与丢弃计数 |
 | P8 | 魔法数字未提取 | `timeout=30`、`16000`、`15s`、图片上限 2、`quiet_sec=4`、`max_wait_sec=15` | 提取常量或配置项 |
-| P9 | `maintenance` fail-open | registry 文件缺失即放行；`uninstall_plugin` 无闸门 | 缺失改 fail-closed 或至少 warn；补卸载闸门 |
+| P9 | `maintenance` fail-open | registry 文件缺失**静默**放行（无日志）；`uninstall_plugin` / `uninstall_failed_plugin` **无闸门** | ✅ **已处置（T8-06）**：缺失 → **明确 `logger.warning`（含路径与原因）后放行**（不改 fail-closed：该 registry 是本 fork 私有机制，公开后多数用户没有它，fail-closed 会锁死纯净环境）；损坏 → 仍 fail-closed；卸载两入口补闸门并留 `force=False` 逃生口（`force` **暂不在面板暴露**）。详见 `docs/maintained/maintenance-gate.md` |
 | P10 | 手写正则做安全判定 | `SAFETY_REFUSAL_PATTERN`、`execution_denial` 中文祈使句 | 明确误判容限并补测试（阶段 3 必做） |
 | **P11** | **维护版 core 打破上游 17 项测试预期**（阶段 7 新发现） | 见下方对照表 | **登记不改**：属补丁质量证据，须在"插件重写"批次统一处理；任何 core 打磨都必须以"不新增失败"为验收 |
 
