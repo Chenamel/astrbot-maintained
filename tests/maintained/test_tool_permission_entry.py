@@ -140,9 +140,7 @@ def test_execution_level_reads_the_request_configuration(monkeypatch):
     util.check_tool_permission(
         context, "Python execution", util.ToolPermissionLevel.EXECUTION
     )
-    assert [
-        config["provider_settings"]["admins_id"] for _, config in seen
-    ] == [["100"]]
+    assert [config["provider_settings"]["admins_id"] for _, config in seen] == [["100"]]
 
 
 def test_levels_stay_independent(monkeypatch):
@@ -174,10 +172,9 @@ def test_admin_permission_forwards_to_the_identity_level(monkeypatch):
     monkeypatch.setattr(
         util,
         "check_tool_permission",
-        lambda context, operation_name, level: calls.append(
-            (operation_name, level)
-        )
-        or "forwarded",
+        lambda context, operation_name, level: (
+            calls.append((operation_name, level)) or "forwarded"
+        ),
     )
     context = _context(_event())
     assert util.check_admin_permission(context, "Using CUA mouse") == "forwarded"
