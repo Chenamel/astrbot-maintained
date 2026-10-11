@@ -39,7 +39,7 @@ PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 > 运行方式没有额外的包装脚本：直接用上面的命令即可，
 > 实例侧的漂移检测与恢复工具见 [`../../docs/maintained/tools.md`](../../docs/maintained/tools.md)。
 
-## 现阶段测试清单（17 个文件 / 203 项）
+## 现阶段测试清单（18 个文件 / 246 项）
 
 | 文件 | 覆盖 |
 |---|---|
@@ -56,6 +56,7 @@ PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 | `test_p11_deviations.py` | P11 注册表守护：α 9 / β 8 条数、nodeid 仍指向真实上游用例、理由含组别、β 红线文档与 core 锚点仍在、命中数 17/17 |
 | `test_hook_timing_mode.py` | `hook_timing_mode` 双模式时序：legacy 下 yield 时 `on_agent_done` **未**触发（＝上游）、enhanced 下**已**触发（＝本 fork），并确认钩子最终都跑过 |
 | `test_hook_timing_passthrough.py` | cron 与后台任务唤醒路径也读 `misc`：`hook_timing_mode` / `tool_schema_mode` 随配置生效，非法值回落默认 |
+| `test_code_delivery_policy.py` | P10 手写正则的**当前实测行为**钉死：执行授权矩阵、拒答识别（含漏判/误报，标注 T8-10 待修）、源码任务与交付判定 |
 | `test_api_frozen.py` | 上游 api 相对 `baseline/v4.28.2` 零改动（白名单=9 新增文件） |
 | `test_tools_check_drift.py` | 漂移检测：ok/mismatch/missing、退出码、JSON 输出、路径解析 |
 | `test_tools_apply_patches.py` | 源校验中止、预演不写、备份收据、写回后复核、端到端修复 |
