@@ -75,6 +75,16 @@
     `tests/maintained/test_tool_capability_declaration.py`（11 项，含「名字不在任何名单里的
     自声明工具也要被移除」这一反回归断言 + 「旧常量不许复活」守卫）。
     **默认配置下行为零变化**（core 自带已声明 + 默认名单 = 原 29 个）。
+  - **P9 本地维护保护闸门（T8-06）**：
+    ① 名单文件**缺失**原本**静默**放行 ⇒ 改为**明确 `logger.warning`（含路径与原因）后放行**。
+    **不改 fail-closed**：`maintenance_registry.json` 是本 fork 私有机制，公开后绝大多数用户
+    根本没有它，fail-closed 会把纯净环境的插件更新/卸载**全部锁死**，与兼容立场冲突。
+    ② 名单**损坏**（非法 JSON / 结构不对 / 缺键）仍 **fail-closed**（原有语义保留）。
+    ③ `uninstall_plugin` / `uninstall_failed_plugin` **补闸门**（此前完全没有），
+    并按用户要求留 `force=False` 逃生口；**`force` 暂不在面板暴露**，避免一键误删本地维护版。
+    新增 `tests/maintained/test_maintenance_gate.py`（13 项）：缺失必告警、命中插件名/目录名拒绝、
+    五种损坏形态 fail-closed、卸载默认被拦 / `force=True` 绕过闸门（用 spy 断言只查一次）。
+    详见 `docs/maintained/maintenance-gate.md`。
   - **β 影响面排查（T8-01R）**：新文档 `docs/maintained/hook-timing-impact.md` —— 精确更正 β 根因为
     runner **1130** 行（基线 972 在 yield 之后）；本机 17 个插件**硬风险 0**、受益 2、需观察 1；
     官方生态抽样 71 个仓库（受益 7 / 有风险 3 + 2 待复核），推测真正受损 ≤20–40；
@@ -83,7 +93,7 @@
     977 经实测为独立的图片降级早退路径故保持 `enhanced` —— **legacy 精确等于上游行为**。
     另登记 **T8-10**：`execution_denial` 误放行（引用文档即授权执行，**提权风险**），单独排期，本阶段不改。
     **本轮只出报告，未改 core、未动台账。**
-  - 套件口径（截至 T8-04）：`tests/maintained` **275 项**全绿（20 个文件）；上游口径
+  - 套件口径（截至 T8-06）：`tests/maintained` **288 项**全绿（21 个文件）；上游口径
     `295 passed, 17 xfailed`（含 γ 对照 `tests/test_process_stage_images.py` 125）；
     台账 **36 条**（T8-07 +4、T8-11 +2、T8-04 +1），双端 NO DRIFT。
 - **阶段 7 安全打磨 + 可用性验证**（发布暂缓，仓库保持私有）：
