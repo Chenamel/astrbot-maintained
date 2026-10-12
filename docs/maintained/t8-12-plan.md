@@ -53,9 +53,19 @@
 | skills_like 重查询 | **1142** / **1166** ← 旧 1130 | ✅ **唯一一处** | enhanced=提前（本 fork 优化）／legacy=延后（=上游） |
 | 工具连败末轮补生成 | **1340** / 1325 | ❌ 从未有过 | fork 新增，上游无对照 |
 
-**已确认的错误记载**（Step 0' 订正）：`.workbuddy/handover.md` §2/§4 的「legacy 仅延后 1130/1325」，
-以及 `docs/maintained/hook-timing-impact.md:16` 的「只延后 1130 / 1325」。
-同文件 §121/§124「1325 保持 enhanced、一行不动」**是正确的**。
+**错误记载（Step 0' 已处置，逐条 git/grep 实况取证）**：
+
+| 位置 | 取证结果 | 处置 |
+|---|---|---|
+| `docs/maintained/hook-timing-impact.md:16`「只延后 **1130 / 1325**」 | ✅ **确有错**，且是**唯一错误源** | 已订正为「只延后 1130 一处（现 1142/1166）」，并加订正注脚（提交 `977872dd9`） |
+| `.workbuddy/handover.md` §2/§4「legacy 仅延后 1130/1325」 | ❌ **该记载不存在** —— `grep -n "1130\|1325\|1093\|977" .workbuddy/handover.md` **零命中**；该文件只有 §4 第 3 条「`legacy_timing` 分支（约 1140–1165）」，与实况一致 | 未改事实；只加了顶部「本文件是线索，不是证据」免责行 |
+| `hook-timing-impact.md` §121/§124「1325 保持 enhanced、一行不动」 | ✅ 正确 | 未动 |
+
+> **2026-10-13 取证澄清（本节初稿自身的一处错误）**：
+> 本小节初稿（提交 `644e03b72`）称「handover 与 impact 文档**两处都错**」，
+> 那是**未经取证的历史转述**。Step 0' 用 grep 实况复核后确认：
+> **唯一错误源只有 `hook-timing-impact.md:16`**，`handover.md` 不含此错误记载。
+> 这再次印证 §0 的取证原则 —— 计划文档与交接文档的记载同样只能作线索，不能作证据。
 
 ### 1.3 四个文件（＝ inventory §3.2 的 🟡 4 项）
 
@@ -70,8 +80,8 @@
 
 | 步 | 内容 | 台账 | 验收（每步停下汇报） |
 |---|---|---|---|
-| **0** | β 探针落地 + 5 case 基线快照 + 零保护 case 清单 | 0 | 基线 JSON 落盘、5 case 全通过 |
-| **0'** | 文档订正（handover + hook-timing-impact.md:16） | 0 | 双端校验仍是 36 条 NO DRIFT（文档不在台账内，仅确认） |
+| **0** | ✅ **已完成**（提交 `3a1bccdc8`）β 探针落地 + 5 case 基线快照 + 零保护 case 清单 | 0 | 基线 JSON 落盘、5 case 全通过 |
+| **0'** | ✅ **已完成**（提交 `977872dd9`）文档订正 —— **唯一错误源 `hook-timing-impact.md:16`**；handover 只加免责行（见 §1.2 取证澄清） | 0 | 双端校验仍是 36 条 NO DRIFT（文档不在台账内，仅确认） |
 | **1** | `follow_up` 去重 + `self_id` 统一（复用 `direct_turns` 判定） | 2 条哈希 | 探针一致 + maintained 304 |
 | **2** | `code_delivery_policy` 结构整理（**正则一行不动**） | 1 条哈希 | T8-02 的 43 项行为测试仍全绿 |
 | **3** | `astr_main_agent` 外迁（quote / proactive 两组） | 2 条哈希 + 新增 2 条（#38 #39） | 探针一致 + **断言 `internal.py:139` 的构造语句仍在 `__init__` 函数体内** |
@@ -81,6 +91,15 @@
 | **4d** | **取消** `_simple_print_message_role` 外迁（调用点 1004/1015 紧贴 984 敏感区） | 0 | — |
 
 Step 0 与 0' 互不依赖，可同批执行。
+
+> **结构守卫的执行保证**（偏离 2 的接受前提）：
+> `hook_timing_probe.py` 的 `main()` 在**每次调用** —— `--dump` 与 `--compare` 都算 —— 都会先跑一次
+> 符号化 `structural_guard(runner)`，断言 `await self._complete_with_assistant_response(`
+> **恰好 5 处**（enhanced 分支 1 / legacy 分支 1 / 无条件 3），并把守卫错误并入 `failures` ⇒ 退出码 `1`。
+> 判定**不依赖行号**（向上回看 6 行找 `if [not ]legacy_timing:`），所以拆分后行号漂移不会误报，
+> 但少一处 / 多一处 / 分支性质变了会立刻判红。
+> ⇒ **Step 4a / 4b / 4c 每一步跑一次 `--compare`，结构守卫就必然执行一遍。**
+> 比对范围只含 `events` / `summary` / `mode_symmetry`；`repo_commit` 与 `case.call_site` 是信息字段，不参与比对。
 
 ### 2.1 各步外迁清单（调用行号实况，均不落在 984/1100/1142/1166/1340）
 
