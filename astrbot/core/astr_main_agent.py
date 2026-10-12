@@ -600,8 +600,7 @@ def _apply_lightweight_proactive_tools(
         if not tool.active:
             continue
         if not (
-            getattr(tool, "is_lightweight_proactive_safe", False)
-            or tool.name in listed
+            getattr(tool, "is_lightweight_proactive_safe", False) or tool.name in listed
         ):
             continue
         if allowed is None or tool.name in allowed:
@@ -836,9 +835,7 @@ async def _ensure_img_caption(
         if not isinstance(caption, str) or not caption.strip():
             raise ValueError("Image caption provider returned an empty caption")
         req.extra_user_content_parts.append(
-            TextPart(
-                text=f"{IMAGE_CAPTION_MARKER}{caption.strip()}</image_caption>"
-            )
+            TextPart(text=f"{IMAGE_CAPTION_MARKER}{caption.strip()}</image_caption>")
         )
         req.image_input_unavailable = False
     except Exception as exc:  # noqa: BLE001
