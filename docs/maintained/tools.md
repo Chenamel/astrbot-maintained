@@ -13,6 +13,7 @@
 |---|---|---|
 | `maintained/tools/check_drift.py` | **检测**实例 core 是否与台账（=维护版真相源）不一致 | 机器人异常时、启动器更新后、定期巡检 |
 | `maintained/tools/apply_patches.py` | **修复**：把仓内维护版 core 打回实例（带备份与校验） | check_drift 报出漂移后 |
+| `maintained/tools/hook_timing_probe.py` | **取证**：记录并校验 agent 完成钩子相对最终回复的时序 | T8-12 每步拆分前后（β 红线） |
 
 ## 1. 共同约定
 
@@ -66,7 +67,39 @@ python maintained/tools/apply_patches.py --instance "<实例目录>" --apply
 
 **注意**：写完 core 源码后需**重启 AstrBot** 才生效（工具不做重启，避免突然中断正在跑的任务）。
 
-## 4. 典型处置流程
+## 4. `hook_timing_probe.py`
+
+T8-12 要拆分四个过大的 core 文件，而 **β（agent 完成钩子的时序）必须逐点保真**。
+该探针把「钩子相对于最终回复的位置」记录下来，供每一步拆分后机械比对。
+
+```bash
+# 落盘基线（按 commit 命名）
+python maintained/tools/hook_timing_probe.py --quiet --dump maintained/baselines/hook_timing/<shortsha>.json
+
+# 与基线比对
+python maintained/tools/hook_timing_probe.py --quiet --compare maintained/baselines/hook_timing/<shortsha>.json
+```
+
+**5 个 case**（括号为落盘时的行号）：`image_unavailable`(984) / `no_tool_call`(1100) /
+`requery_enhanced`(1142) / `requery_legacy`(1166) / `tool_failure_final`(1340)。
+
+**不变量（只比相对关系，不比绝对行号）**：
+
+- `enhanced` ⇒ `hook_index < first_final_yield_index`
+- `legacy` ⇒ `hook_index > first_final_yield_index`
+- 984 / 1100 / 1340 **没有** `legacy_timing` 分支 ⇒ 两种模式下结果必须完全相同（`mode_symmetry`）
+
+**结构守卫**：每次运行都符号化扫描 runner，断言 `await self._complete_with_assistant_response(`
+恰好 **5 处**，其中 enhanced 分支 1 处、legacy 分支 1 处、无条件 3 处 —— **不依赖行号**，
+所以拆分后行号漂移不会误报，但少一处/多一处立刻判红。
+
+**比对范围**：只比 `events` / `summary` / `mode_symmetry`。`repo_commit` 与 `case.call_site`
+是信息字段，本就会随改动移动，不参与比对。
+
+**退出码**：`0` 一致；`1` 有 case / 不变量 / 结构守卫失败；`2` 用法或环境错误。
+`--quiet` 只压制 runner 自身的日志（它会打 traceback），不影响判定。
+
+## 5. 典型处置流程
 
 ```bash
 # 1. 发现机器人异常 / 启动器更新过核心
@@ -81,15 +114,16 @@ python maintained/tools/apply_patches.py --instance "<实例目录>" --apply
 # 4. 重启 AstrBot，再用 check_drift 复查
 ```
 
-## 5. 明确不做
+## 6. 明确不做
 
 - **不拦启动器**（做不到：拦不住进程外的文件覆盖）。本工具链的定位是**事后快速检测 + 一键恢复**，
   把 MTTR 从"人工排查半小时"降到"两条命令"。
 - 不自动重启机器人、不改配置、不动插件、不碰 `data/`。
 - 不做「上游版本升级」——那走三方合并（`project_rules.md` §5），与本工具无关。
 
-## 6. 测试
+## 7. 测试
 
-`tests/maintained/test_tools_check_drift.py` / `test_tools_apply_patches.py`：
+`tests/maintained/test_tools_check_drift.py` / `test_tools_apply_patches.py` /
+`test_tools_hook_timing_probe.py`：
 用 `tmp_path` 造出「假仓 + 假实例」，覆盖无漂移 / 内容不符 / 文件缺失 / 源损坏中止 /
 预演不写文件 / `--apply` 备份与写回 / 写回后复核 等分支。
