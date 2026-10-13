@@ -78,7 +78,12 @@ from ..run_context import ContextWrapper, TContext
 from ..tool_executor import BaseFunctionToolExecutor
 from .base import AgentResponse, AgentState, BaseAgentRunner
 from .tool_loop_support import (
+    ToolExecutorResultT,
+    _ToolExecutionInterrupted,
+    build_repeated_tool_call_guidance,
+    iter_tool_executor_results,
     read_tool_hint,
+    track_tool_call_streak,
     truncate_tool_result_preview,
     write_tool_result_overflow_file,
 )
@@ -123,11 +128,6 @@ class FollowUpTicket:
     resolved: asyncio.Event = field(default_factory=asyncio.Event)
 
 
-class _ToolExecutionInterrupted(Exception):
-    """Raised when a running tool call is interrupted by a stop request."""
-
-
-ToolExecutorResultT = T.TypeVar("ToolExecutorResultT")
 AwaitableResultT = T.TypeVar("AwaitableResultT")
 
 
@@ -446,6 +446,16 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
 
     def _read_tool_hint(self) -> str:
         return read_tool_hint(self)
+
+    def _track_tool_call_streak(
+        self,
+        tool_name: str,
+        tool_args: dict[str, T.Any] | None,
+    ) -> int:
+        return track_tool_call_streak(self, tool_name, tool_args)
+
+    def _build_repeated_tool_call_guidance(self, tool_name: str, streak: int) -> str:
+        return build_repeated_tool_call_guidance(self, tool_name, streak)
 
     async def _assemble_request_context_for_provider(
         self,
@@ -830,53 +840,6 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         if not notice:
             return content
         return f"{content}{notice}"
-
-    def _track_tool_call_streak(
-        self,
-        tool_name: str,
-        tool_args: dict[str, T.Any] | None,
-    ) -> int:
-        """Track consecutive tool calls with the same name and arguments.
-
-        Args:
-            tool_name: Name of the called tool.
-            tool_args: Arguments passed to the tool.
-
-        Returns:
-            Number of consecutive calls with the same name and arguments.
-        """
-        normalized_args = {} if tool_args is None else tool_args
-        if (
-            tool_name == self._last_tool_name
-            and normalized_args == self._last_tool_args
-        ):
-            self._same_tool_streak += 1
-        else:
-            self._last_tool_name = tool_name
-            self._last_tool_args = copy.deepcopy(normalized_args)
-            self._same_tool_streak = 1
-        return self._same_tool_streak
-
-    def _build_repeated_tool_call_guidance(self, tool_name: str, streak: int) -> str:
-        if streak < self.REPEATED_TOOL_NOTICE_L1_THRESHOLD:
-            return ""
-
-        if streak >= self.REPEATED_TOOL_NOTICE_L3_THRESHOLD:
-            return self.REPEATED_TOOL_NOTICE_L3_TEMPLATE.format(
-                tool_name=tool_name,
-                streak=streak,
-            )
-
-        if streak >= self.REPEATED_TOOL_NOTICE_L2_THRESHOLD:
-            return self.REPEATED_TOOL_NOTICE_L2_TEMPLATE.format(
-                tool_name=tool_name,
-                streak=streak,
-            )
-
-        return self.REPEATED_TOOL_NOTICE_L1_TEMPLATE.format(
-            tool_name=tool_name,
-            streak=streak,
-        )
 
     def _sanitize_malformed_tool_calls(
         self,
@@ -1964,55 +1927,10 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         with suppress(asyncio.CancelledError, RuntimeError, StopAsyncIteration):
             await close_executor()
 
+
     async def _iter_tool_executor_results(
         self,
         executor: T.AsyncGenerator[ToolExecutorResultT, None],
     ) -> T.AsyncGenerator[ToolExecutorResultT, None]:
-        async def _next_executor_result() -> ToolExecutorResultT:
-            return await anext(executor)
-
-        while True:
-            event = getattr(self.run_context.context, "event", None)
-            stale_reserved_tool = event is not None and not is_current(event)
-            if self._is_stop_requested() and not stale_reserved_tool:
-                await self._close_executor(executor)
-                raise _ToolExecutionInterrupted(
-                    "Tool execution interrupted before reading the next tool result."
-                )
-
-            next_result_task = asyncio.create_task(_next_executor_result())
-            abort_task = asyncio.create_task(self._abort_signal.wait())
-            try:
-                done, _ = await asyncio.wait(
-                    {next_result_task, abort_task},
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-
-                if abort_task in done:
-                    if event is not None and not is_current(event):
-                        # A started operation must finish once; replacement reuses its result.
-                        try:
-                            yield await next_result_task
-                        except StopAsyncIteration:
-                            return
-                        continue
-                    if not next_result_task.done():
-                        next_result_task.cancel()
-                        with suppress(asyncio.CancelledError, StopAsyncIteration):
-                            await next_result_task
-
-                    await self._close_executor(executor)
-
-                    raise _ToolExecutionInterrupted(
-                        "Tool execution interrupted by a stop request."
-                    )
-
-                try:
-                    yield next_result_task.result()
-                except StopAsyncIteration:
-                    return
-            finally:
-                if not abort_task.done():
-                    abort_task.cancel()
-                    with suppress(asyncio.CancelledError):
-                        await abort_task
+        async for result in iter_tool_executor_results(self, executor):
+            yield result
