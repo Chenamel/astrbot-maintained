@@ -6,10 +6,9 @@ from dataclasses import dataclass
 from astrbot import logger
 from astrbot.core.agent.runners.tool_loop_agent_runner import FollowUpTicket
 from astrbot.core.astr_agent_run_util import AgentRunner
-from astrbot.core.message.components import At, Reply
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.utils.active_event_registry import active_event_registry
-from astrbot.core.utils.direct_turns import coordinator
+from astrbot.core.utils.direct_turns import coordinator, mentions_other
 
 _ACTIVE_AGENT_RUNNERS: dict[str, AgentRunner] = {}
 _FOLLOW_UP_ORDER_STATE: dict[str, dict[str, object]] = {}
@@ -181,14 +180,7 @@ async def _monitor_follow_up_ticket(
 
 
 def try_capture_follow_up(event: AstrMessageEvent) -> FollowUpCapture | None:
-    self_id = str(event.get_self_id()) if hasattr(event, "get_self_id") else ""
-    if any(
-        isinstance(component, At)
-        and str(component.qq) != self_id
-        or isinstance(component, Reply)
-        and str(component.sender_id) != self_id
-        for component in event.get_messages()
-    ):
+    if mentions_other(event):
         return None
     sender_id = event.get_sender_id()
     if not sender_id:

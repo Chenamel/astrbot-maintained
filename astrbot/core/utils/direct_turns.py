@@ -29,6 +29,59 @@ TASK_TEXT_MAX_CHARS = 16000
 TOOL_RESULT_WAIT_TIMEOUT_SEC = 15
 
 
+def self_id_of(event) -> str:
+    """Return the bot's own id for an event, or ``""`` when unavailable.
+
+    Args:
+        event: A message event, or any duck-typed stand-in.
+
+    Returns:
+        The bot id as a string; ``""`` when the event cannot provide one.
+    """
+    getter = getattr(event, "get_self_id", None)
+    if not callable(getter):
+        return ""
+    return str(getter())
+
+
+def mentions_other(event) -> bool:
+    """Return whether any At/Reply in the message targets another account.
+
+    Args:
+        event: A message event whose components are scanned.
+
+    Returns:
+        True when an At or Reply points at an id other than the bot's own.
+    """
+    self_id = self_id_of(event)
+    return any(
+        isinstance(component, At)
+        and str(component.qq) != self_id
+        or isinstance(component, Reply)
+        and str(component.sender_id) != self_id
+        for component in event.get_messages()
+    )
+
+
+def mentions_self(event) -> bool:
+    """Return whether any At/Reply in the message targets the bot itself.
+
+    Args:
+        event: A message event whose components are scanned.
+
+    Returns:
+        True when an At or Reply points at the bot's own id.
+    """
+    self_id = self_id_of(event)
+    return any(
+        isinstance(component, At)
+        and str(component.qq) == self_id
+        or isinstance(component, Reply)
+        and str(component.sender_id) == self_id
+        for component in event.get_messages()
+    )
+
+
 @dataclass
 class DirectTurn:
     first_at: float
@@ -93,9 +146,7 @@ class DirectTurnCoordinator:
                 self.reset(event.unified_msg_origin)
             return
         if not text and not any(
-            isinstance(c, Image)
-            or isinstance(c, At)
-            and str(c.qq) == str(event.get_self_id())
+            isinstance(c, Image) or isinstance(c, At) and str(c.qq) == self_id_of(event)
             for c in event.get_messages()
         ):
             return
@@ -112,27 +163,14 @@ class DirectTurnCoordinator:
         ):
             event.stop_event()
             return
-        self_id = str(event.get_self_id())
-        other = any(
-            isinstance(c, At)
-            and str(c.qq) != self_id
-            or isinstance(c, Reply)
-            and str(c.sender_id) != self_id
-            for c in event.get_messages()
-        )
+        other = mentions_other(event)
         if (
             (not turn or turn.closed or turn.sent)
             and not other
             and (
                 event.is_private_chat()
                 or event.is_at_or_wake_command
-                or any(
-                    isinstance(c, At)
-                    and str(c.qq) == self_id
-                    or isinstance(c, Reply)
-                    and str(c.sender_id) == self_id
-                    for c in event.get_messages()
-                )
+                or mentions_self(event)
                 or any(text.startswith(prefix) for prefix in wake_prefixes if prefix)
             )
         ):
