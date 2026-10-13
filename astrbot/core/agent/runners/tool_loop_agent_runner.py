@@ -6,10 +6,8 @@ import sys
 import time
 import traceback
 import typing as T
-import uuid
 from contextlib import suppress
 from dataclasses import dataclass, field, replace
-from pathlib import Path
 
 from mcp.types import (
     BlobResourceContents,
@@ -79,6 +77,11 @@ from ..response import AgentResponseData, AgentStats
 from ..run_context import ContextWrapper, TContext
 from ..tool_executor import BaseFunctionToolExecutor
 from .base import AgentResponse, AgentState, BaseAgentRunner
+from .tool_loop_support import (
+    read_tool_hint,
+    truncate_tool_result_preview,
+    write_tool_result_overflow_file,
+)
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -442,9 +445,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         self.stats.start_time = time.time()
 
     def _read_tool_hint(self) -> str:
-        if self.read_tool is not None:
-            return f"`{self.read_tool.name}`"
-        return "the available file-read tool"
+        return read_tool_hint(self)
 
     async def _assemble_request_context_for_provider(
         self,
@@ -493,26 +494,11 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         tool_call_id: str,
         content: str,
     ) -> str:
-        if self.tool_result_overflow_dir is None:
-            raise ValueError("tool_result_overflow_dir is not configured")
-
-        overflow_dir = Path(self.tool_result_overflow_dir).resolve(strict=False)
-        safe_tool_call_id = (
-            "".join(
-                ch if ch.isalnum() or ch in {"-", "_", "."} else "_"
-                for ch in tool_call_id
-            ).strip("._")
-            or "tool_call"
+        return await write_tool_result_overflow_file(
+            self,
+            tool_call_id=tool_call_id,
+            content=content,
         )
-        file_name = f"{safe_tool_call_id}_{uuid.uuid4().hex[:8]}.txt"
-        overflow_path = overflow_dir / file_name
-
-        def _run() -> str:
-            overflow_dir.mkdir(parents=True, exist_ok=True)
-            overflow_path.write_text(content, encoding="utf-8")
-            return str(overflow_path)
-
-        return await asyncio.to_thread(_run)
 
     async def _materialize_large_tool_result(
         self,
@@ -566,18 +552,11 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         *,
         tool_call_id: str,
     ) -> str:
-        preview = content
-        while preview:
-            estimated_tokens = self._tool_result_token_counter.count_tokens(
-                [Message(role="tool", content=preview, tool_call_id=tool_call_id)]
-            )
-            if estimated_tokens <= self.TOOL_RESULT_PREVIEW_MAX_ESTIMATED_TOKENS:
-                return preview
-            next_len = len(preview) // 2
-            if next_len <= 0:
-                break
-            preview = preview[:next_len]
-        return preview
+        return truncate_tool_result_preview(
+            self,
+            content,
+            tool_call_id=tool_call_id,
+        )
 
     async def _await_or_stop(
         self,
