@@ -1927,7 +1927,6 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         with suppress(asyncio.CancelledError, RuntimeError, StopAsyncIteration):
             await close_executor()
 
-
     async def _iter_tool_executor_results(
         self,
         executor: T.AsyncGenerator[ToolExecutorResultT, None],
