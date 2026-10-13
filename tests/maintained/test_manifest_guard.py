@@ -21,7 +21,7 @@ MANIFEST_PATH = REPO_ROOT / "maintained" / "installed_manifest.json"
 
 #: Number of protected files. Adding or removing entries requires updating this
 #: pin in the same commit -- that is the point of the pin.
-EXPECTED_ENTRY_COUNT = 36
+EXPECTED_ENTRY_COUNT = 38
 
 
 def _manifest() -> dict:
