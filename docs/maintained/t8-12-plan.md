@@ -84,7 +84,7 @@
 | **0'** | ✅ **已完成**（提交 `977872dd9`）文档订正 —— **唯一错误源 `hook-timing-impact.md:16`**；handover 只加免责行（见 §1.2 取证澄清） | 0 | 双端校验仍是 36 条 NO DRIFT（文档不在台账内，仅确认） |
 | **1** | ✅ **已完成**（提交 `f1dc62650` / `2256385c4` / `652a4cfa8`）`follow_up` 去重 + `self_id` 统一（复用 `direct_turns` 判定） | 2 条哈希（**实测 2 条，与预估一致**） | 探针一致 + maintained 317 |
 | **2** | ✅ **已完成**（提交 `9d892d26d` / `787700da0` / `106f115eb` / `2a39014cc`）`code_delivery_policy` 结构整理（**口径 B**：正则字符零改动 + 不许搬动 + 留在原函数原位置）。只抽 **2 个私有 helper**：`_task_text`（原 90-102）、`_drop_execution_tools`（原 186-200）。**不上提** `aliases` / `language_patterns`，**不动** 38-78 禁区、**不动** 201-206 英文 prompt。§1.3 的两项剩余问题（正则双向误判 / 无条件注入）**Step 2 未处理，待 T8-10** | 1 条哈希（**实测 1 条，与预估一致**） | T8-02 的 43 项行为测试仍全绿 + 新增结构测试 18 项 |
-| **3** | `astr_main_agent` 外迁（quote / proactive 两组） | 2 条哈希 + 新增 2 条（#38 #39） | 探针一致 + **断言 `internal.py:139` 的构造语句仍在 `__init__` 函数体内** |
+| **3** | ✅ **已完成**（提交 `56803e88d` / `fc345c2c0` / `f7ddf1956` / `0fbd10f3f` / `319c06ff9` / `6105e6350`）`astr_main_agent` 外迁 —— quote **6** → #38；proactive **3** + 2 常量 → #39。**留守 4**（见 §3.2） | 2 条哈希（**实测 2 条**）+ 新增 2 条（#38 #39） | 探针一致 + **AST 断言 `MainAgentBuildConfig(...)` 仍在 `InternalAgentSubStage.initialize()` 内** |
 | **4a** | 工具结果落盘族外迁 | 新增 1 条（#37） | 探针 + β xfail 8/8 + 调用点仍为 5 |
 | **4b** | 工具循环族外迁 | 1 条哈希 | 同上 |
 | **4c** | sanitize / `_resolve_tool_exec` 辅助族外迁 | 1 条哈希 | 同上 |
@@ -149,7 +149,15 @@ Step 0 与 0' 互不依赖，可同批执行。
 可以凑满 13 个，但会新增 `astr_main_agent_quote/_proactive → astr_main_agent` 的**回边耦合**，
 违反本节"#38 不是新增架构耦合"的定性与「兼容优先、零冲突」铁律 ⇒ **不采用**。
 
-⇒ 行数：**1905 → 约 1734（−171 / −9%）**，而非原估的 1624 / −15%。
+⇒ 行数：**1905 → 1725（−180 / −9.4%）**，而非原估的 1624 / −15%（实测值见 §2 第 3 行）。
+
+> **技术债（Step 3 留下，待后续单独排期）**
+> 1. **4 个函数因上游 patch 软锁定无法外迁**：`_append_video_attachment`（`ama.logger`）、
+>    `_build_local_mode_prompt`（`ama.resolve_windows_shell`）、`_filter_skills_for_current_config`
+>    （`ama.star_registry`）、`_apply_local_env_tools`（依赖上者）。除非接受回边耦合，否则动不了。
+> 2. **`astr_main_agent.py` 因上游测试软锁定（含 re-export）无法彻底瘦身**：外迁 9 个后仍 **1725 行**，
+>    剩余大头 `build_main_agent`(248) / `collect_initial_request`(220) / `_ensure_persona_and_skills`(178) 未拆。
+> 3. **`_append_video_attachment` 与 `_apply_local_env_tools` 全仓零直接覆盖**（既有债务，Step 3 未补）。
 
 ### 3.1 完整 39 条（现有 36 + 新增 3）
 
@@ -278,8 +286,8 @@ Step 0 与 0' 互不依赖，可同批执行。
 
 ## 8. 验收口径（每步都要满足）
 
-`tests/maintained` 全绿（**2026-10-13 Step 2 后实测：335 passed + 1 skipped，25 个测试文件 + conftest**；
-演进：Step 0 前 303+1 / 22 文件 → Step 1 后 317+1 / 24 文件 → Step 2 后 335+1 / 25 文件，只增不减）／
-上游 `295 passed + 17 xfailed` 不变／
+`tests/maintained` 全绿（**2026-10-14 Step 3 后实测：349 passed + 1 skipped，26 个测试文件 + conftest**；
+演进：Step 0 前 303+1 / 22 文件 → Step 1 后 317+1 / 24 文件 → Step 2 后 335+1 / 25 文件 →
+Step 3 后 349+1 / 26 文件，只增不减）／上游 `295 passed + 17 xfailed` 不变（含 β xfail 8/8）／
 ruff `check` 干净、`format --check` 仅剩 `config/agent_runner.py` 与 `config/default.py` 两个已同意延后的文件／
 双端（实例 + 仓）NO DRIFT／探针一致／β xfail 8/8。
