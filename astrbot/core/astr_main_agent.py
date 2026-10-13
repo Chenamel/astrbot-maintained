@@ -20,6 +20,21 @@ from astrbot.core.astr_agent_context import AgentContextWrapper, AstrAgentContex
 from astrbot.core.astr_agent_hooks import MAIN_AGENT_HOOKS
 from astrbot.core.astr_agent_run_util import AgentRunner
 from astrbot.core.astr_agent_tool_exec import FunctionToolExecutor
+from astrbot.core.astr_main_agent_proactive import (
+    WEB_SEARCH_CITATION_PROMPT,
+    WEB_SEARCH_CITATION_TOOL_NAMES,
+    _apply_web_search_citation_prompt,
+    _apply_web_search_tools,
+    _proactive_cron_job_tools,
+)
+from astrbot.core.astr_main_agent_quote import (
+    _append_audio_attachment,
+    _append_quoted_audio_attachment,
+    _append_quoted_image_attachment,
+    _get_quoted_message_parser_settings,
+    _process_quote_message,
+    _provider_supports_modality,
+)
 from astrbot.core.astr_main_agent_resources import (
     CHATUI_INLINE_GENUI_SYSTEM_PROMPT,
     CHATUI_SPECIAL_DEFAULT_PERSONA_PROMPT,
@@ -86,7 +101,10 @@ from astrbot.core.tools.computer_tools import (
     ShellSessionTool,
     SyncSkillReleaseTool,
 )
-from astrbot.core.tools.cron_tools import FutureTaskTool
+
+# FutureTaskTool and four web search tools stay imported after the T8-12 split:
+# upstream tests still resolve them as astr_main_agent attributes.
+from astrbot.core.tools.cron_tools import FutureTaskTool  # noqa: F401
 from astrbot.core.tools.knowledge_base_tools import (
     KnowledgeBaseQueryTool,
     retrieve_knowledge_base,
@@ -96,17 +114,10 @@ from astrbot.core.tools.message_tools import (
     SendMessageToUserTool,
 )
 from astrbot.core.tools.web_search_tools import (
-    AnySearchWebSearchTool,
-    BaiduWebSearchTool,
-    BochaWebSearchTool,
-    BraveWebSearchTool,
-    ExaGetContentsTool,
-    ExaWebSearchTool,
-    FirecrawlExtractWebPageTool,
-    FirecrawlWebSearchTool,
-    TavilyExtractWebPageTool,
-    TavilyWebSearchTool,
-    normalize_legacy_web_search_config,
+    BaiduWebSearchTool,  # noqa: F401
+    FirecrawlExtractWebPageTool,  # noqa: F401
+    FirecrawlWebSearchTool,  # noqa: F401
+    normalize_legacy_web_search_config,  # noqa: F401
 )
 from astrbot.core.utils.astrbot_path import (
     get_astrbot_system_tmp_path,
@@ -115,21 +126,28 @@ from astrbot.core.utils.astrbot_path import (
 from astrbot.core.utils.file_extract import extract_file_moonshotai
 from astrbot.core.utils.llm_metadata import LLM_METADATAS
 from astrbot.core.utils.media_utils import is_file_uri, is_recoverable_image_error
-from astrbot.core.utils.quoted_message.settings import (
-    SETTINGS as DEFAULT_QUOTED_MESSAGE_SETTINGS,
-)
-from astrbot.core.utils.quoted_message.settings import (
-    QuotedMessageParserSettings,
-)
 from astrbot.core.utils.quoted_message_parser import (
     extract_quoted_message_images,
-    extract_quoted_message_text,
 )
 from astrbot.core.utils.string_utils import normalize_and_dedupe_strings
 from astrbot.core.workspace import (
     normalize_umo_for_workspace,
     resolve_workspace_root_for_umo,
 )
+
+__all__ = [
+    "WEB_SEARCH_CITATION_PROMPT",
+    "WEB_SEARCH_CITATION_TOOL_NAMES",
+    "_append_audio_attachment",
+    "_append_quoted_audio_attachment",
+    "_append_quoted_image_attachment",
+    "_apply_web_search_citation_prompt",
+    "_apply_web_search_tools",
+    "_get_quoted_message_parser_settings",
+    "_proactive_cron_job_tools",
+    "_process_quote_message",
+    "_provider_supports_modality",
+]
 
 LLM_ERROR_MESSAGE_EXTRA_KEY = "_llm_error_message"
 WEEKDAY_NAMES = (
@@ -140,22 +158,6 @@ WEEKDAY_NAMES = (
     "Friday",
     "Saturday",
     "Sunday",
-)
-WEB_SEARCH_CITATION_TOOL_NAMES = frozenset(
-    {
-        "web_search_baidu",
-        "web_search_tavily",
-        "web_search_bocha",
-        "web_search_brave",
-        "web_search_exa",
-        "web_search_anysearch",
-    }
-)
-WEB_SEARCH_CITATION_PROMPT = (
-    "Always cite web search results you rely on. "
-    "Index is a unique identifier for each search result. "
-    "Use the exact citation format <ref>index</ref> (e.g. <ref>abcd.3</ref>) "
-    "after the sentence that uses the information. Do not invent citations."
 )
 
 
@@ -854,24 +856,6 @@ async def _ensure_img_caption(
             req.image_urls = []
 
 
-def _append_quoted_image_attachment(req: ProviderRequest, image_path: str) -> None:
-    req.extra_user_content_parts.append(
-        TextPart(text=f"[Image Attachment in quoted message: path {image_path}]")
-    )
-
-
-def _append_audio_attachment(req: ProviderRequest, audio_path: str) -> None:
-    req.extra_user_content_parts.append(
-        TextPart(text=f"[Audio Attachment: path {audio_path}]")
-    )
-
-
-def _append_quoted_audio_attachment(req: ProviderRequest, audio_path: str) -> None:
-    req.extra_user_content_parts.append(
-        TextPart(text=f"[Audio Attachment in quoted message: path {audio_path}]")
-    )
-
-
 async def _append_video_attachment(
     req: ProviderRequest,
     video: Video,
@@ -910,103 +894,6 @@ async def _append_video_attachment(
         text = f"[Video Attachment: name {video_name}, path {video_path}]"
 
     req.extra_user_content_parts.append(TextPart(text=text))
-
-
-def _get_quoted_message_parser_settings(
-    provider_settings: dict[str, object] | None,
-) -> QuotedMessageParserSettings:
-    if not isinstance(provider_settings, dict):
-        return DEFAULT_QUOTED_MESSAGE_SETTINGS
-    overrides = provider_settings.get("quoted_message_parser")
-    if not isinstance(overrides, dict):
-        return DEFAULT_QUOTED_MESSAGE_SETTINGS
-    return DEFAULT_QUOTED_MESSAGE_SETTINGS.with_overrides(overrides)
-
-
-async def _process_quote_message(
-    event: AstrMessageEvent,
-    req: ProviderRequest,
-    img_cap_prov_id: str,
-    plugin_context: Context,
-    quoted_message_settings: QuotedMessageParserSettings = DEFAULT_QUOTED_MESSAGE_SETTINGS,
-    main_provider_supports_image: bool = False,
-    skip_quote_image_caption: bool = False,
-    image_ref: str | None = None,
-) -> None:
-    """Append quoted text and optionally describe an explicitly supplied image.
-
-    Args:
-        event: Event whose quote text is included in the request.
-        req: Working request receiving the quote text and optional caption.
-        img_cap_prov_id: Existing dedicated caption provider selection.
-        plugin_context: Provider and quoted-message lookup services.
-        quoted_message_settings: Existing quote extraction limits and options.
-        main_provider_supports_image: Whether the main model can see images.
-        skip_quote_image_caption: Whether the main caption branch handles it.
-        image_ref: Already collected image reference; the local stage supplies
-            a prepared path. No image is re-read from the event here.
-    """
-    quote = None
-    for comp in event.message_obj.message:
-        if isinstance(comp, Reply):
-            quote = comp
-            break
-    if not quote:
-        return
-
-    content_parts = []
-    sender_info = f"({quote.sender_nickname}): " if quote.sender_nickname else ""
-    message_str = (
-        await extract_quoted_message_text(
-            event,
-            quote,
-            settings=quoted_message_settings,
-        )
-        or quote.message_str
-        or "[Empty Text]"
-    )
-    content_parts.append(f"{sender_info}{message_str}")
-
-    if image_ref:
-        if skip_quote_image_caption:
-            logger.debug(
-                "Skipping quote image captioning because image captioning already handled this request."
-            )
-        elif main_provider_supports_image:
-            logger.debug(
-                "Skipping quote image captioning because the main provider supports image input."
-            )
-        elif not img_cap_prov_id:
-            logger.debug(
-                "No dedicated image caption provider configured. "
-                "Skipping quote image captioning."
-            )
-        else:
-            try:
-                prov = None
-                prov = plugin_context.get_provider_by_id(img_cap_prov_id)
-                if prov is None:
-                    prov = await plugin_context.get_using_provider_async(
-                        event.unified_msg_origin
-                    )
-
-                if prov and isinstance(prov, Provider):
-                    llm_resp = await prov.text_chat(
-                        prompt="Please describe the image content.",
-                        image_urls=[image_ref],
-                    )
-                    if llm_resp.completion_text:
-                        content_parts.append(
-                            f"[Image Caption in quoted message]: {llm_resp.completion_text}"
-                        )
-                else:
-                    logger.warning("No provider found for image captioning in quote.")
-            except Exception as exc:
-                logger.error("Quote image captioning failed (%s).", type(exc).__name__)
-
-    quoted_content = "\n".join(content_parts)
-    quoted_text = f"<Quoted Message>\n{quoted_content}\n</Quoted Message>"
-    req.extra_user_content_parts.append(TextPart(text=quoted_text))
 
 
 def _append_system_reminders(
@@ -1271,66 +1158,6 @@ def _apply_sandbox_tools(
     req.system_prompt = f"{req.system_prompt or ''}\n{SANDBOX_MODE_PROMPT}\n"
 
 
-def _proactive_cron_job_tools(req: ProviderRequest, plugin_context: Context) -> None:
-    if req.func_tool is None:
-        req.func_tool = ToolSet()
-    tool_mgr = plugin_context.get_llm_tool_manager()
-    req.func_tool.add_tool(tool_mgr.get_builtin_tool(FutureTaskTool))
-
-
-async def _apply_web_search_tools(
-    event: AstrMessageEvent,
-    req: ProviderRequest,
-    plugin_context: Context,
-) -> None:
-    cfg = plugin_context.get_config(umo=event.unified_msg_origin)
-    normalize_legacy_web_search_config(cfg)
-    prov_settings = cfg.get("provider_settings", {})
-
-    if not prov_settings.get("web_search", False):
-        return
-
-    if req.func_tool is None:
-        req.func_tool = ToolSet()
-
-    tool_mgr = plugin_context.get_llm_tool_manager()
-    provider = prov_settings.get("websearch_provider", "tavily")
-    if provider == "tavily":
-        req.func_tool.add_tool(tool_mgr.get_builtin_tool(TavilyWebSearchTool))
-        req.func_tool.add_tool(tool_mgr.get_builtin_tool(TavilyExtractWebPageTool))
-    elif provider == "bocha":
-        req.func_tool.add_tool(tool_mgr.get_builtin_tool(BochaWebSearchTool))
-    elif provider == "brave":
-        req.func_tool.add_tool(tool_mgr.get_builtin_tool(BraveWebSearchTool))
-    elif provider == "firecrawl":
-        req.func_tool.add_tool(tool_mgr.get_builtin_tool(FirecrawlWebSearchTool))
-        req.func_tool.add_tool(tool_mgr.get_builtin_tool(FirecrawlExtractWebPageTool))
-    elif provider == "baidu_ai_search":
-        req.func_tool.add_tool(tool_mgr.get_builtin_tool(BaiduWebSearchTool))
-    elif provider == "exa":
-        req.func_tool.add_tool(tool_mgr.get_builtin_tool(ExaWebSearchTool))
-        req.func_tool.add_tool(tool_mgr.get_builtin_tool(ExaGetContentsTool))
-    elif provider == "anysearch":
-        req.func_tool.add_tool(tool_mgr.get_builtin_tool(AnySearchWebSearchTool))
-
-
-def _apply_web_search_citation_prompt(
-    event: AstrMessageEvent,
-    req: ProviderRequest,
-) -> None:
-    if event.get_platform_name() != "webchat" or not req.func_tool:
-        return
-
-    if not any(req.func_tool.get_tool(name) for name in WEB_SEARCH_CITATION_TOOL_NAMES):
-        return
-
-    system_prompt = req.system_prompt or ""
-    if WEB_SEARCH_CITATION_PROMPT in system_prompt:
-        return
-
-    req.system_prompt = f"{system_prompt}\n{WEB_SEARCH_CITATION_PROMPT}\n"
-
-
 async def _get_compress_provider(
     config: MainAgentBuildConfig,
     plugin_context: Context,
@@ -1399,13 +1226,6 @@ def _get_fallback_chat_providers(
         fallbacks.append(fallback_provider)
         seen_provider_ids.add(fallback_id)
     return fallbacks
-
-
-def _provider_supports_modality(provider: Provider, modality: str) -> bool:
-    modalities = provider.provider_config.get("modalities", None)
-    if modalities == []:
-        return True  # Empty list from migration is treated as unconfigured for backward compatibility
-    return isinstance(modalities, list) and modality in modalities
 
 
 def _select_image_chat_provider(
