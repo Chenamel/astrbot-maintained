@@ -82,7 +82,7 @@
 |---|---|---|---|
 | **0** | ✅ **已完成**（提交 `3a1bccdc8`）β 探针落地 + 5 case 基线快照 + 零保护 case 清单 | 0 | 基线 JSON 落盘、5 case 全通过 |
 | **0'** | ✅ **已完成**（提交 `977872dd9`）文档订正 —— **唯一错误源 `hook-timing-impact.md:16`**；handover 只加免责行（见 §1.2 取证澄清） | 0 | 双端校验仍是 36 条 NO DRIFT（文档不在台账内，仅确认） |
-| **1** | `follow_up` 去重 + `self_id` 统一（复用 `direct_turns` 判定） | 2 条哈希 | 探针一致 + maintained 304 |
+| **1** | ✅ **已完成**（提交 `f1dc62650` / `2256385c4` / `652a4cfa8`）`follow_up` 去重 + `self_id` 统一（复用 `direct_turns` 判定） | 2 条哈希（**实测 2 条，与预估一致**） | 探针一致 + maintained 317 |
 | **2** | `code_delivery_policy` 结构整理（**正则一行不动**） | 1 条哈希 | T8-02 的 43 项行为测试仍全绿 |
 | **3** | `astr_main_agent` 外迁（quote / proactive 两组） | 2 条哈希 + 新增 2 条（#38 #39） | 探针一致 + **断言 `internal.py:139` 的构造语句仍在 `__init__` 函数体内** |
 | **4a** | 工具结果落盘族外迁 | 新增 1 条（#37） | 探针 + β xfail 8/8 + 调用点仍为 5 |
@@ -253,5 +253,7 @@ Step 0 与 0' 互不依赖，可同批执行。
 
 ## 8. 验收口径（每步都要满足）
 
-`tests/maintained` 全绿（当前 304 项，只增不减）／上游 `295 passed + 17 xfailed` 不变／
-ruff `check` + `format` 干净／双端（实例 + 仓）NO DRIFT／探针一致／β xfail 8/8。
+`tests/maintained` 全绿（**2026-10-13 实测：317 passed + 1 skipped，24 个测试文件 + conftest**；
+Step 0 前为 303 passed + 1 skipped / 22 文件，只增不减）／上游 `295 passed + 17 xfailed` 不变／
+ruff `check` 干净、`format --check` 仅剩 `config/agent_runner.py` 与 `config/default.py` 两个已同意延后的文件／
+双端（实例 + 仓）NO DRIFT／探针一致／β xfail 8/8。
