@@ -72,7 +72,7 @@
 | 项 | 文件 | 行数 | 剩余问题 | 与 β 的关联 |
 |---|---|---|---|---|
 | 18 | `astrbot/core/astr_main_agent.py` | 1908 | 硬编码已于 T8-03/T8-04 清除（能力契约 + 自声明 + 配置兜底）。**剩余＝职责膨胀**（30+ 函数） | 间接：β 场景的入口装配方 |
-| 19 | `astrbot/core/code_delivery_policy.py` | 212 | `EXECUTION_TOOL_NAMES` 已移除。**剩余**：正则双向误判（= **T8-10，禁碰**）；`allowed=True` 时无条件注入英文 prompt | 间接但属**成因侧**：代码交付修复使完成钩子更早调用 |
+| 19 | `astrbot/core/code_delivery_policy.py` | 212 | `EXECUTION_TOOL_NAMES` 已移除。**剩余两项 —— ① 正则双向误判（= **T8-10**）② `allowed=True` 时无条件注入英文 prompt。⛔ **两项 Step 2 均未处理，待 T8-10**（见 §2 Step 2 行与 §7）** | 间接但属**成因侧**：代码交付修复使完成钩子更早调用 |
 | 20 | `astrbot/core/agent/runners/tool_loop_agent_runner.py` | 2039 | 目录名倒挂已由 T8-03 修掉。**剩余＝过大**：`_step()` 965-1354、`_handle_function_tools` 1392-1820 | **直接承载 β**（5 个调用点） |
 | 21 | `astrbot/core/pipeline/process_stage/follow_up.py` | 264 | `185-191` 与 `direct_turns.py:116-120` **逐字重复** `other` 判定；`self_id` 处理两侧不一致（follow_up 兜成 `""` ⇒ self_id 缺失时把所有 @ 误判为"@别人"丢弃） | 相邻：`_complete_...` 末尾 308 行立刻结算 follow-up |
 
@@ -245,7 +245,11 @@ Step 0 与 0' 互不依赖，可同批执行。
 
 ## 7. 禁区（全程不变）
 
-- **T8-10** 提权逻辑（`code_delivery_policy.py:80` 等）：**零触碰**
+- **T8-10** 提权逻辑：**零触碰**。⚠️ 行号已订正（2026-10-13 取证）：旧记载的 `code_delivery_policy.py:80`
+  **是错的**（该行现为**空行**）—— 那组行号写于 `d88b38c3f` 时代，`cecdab218` 让全文整体上移 **8 行**。
+  **现况**：`execution_denial` **整段 38–78 行**为禁区（T8-10 + T8-13 双重），其中误放行分支
+  `然后|并|再|并且` 现为 **72 行**；`SAFETY_REFUSAL_PATTERN` 现为 **11–19 行**；T8-13 载体
+  （无条件 `get_sender_id()`）现为 **48 行**。
 - **T8-13** 测试脆弱性（`execution_denial` 无条件读 `get_sender_id()`）：**仅记录**
 - **上游测试文件**：零修改（已复核 `git diff --name-status baseline/v4.28.2 -- tests/ | grep -v "^A"` = 空）
 - **上游基线与 API 调用**：零变更；`astrbot/api/**` 上游符号由 `test_api_frozen.py` 守护
