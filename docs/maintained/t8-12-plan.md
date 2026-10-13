@@ -85,7 +85,7 @@
 | **1** | ✅ **已完成**（提交 `f1dc62650` / `2256385c4` / `652a4cfa8`）`follow_up` 去重 + `self_id` 统一（复用 `direct_turns` 判定） | 2 条哈希（**实测 2 条，与预估一致**） | 探针一致 + maintained 317 |
 | **2** | ✅ **已完成**（提交 `9d892d26d` / `787700da0` / `106f115eb` / `2a39014cc`）`code_delivery_policy` 结构整理（**口径 B**：正则字符零改动 + 不许搬动 + 留在原函数原位置）。只抽 **2 个私有 helper**：`_task_text`（原 90-102）、`_drop_execution_tools`（原 186-200）。**不上提** `aliases` / `language_patterns`，**不动** 38-78 禁区、**不动** 201-206 英文 prompt。§1.3 的两项剩余问题（正则双向误判 / 无条件注入）**Step 2 未处理，待 T8-10** | 1 条哈希（**实测 1 条，与预估一致**） | T8-02 的 43 项行为测试仍全绿 + 新增结构测试 18 项 |
 | **3** | ✅ **已完成**（提交 `56803e88d` / `fc345c2c0` / `f7ddf1956` / `0fbd10f3f` / `319c06ff9` / `6105e6350`）`astr_main_agent` 外迁 —— quote **6** → #38；proactive **3** + 2 常量 → #39。**留守 4**（见 §3.2） | 2 条哈希（**实测 2 条**）+ 新增 2 条（#38 #39） | 探针一致 + **AST 断言 `MainAgentBuildConfig(...)` 仍在 `InternalAgentSubStage.initialize()` 内** |
-| **4a** | 工具结果落盘族外迁 | 新增 1 条（#37） | 探针 + β xfail 8/8 + 调用点仍为 5 |
+| **4a** | ✅ **已完成**（提交 `cd3fb47fe` / `03540b1f9` / `f18ae84ba` / `e5f196b3d` / `a51f47608`）工具结果落盘族外迁 → **#37**（**方案 a 薄委托**：runner 保留 3 个转发方法，保住上游 `runner._write_tool_result_overflow_file` 实例级 monkeypatch）。runner **2039 → 2018（-21）** | 新增 1 条（#37）+ runner 哈希 1 条（**实测 1+1**） | 探针 MATCH + 结构守卫 5 处齐全 + β xfail 8/8 + 新增 14 case |
 | **4b** | 工具循环族外迁 | 1 条哈希 | 同上 |
 | **4c** | sanitize / `_resolve_tool_exec` 辅助族外迁 | 1 条哈希 | 同上 |
 | **4d** | **取消** `_simple_print_message_role` 外迁（调用点 1004/1015 紧贴 984 敏感区） | 0 | — |
@@ -288,6 +288,6 @@ Step 0 与 0' 互不依赖，可同批执行。
 
 `tests/maintained` 全绿（**2026-10-14 Step 3 后实测：349 passed + 1 skipped，26 个测试文件 + conftest**；
 演进：Step 0 前 303+1 / 22 文件 → Step 1 后 317+1 / 24 文件 → Step 2 后 335+1 / 25 文件 →
-Step 3 后 349+1 / 26 文件，只增不减）／上游 `295 passed + 17 xfailed` 不变（含 β xfail 8/8）／
+Step 3 后 349+1 / 26 文件 → Step 4a 后 363+1 / 27 文件，只增不减）／上游 `295 passed + 17 xfailed` 不变（含 β xfail 8/8）／
 ruff `check` 干净、`format --check` 仅剩 `config/agent_runner.py` 与 `config/default.py` 两个已同意延后的文件／
 双端（实例 + 仓）NO DRIFT／探针一致／β xfail 8/8。
