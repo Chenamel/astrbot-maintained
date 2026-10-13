@@ -18,12 +18,14 @@ from astrbot.core.astr_main_agent import (
     LLM_ERROR_MESSAGE_EXTRA_KEY,
     MainAgentBuildConfig,
     MainAgentBuildResult,
-    _get_quoted_message_parser_settings,
-    _process_quote_message,
-    _provider_supports_modality,
     _select_provider,
     build_main_agent,
     collect_initial_request,
+)
+from astrbot.core.astr_main_agent_quote import (
+    _get_quoted_message_parser_settings,
+    _process_quote_message,
+    _provider_supports_modality,
 )
 from astrbot.core.config.agent_runner import (
     normalize_hook_timing_mode,
