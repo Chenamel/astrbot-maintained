@@ -71,7 +71,7 @@
 
 | 项 | 文件 | 行数 | 剩余问题 | 与 β 的关联 |
 |---|---|---|---|---|
-| 18 | `astrbot/core/astr_main_agent.py` | 1908 | 硬编码已于 T8-03/T8-04 清除（能力契约 + 自声明 + 配置兜底）。**剩余＝职责膨胀**（30+ 函数） | 间接：β 场景的入口装配方 |
+| 18 | `astrbot/core/astr_main_agent.py` | 1905 | 硬编码已于 T8-03/T8-04 清除（能力契约 + 自声明 + 配置兜底）。**Step 3 已外迁 9 个函数**（quote 6 → #38；proactive 3 + 2 常量 → #39），**1905 → 约 1734（−9%）**。**留守 4 个**（`_append_video_attachment` / `_build_local_mode_prompt` / `_apply_local_env_tools` / `_filter_skills_for_current_config`），原因见 §3.2。**剩余技术债**：`build_main_agent`(248 行) / `collect_initial_request`(220 行) / `_ensure_persona_and_skills`(178 行) 三大函数未拆 | 间接：β 场景的入口装配方 |
 | 19 | `astrbot/core/code_delivery_policy.py` | 212 | `EXECUTION_TOOL_NAMES` 已移除。**剩余两项 —— ① 正则双向误判（= **T8-10**）② `allowed=True` 时无条件注入英文 prompt。⛔ **两项 Step 2 均未处理，待 T8-10**（见 §2 Step 2 行与 §7）** | 间接但属**成因侧**：代码交付修复使完成钩子更早调用 |
 | 20 | `astrbot/core/agent/runners/tool_loop_agent_runner.py` | 2039 | 目录名倒挂已由 T8-03 修掉。**剩余＝过大**：`_step()` 965-1354、`_handle_function_tools` 1392-1820 | **直接承载 β**（5 个调用点） |
 | 21 | `astrbot/core/pipeline/process_stage/follow_up.py` | 264 | `185-191` 与 `direct_turns.py:116-120` **逐字重复** `other` 判定；`self_id` 处理两侧不一致（follow_up 兜成 `""` ⇒ self_id 缺失时把所有 @ 误判为"@别人"丢弃） | 相邻：`_complete_...` 末尾 308 行立刻结算 follow-up |
@@ -105,8 +105,8 @@ Step 0 与 0' 互不依赖，可同批执行。
 
 | 步 | 函数 | 被调行号 |
 |---|---|---|
-| 3 | `_get_quoted_message_parser_settings` / `_process_quote_message` / `_provider_supports_modality` / `_append_quoted_image_attachment` / `_append_audio_attachment` / `_append_quoted_audio_attachment` / `_append_video_attachment` | （`internal.py` 另 import 前三个） |
-| 3 | `_apply_local_env_tools` / `_build_local_mode_prompt` / `_proactive_cron_job_tools` / `_apply_web_search_tools` / `_apply_web_search_citation_prompt` / `_filter_skills_for_current_config` | 仅 `astr_main_agent` 内部用 |
+| 3a | ✅ **外迁 9 个**：`_get_quoted_message_parser_settings` / `_process_quote_message` / `_provider_supports_modality` / `_append_quoted_image_attachment` / `_append_audio_attachment` / `_append_quoted_audio_attachment`（→ **#38**，前三个 `internal.py` 另 import）<br>`_proactive_cron_job_tools` / `_apply_web_search_tools` / `_apply_web_search_citation_prompt` + 常量 `WEB_SEARCH_CITATION_TOOL_NAMES` / `WEB_SEARCH_CITATION_PROMPT`（→ **#39**） | 1547,1627 / 1742 / 1079,1427,1432,1748 / 1582,1638 / 1532 / 1586 / 1779 / 1762 / 1869 |
+| 3b | ⛔ **留守 4 个（不可外迁）**：`_append_video_attachment` / `_build_local_mode_prompt` / `_apply_local_env_tools` / `_filter_skills_for_current_config` | 见 §3.2 |
 | 4a | `_write_tool_result_overflow_file` / `_truncate_tool_result_preview` / `_read_tool_hint` | 534 / 532 / 557 |
 | 4b | `_materialize_large_tool_result` / `_build_repeated_tool_call_guidance` / `_track_tool_call_streak` / `_iter_tool_executor_results` | 1678 / 1685,1702,1716,1739 / 1534 / 1593 |
 | 4c | `_sanitize_malformed_tool_calls` / `_build_tool_requery_context` / `_build_tool_subset` / `_has_meaningful_assistant_reply` | 724,1890,1922 / 1875,1902 / 1866,1871 / 1897 |
@@ -122,13 +122,34 @@ Step 0 与 0' 互不依赖，可同批执行。
 | # | 新增模块 | 被谁 import | 何时登记 |
 |---|---|---|---|
 | **37** | `astrbot/core/agent/runners/tool_loop_support.py` | 仅 `tool_loop_agent_runner.py`（已登记） | Step 4a |
-| **38** | `astrbot/core/astr_main_agent_quote.py` | `astr_main_agent.py`（已登记）+ `internal.py`（已登记） | Step 3 |
-| **39** | `astrbot/core/astr_main_agent_proactive.py` | 仅 `astr_main_agent.py`（已登记） | Step 3 |
+| **38** | `astrbot/core/astr_main_agent_quote.py`（**quote 6 函数**） | `astr_main_agent.py`（已登记）+ `internal.py`（已登记） | Step 3 |
+| **39** | `astrbot/core/astr_main_agent_proactive.py`（**proactive 3 函数 + 2 常量**） | 仅 `astr_main_agent.py`（已登记） | Step 3 |
 
 > **给后人的说明（#38）**：`#38` 被 pipeline 层的 `internal.py` import，
 > 属**既有耦合的延续** —— `internal.py` 本就从 `astr_main_agent.py` import
 > `_get_quoted_message_parser_settings` / `_process_quote_message` / `_provider_supports_modality`，
 > 外迁只是换了来源模块，**不是新增架构耦合**。
+
+### 3.2 实际外迁 9 / 留守 4（2026-10-14 定稿）
+
+原定 13 个，实施时发现**上游测试的软锁定面比估计的宽**：不只是 `ama.<函数名>` 读名，
+还有 `patch` / `monkeypatch.setattr` 目标。`patch` **只重绑 `astr_main_agent` 命名空间里的名字**，
+函数搬到新模块后全局名解析走新模块 ⇒ 补丁失效，**re-export 救不了**。
+
+| 类别 | 函数 | 锁定源 |
+|---|---|---|
+| ✅ 外迁 7 | `_append_quoted_image_attachment` / `_append_audio_attachment` / `_append_quoted_audio_attachment` / `_get_quoted_message_parser_settings` / `_process_quote_message` / `_provider_supports_modality` / `_apply_web_search_citation_prompt` | 无 |
+| ✅ 外迁 2（需 `# noqa: F401` 保名） | `_proactive_cron_job_tools`（`FutureTaskTool`）／ `_apply_web_search_tools`（`BaiduWebSearchTool` / `Firecrawl×2` / `normalize_legacy_web_search_config`） | 上游断言读 `module.X` 同名对象 |
+| ⛔ **留守 4** | `_append_video_attachment` | `patch("astrbot.core.astr_main_agent.logger")` ×5，断言 `mock_logger.error.call_count == 1` |
+| ⛔ 同上 | `_build_local_mode_prompt` | `patch("...astr_main_agent.resolve_windows_shell")` ×3 |
+| ⛔ 同上 | `_filter_skills_for_current_config` | `monkeypatch.setattr(module, "star_registry", …)` ×2 |
+| ⛔ 同上 | `_apply_local_env_tools` | 它调用 `_build_local_mode_prompt`；后者留守 ⇒ 前者留守才不产生回边 |
+
+**明确拒绝的替代方案**：给留守函数加「函数内延迟反向导入」（`from astrbot.core.astr_main_agent import logger`）
+可以凑满 13 个，但会新增 `astr_main_agent_quote/_proactive → astr_main_agent` 的**回边耦合**，
+违反本节"#38 不是新增架构耦合"的定性与「兼容优先、零冲突」铁律 ⇒ **不采用**。
+
+⇒ 行数：**1905 → 约 1734（−171 / −9%）**，而非原估的 1624 / −15%。
 
 ### 3.1 完整 39 条（现有 36 + 新增 3）
 
