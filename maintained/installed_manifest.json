@@ -20,7 +20,7 @@
     "astrbot/core/config/default.py": "9c2e20ef25846c1a9fd4e81f28f6b1e6d5a22cfa813d85b9746f8c4845b5b3da",
     "astrbot/core/cron/manager.py": "fe9bb7b4260d7ce44909b9cb06e772c34aebc6aa09f68659932b3bdf4cea4b03",
     "astrbot/core/pipeline/context_utils.py": "426ac085024dced768bd543903441ad6c69549ddd6e67d5acb93e3914585fc9d",
-    "astrbot/core/pipeline/process_stage/follow_up.py": "8c62abed219fc00eaa95587c72d2751523339ffe7310055a9cd9d14e22562e86",
+    "astrbot/core/pipeline/process_stage/follow_up.py": "44e217698ff22f7ec52fc943e6c449dae7b022e3ce38ba03a75f9c74253bc3b8",
     "astrbot/core/pipeline/process_stage/method/agent_sub_stages/image_input.py": "8a94c377d6aa9283beaeb4afb6c71c8568a38abe48aed7e58c6ce6d996760a32",
     "astrbot/core/pipeline/process_stage/method/agent_sub_stages/internal.py": "12e55e5a3d815fadd5dad11804e50d2758cb9edda3f59c8eeecca1f8498337a7",
     "astrbot/core/pipeline/process_stage/stage.py": "2a26f18d3eceef1f6768e0f1619182c69a63da3c1273633f82d36ed118a11b55",
@@ -35,7 +35,7 @@
     "astrbot/core/tools/computer_tools/python.py": "ad1ec10471e1a7c83c9134480f34418e2363407055bac83438d638b19e94300c",
     "astrbot/core/tools/computer_tools/shell.py": "fbdc78a1c5c357e29a05d83653fe54cab99adc147e6f323cbb6c1b254b16085e",
     "astrbot/core/tools/computer_tools/util.py": "812c88a8cbe53387ba4ddf46dadcc830ec3a925afb3cd9d32e97ea9f9e32452a",
-    "astrbot/core/utils/direct_turns.py": "b14bba4a7932ba81594a78f2c558d1aed148cffa4edc311f6b75c60075be0824",
+    "astrbot/core/utils/direct_turns.py": "4db50ced8adf8703feb86e049a16d89d219b0303706e5ad72e3b500e69d98353",
     "astrbot/dashboard/services/plugin_service.py": "3568f5a720f0c8f7490cc4a31d7cfcb68523b876e54e8d682a24dcc872b328fa"
   }
 }
