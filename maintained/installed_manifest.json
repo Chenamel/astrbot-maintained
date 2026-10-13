@@ -10,7 +10,7 @@
     "astrbot/api/proactive/__init__.py": "b05da0ffa7147143bc0190fe254e08b1cd11fbc14d473bc10193951c6365ea9f",
     "astrbot/api/runtime/__init__.py": "21f78d398f0702d34687b07ddc11cc40ff01fec394f5e4aa707ba996173ed25f",
     "astrbot/api/turns/__init__.py": "26fe891ef89fe2414ec42350f27fc78ad5829d3195ab54008a5ed77db2aecedd",
-    "astrbot/core/agent/runners/tool_loop_agent_runner.py": "9e8eaea9ab6ce744ceacadda0d3834d0f40f791c2fe45704be20b2595c1046a8",
+    "astrbot/core/agent/runners/tool_loop_agent_runner.py": "ecc342c07002bcfe76389eec183b114c5463ac8dcdefbb95870f4f8506ba6188",
     "astrbot/core/agent/runners/tool_loop_support.py": "d2d4fe4d688bad931ca396792af0aa318dd160ec69e17bce00ed2be10b8ef56f",
     "astrbot/core/agent/tool.py": "d5c5c35467ade03dc920772db8848932cafdd4fd497ad9ea9bb7ebe66bbbb993",
     "astrbot/core/astr_agent_run_util.py": "cc379aae3021d96003e996889dd7a788a70475a258dbefbc67aefe665bdc3cb9",
