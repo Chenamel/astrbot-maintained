@@ -107,7 +107,7 @@ Step 0 与 0' 互不依赖，可同批执行。
 |---|---|---|
 | 3a | ✅ **外迁 9 个**：`_get_quoted_message_parser_settings` / `_process_quote_message` / `_provider_supports_modality` / `_append_quoted_image_attachment` / `_append_audio_attachment` / `_append_quoted_audio_attachment`（→ **#38**，前三个 `internal.py` 另 import）<br>`_proactive_cron_job_tools` / `_apply_web_search_tools` / `_apply_web_search_citation_prompt` + 常量 `WEB_SEARCH_CITATION_TOOL_NAMES` / `WEB_SEARCH_CITATION_PROMPT`（→ **#39**） | 1547,1627 / 1742 / 1079,1427,1432,1748 / 1582,1638 / 1532 / 1586 / 1779 / 1762 / 1869 |
 | 3b | ⛔ **留守 4 个（不可外迁）**：`_append_video_attachment` / `_build_local_mode_prompt` / `_apply_local_env_tools` / `_filter_skills_for_current_config` | 见 §3.2 |
-| 4a | `_write_tool_result_overflow_file` / `_truncate_tool_result_preview` / `_read_tool_hint` | 534 / 532 / 557 |
+| 4a | ✅ **已执行**（方案 a 薄委托）`_write_tool_result_overflow_file` / `_truncate_tool_result_preview` / `_read_tool_hint` → **#37**（runner 保留 3 个薄委托，保住上游 1990 行的实例级 monkeypatch）| 新增 1 条（#37）+ runner 哈希 1 条 | 探针 + β xfail 8/8 + 调用点仍为 5 |
 | 4b | `_materialize_large_tool_result` / `_build_repeated_tool_call_guidance` / `_track_tool_call_streak` / `_iter_tool_executor_results` | 1678 / 1685,1702,1716,1739 / 1534 / 1593 |
 | 4c | `_sanitize_malformed_tool_calls` / `_build_tool_requery_context` / `_build_tool_subset` / `_has_meaningful_assistant_reply` | 724,1890,1922 / 1875,1902 / 1866,1871 / 1897 |
 
@@ -121,7 +121,7 @@ Step 0 与 0' 互不依赖，可同批执行。
 
 | # | 新增模块 | 被谁 import | 何时登记 |
 |---|---|---|---|
-| **37** | `astrbot/core/agent/runners/tool_loop_support.py` | 仅 `tool_loop_agent_runner.py`（已登记） | Step 4a |
+| **37** | `astrbot/core/agent/runners/tool_loop_support.py` | 仅 `tool_loop_agent_runner.py`（已登记） | Step 4a。**\#37 是单模块，由 4a / 4b / 4c 共用**：4b / 4c 只往里加函数并同步 runner 哈希，**不再新增台账条目** |
 | **38** | `astrbot/core/astr_main_agent_quote.py`（**quote 6 函数**） | `astr_main_agent.py`（已登记）+ `internal.py`（已登记） | Step 3 |
 | **39** | `astrbot/core/astr_main_agent_proactive.py`（**proactive 3 函数 + 2 常量**） | 仅 `astr_main_agent.py`（已登记） | Step 3 |
 
