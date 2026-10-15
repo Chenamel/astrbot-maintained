@@ -90,6 +90,16 @@
 | **4c** | sanitize / `_resolve_tool_exec` 辅助族外迁 | 1 条哈希 | 同上 |
 | **4d** | **取消** `_simple_print_message_role` 外迁（调用点 1004/1015 紧贴 984 敏感区） | 0 | — |
 
+> **薄委托的一条已知例外**：薄委托的常规形态是**一行 `return` 转发**（4a 三个、4b 两个都是）。
+> **`_iter_tool_executor_results` 是 async generator，函数体内含 `yield`，无法用 `return` 转发**，
+> 因此它的薄委托是两行转发：
+> ```python
+> async for result in iter_tool_executor_results(self, executor):
+>     yield result
+> ```
+> 这是语言层面的约束，不是约定被破坏；调用点写法（`async for resp in self._iter_tool_executor_results(...)`）
+> **一字未变**。后续若再遇到 async generator 外迁，沿用此形态。
+
 Step 0 与 0' 互不依赖，可同批执行。
 
 > **结构守卫的执行保证**（偏离 2 的接受前提）：
