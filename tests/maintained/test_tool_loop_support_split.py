@@ -20,6 +20,8 @@ import pytest
 
 from astrbot.core.agent.runners import tool_loop_support
 from astrbot.core.agent.runners.tool_loop_agent_runner import ToolLoopAgentRunner
+from astrbot.core.agent.tool import FunctionTool, ToolSet
+from astrbot.core.agent.tool import FunctionTool, ToolSet
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RUNNER_PATH = (
@@ -34,12 +36,20 @@ DELEGATES = (
     ("_track_tool_call_streak", "track_tool_call_streak"),
     ("_build_repeated_tool_call_guidance", "build_repeated_tool_call_guidance"),
     ("_iter_tool_executor_results", "iter_tool_executor_results"),
+    ("_sanitize_malformed_tool_calls", "sanitize_malformed_tool_calls"),
+    ("_build_tool_requery_context", "build_tool_requery_context"),
+    ("_has_meaningful_assistant_reply", "has_meaningful_assistant_reply"),
+    ("_build_tool_subset", "build_tool_subset"),
 )
 
 SUPPORT_ALL = (
     "build_repeated_tool_call_guidance",
+    "build_tool_requery_context",
+    "build_tool_subset",
+    "has_meaningful_assistant_reply",
     "iter_tool_executor_results",
     "read_tool_hint",
+    "sanitize_malformed_tool_calls",
     "track_tool_call_streak",
     "truncate_tool_result_preview",
     "write_tool_result_overflow_file",
@@ -123,10 +133,20 @@ def test_delegate_signatures_match_the_support_functions(method_name, function_n
     method = inspect.signature(getattr(ToolLoopAgentRunner, method_name))
     function = inspect.signature(getattr(tool_loop_support, function_name))
 
-    # Drop the receiver on both sides: ``self`` on the method, ``runner`` on the
-    # support function. Everything after it must be identical.
-    method_params = list(method.parameters.values())[1:]
-    function_params = list(function.parameters.values())[1:]
+    # Detect both shapes dynamically instead of hardcoding names: a staticmethod
+    # delegate has no ``self``, and a support function only takes ``runner`` when
+    # it actually needs runner state.
+    is_static = isinstance(
+        inspect.getattr_static(ToolLoopAgentRunner, method_name),
+        staticmethod,
+    )
+    method_params = list(method.parameters.values())
+    if not is_static:
+        method_params = method_params[1:]
+
+    function_params = list(function.parameters.values())
+    if function_params and function_params[0].name == "runner":
+        function_params = function_params[1:]
 
     assert [p.name for p in method_params] == [p.name for p in function_params]
     assert [p.kind for p in method_params] == [p.kind for p in function_params]
@@ -495,3 +515,277 @@ async def test_iter_tool_executor_results_raises_when_stopped():
     with pytest.raises(Exception, match="interrupted"):
         async for _ in tool_loop_support.iter_tool_executor_results(runner, executor()):
             pass
+
+
+class _SanitizeRunner:
+    """Runner stand-in owning the malformed tool name placeholder."""
+
+    MALFORMED_TOOL_NAME_PLACEHOLDER = "__malformed__"
+
+
+class _RequeryRunner:
+    """Runner stand-in owning messages and the re-query instruction template."""
+
+    SKILLS_LIKE_REQUERY_INSTRUCTION_TEMPLATE = "tools: {tool_names}"
+
+    def __init__(self, messages):
+        self.run_context = SimpleNamespace(messages=messages)
+
+
+class _Message:
+    """Message stub exposing the pydantic dump hook."""
+
+    def __init__(self, role: str):
+        self.role = role
+
+    def model_dump(self) -> dict:
+        return {"role": self.role}
+
+
+def test_sanitize_replaces_a_missing_tool_name():
+    """A None tool name is replaced by the runner placeholder."""
+    resp = SimpleNamespace(tools_call_name=[None, "ok"])
+
+    tool_loop_support.sanitize_malformed_tool_calls(_SanitizeRunner(), resp)
+
+    assert resp.tools_call_name == ["__malformed__", "ok"]
+
+
+def test_sanitize_replaces_a_blank_tool_name():
+    """A whitespace-only tool name is replaced by the runner placeholder."""
+    resp = SimpleNamespace(tools_call_name=["   ", "ok"])
+
+    tool_loop_support.sanitize_malformed_tool_calls(_SanitizeRunner(), resp)
+
+    assert resp.tools_call_name == ["__malformed__", "ok"]
+
+
+def test_sanitize_keeps_valid_tool_names():
+    """Well-formed names survive untouched."""
+    resp = SimpleNamespace(tools_call_name=["a", "b"])
+
+    tool_loop_support.sanitize_malformed_tool_calls(_SanitizeRunner(), resp)
+
+    assert resp.tools_call_name == ["a", "b"]
+
+
+def test_requery_context_appends_the_instruction():
+    """Dumped messages are followed by one user instruction message."""
+    runner = _RequeryRunner([_Message("system"), _Message("user")])
+
+    contexts = tool_loop_support.build_tool_requery_context(runner, ["a", "b"])
+
+    assert contexts[:-1] == [{"role": "system"}, {"role": "user"}]
+    assert contexts[-1] == {"role": "user", "content": "tools: a, b"}
+
+
+def test_requery_context_appends_an_extra_instruction():
+    """An extra instruction is appended below the template instruction."""
+    runner = _RequeryRunner([_Message("user")])
+
+    contexts = tool_loop_support.build_tool_requery_context(runner, ["a"], "extra")
+
+    assert contexts[-1]["content"] == "tools: a\nextra"
+
+
+def test_requery_context_deep_copies_plain_dict_messages():
+    """Plain dict messages are copied, never aliased into the result."""
+    original = {"role": "user"}
+    runner = _RequeryRunner([original])
+
+    contexts = tool_loop_support.build_tool_requery_context(runner, ["a"])
+
+    assert contexts[0] == original
+    assert contexts[0] is not original
+
+
+def test_meaningful_reply_accepts_real_text():
+    """Non-whitespace completion text counts as a meaningful reply."""
+    assert tool_loop_support.has_meaningful_assistant_reply(
+        SimpleNamespace(completion_text="hi"),
+    )
+
+
+def test_meaningful_reply_rejects_blank_text():
+    """Whitespace-only completion text is not a meaningful reply."""
+    assert not tool_loop_support.has_meaningful_assistant_reply(
+        SimpleNamespace(completion_text="   "),
+    )
+
+
+def test_meaningful_reply_rejects_missing_text():
+    """A missing completion text is not a meaningful reply."""
+    assert not tool_loop_support.has_meaningful_assistant_reply(
+        SimpleNamespace(completion_text=None),
+    )
+
+
+def test_tool_subset_keeps_only_the_requested_tools():
+    """Known names are copied into a new tool set, in order."""
+
+    def tool(name: str) -> FunctionTool:
+        return FunctionTool(
+            name=name,
+            description=name,
+            parameters={"type": "object", "properties": {}},
+        )
+
+    source = ToolSet([tool("a"), tool("b")])
+
+    subset = tool_loop_support.build_tool_subset(source, ["b", "a"])
+
+    assert [t.name for t in subset.tools] == ["b", "a"]
+
+
+def test_tool_subset_skips_unknown_names():
+    """Names the tool set does not know are silently ignored."""
+
+    def tool(name: str) -> FunctionTool:
+        return FunctionTool(
+            name=name,
+            description=name,
+            parameters={"type": "object", "properties": {}},
+        )
+
+    source = ToolSet([tool("a")])
+
+    subset = tool_loop_support.build_tool_subset(source, ["a", "missing"])
+
+    assert [t.name for t in subset.tools] == ["a"]
+
+
+class _SanitizeRunner:
+    """Runner stand-in owning the malformed tool name placeholder."""
+
+    MALFORMED_TOOL_NAME_PLACEHOLDER = "__malformed__"
+
+
+class _RequeryRunner:
+    """Runner stand-in owning messages and the re-query instruction template."""
+
+    SKILLS_LIKE_REQUERY_INSTRUCTION_TEMPLATE = "tools: {tool_names}"
+
+    def __init__(self, messages):
+        self.run_context = SimpleNamespace(messages=messages)
+
+
+class _Message:
+    """Message stub exposing the pydantic dump hook."""
+
+    def __init__(self, role: str):
+        self.role = role
+
+    def model_dump(self) -> dict:
+        return {"role": self.role}
+
+
+def test_sanitize_replaces_a_missing_tool_name():
+    """A None tool name is replaced by the runner placeholder."""
+    resp = SimpleNamespace(tools_call_name=[None, "ok"])
+
+    tool_loop_support.sanitize_malformed_tool_calls(_SanitizeRunner(), resp)
+
+    assert resp.tools_call_name == ["__malformed__", "ok"]
+
+
+def test_sanitize_replaces_a_blank_tool_name():
+    """A whitespace-only tool name is replaced by the runner placeholder."""
+    resp = SimpleNamespace(tools_call_name=["   ", "ok"])
+
+    tool_loop_support.sanitize_malformed_tool_calls(_SanitizeRunner(), resp)
+
+    assert resp.tools_call_name == ["__malformed__", "ok"]
+
+
+def test_sanitize_keeps_valid_tool_names():
+    """Well-formed names survive untouched."""
+    resp = SimpleNamespace(tools_call_name=["a", "b"])
+
+    tool_loop_support.sanitize_malformed_tool_calls(_SanitizeRunner(), resp)
+
+    assert resp.tools_call_name == ["a", "b"]
+
+
+def test_requery_context_appends_the_instruction():
+    """Dumped messages are followed by one user instruction message."""
+    runner = _RequeryRunner([_Message("system"), _Message("user")])
+
+    contexts = tool_loop_support.build_tool_requery_context(runner, ["a", "b"])
+
+    assert contexts[:-1] == [{"role": "system"}, {"role": "user"}]
+    assert contexts[-1] == {"role": "user", "content": "tools: a, b"}
+
+
+def test_requery_context_appends_an_extra_instruction():
+    """An extra instruction is appended below the template instruction."""
+    runner = _RequeryRunner([_Message("user")])
+
+    contexts = tool_loop_support.build_tool_requery_context(runner, ["a"], "extra")
+
+    assert contexts[-1]["content"] == "tools: a\nextra"
+
+
+def test_requery_context_deep_copies_plain_dict_messages():
+    """Plain dict messages are copied, never aliased into the result."""
+    original = {"role": "user"}
+    runner = _RequeryRunner([original])
+
+    contexts = tool_loop_support.build_tool_requery_context(runner, ["a"])
+
+    assert contexts[0] == original
+    assert contexts[0] is not original
+
+
+def test_meaningful_reply_accepts_real_text():
+    """Non-whitespace completion text counts as a meaningful reply."""
+    assert tool_loop_support.has_meaningful_assistant_reply(
+        SimpleNamespace(completion_text="hi"),
+    )
+
+
+def test_meaningful_reply_rejects_blank_text():
+    """Whitespace-only completion text is not a meaningful reply."""
+    assert not tool_loop_support.has_meaningful_assistant_reply(
+        SimpleNamespace(completion_text="   "),
+    )
+
+
+def test_meaningful_reply_rejects_missing_text():
+    """A missing completion text is not a meaningful reply."""
+    assert not tool_loop_support.has_meaningful_assistant_reply(
+        SimpleNamespace(completion_text=None),
+    )
+
+
+def test_tool_subset_keeps_only_the_requested_tools():
+    """Known names are copied into a new tool set, in order."""
+
+    def tool(name: str) -> FunctionTool:
+        return FunctionTool(
+            name=name,
+            description=name,
+            parameters={"type": "object", "properties": {}},
+        )
+
+    source = ToolSet([tool("a"), tool("b")])
+
+    subset = tool_loop_support.build_tool_subset(source, ["b", "a"])
+
+    assert [t.name for t in subset.tools] == ["b", "a"]
+
+
+def test_tool_subset_skips_unknown_names():
+    """Names the tool set does not know are silently ignored."""
+
+    def tool(name: str) -> FunctionTool:
+        return FunctionTool(
+            name=name,
+            description=name,
+            parameters={"type": "object", "properties": {}},
+        )
+
+    source = ToolSet([tool("a")])
+
+    subset = tool_loop_support.build_tool_subset(source, ["a", "missing"])
+
+    assert [t.name for t in subset.tools] == ["a"]
