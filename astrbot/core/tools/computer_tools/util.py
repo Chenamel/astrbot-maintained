@@ -105,7 +105,11 @@ def check_tool_permission(
             )
         return None
 
-    error = execution_denial(event, config)
+    # The policy reads get_sender_id() without checking for it, so an event
+    # stand-in without the method would raise instead of being denied. Treat
+    # such a context as having no sender, which the policy already rejects.
+    policy_event = event if callable(getattr(event, "get_sender_id", None)) else None
+    error = execution_denial(policy_event, config)
     logger.info(
         "Execution entry operation=%s message_id=%s allowed=%s",
         operation_name,
