@@ -118,10 +118,11 @@ def test_execution_level_returns_the_policy_error(monkeypatch):
 def test_execution_level_denies_an_event_without_a_sender():
     """An event that cannot identify its sender is denied instead of raising.
 
-    The execution policy reads ``get_sender_id()`` directly, so an event
-    stand-in missing the method has to be rejected rather than crash the tool.
+    The execution policy reads ``get_sender_id()`` and the entry log reads
+    ``event.message_obj`` without checking for them, so an event stand-in
+    missing them has to be rejected rather than crash the tool.
     """
-    event = SimpleNamespace(role="admin", unified_msg_origin="umo", message_obj=None)
+    event = SimpleNamespace(role="admin", unified_msg_origin="umo")
     error = util.check_tool_permission(
         _context(event), "Python execution", util.ToolPermissionLevel.EXECUTION
     )
