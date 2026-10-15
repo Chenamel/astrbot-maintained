@@ -1,5 +1,4 @@
 import asyncio
-import copy
 import json
 import re
 import sys
@@ -81,8 +80,12 @@ from .tool_loop_support import (
     ToolExecutorResultT,
     _ToolExecutionInterrupted,
     build_repeated_tool_call_guidance,
+    build_tool_requery_context,
+    build_tool_subset,
+    has_meaningful_assistant_reply,
     iter_tool_executor_results,
     read_tool_hint,
+    sanitize_malformed_tool_calls,
     track_tool_call_streak,
     truncate_tool_result_preview,
     write_tool_result_overflow_file,
@@ -456,6 +459,9 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
 
     def _build_repeated_tool_call_guidance(self, tool_name: str, streak: int) -> str:
         return build_repeated_tool_call_guidance(self, tool_name, streak)
+
+    def _sanitize_malformed_tool_calls(self, llm_resp: LLMResponse) -> None:
+        return sanitize_malformed_tool_calls(self, llm_resp)
 
     async def _assemble_request_context_for_provider(
         self,
@@ -840,22 +846,6 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         if not notice:
             return content
         return f"{content}{notice}"
-
-    def _sanitize_malformed_tool_calls(
-        self,
-        llm_resp: LLMResponse,
-    ) -> None:
-        """Normalize malformed tool call names.
-
-        Args:
-            llm_resp: The LLM response whose tool call lists should be sanitized.
-        """
-        llm_resp.tools_call_name = [
-            self.MALFORMED_TOOL_NAME_PLACEHOLDER
-            if tool_name is None or tool_name.strip() == ""
-            else tool_name
-            for tool_name in llm_resp.tools_call_name
-        ]
 
     @override
     async def step(self):
@@ -1764,34 +1754,14 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         tool_names: list[str],
         extra_instruction: str | None = None,
     ) -> list[dict[str, T.Any]]:
-        """Build contexts for re-querying LLM with param-only tool schemas."""
-        contexts: list[dict[str, T.Any]] = []
-        for msg in self.run_context.messages:
-            if hasattr(msg, "model_dump"):
-                contexts.append(msg.model_dump())  # type: ignore[call-arg]
-            elif isinstance(msg, dict):
-                contexts.append(copy.deepcopy(msg))
-        instruction = self.SKILLS_LIKE_REQUERY_INSTRUCTION_TEMPLATE.format(
-            tool_names=", ".join(tool_names)
-        )
-        if extra_instruction:
-            instruction = f"{instruction}\n{extra_instruction}"
-        contexts.append({"role": "user", "content": instruction})
-        return contexts
+        return build_tool_requery_context(self, tool_names, extra_instruction)
 
     @staticmethod
     def _has_meaningful_assistant_reply(llm_resp: LLMResponse) -> bool:
-        text = (llm_resp.completion_text or "").strip()
-        return bool(text)
+        return has_meaningful_assistant_reply(llm_resp)
 
     def _build_tool_subset(self, tool_set: ToolSet, tool_names: list[str]) -> ToolSet:
-        """Build a subset of tools from the given tool set based on tool names."""
-        subset = ToolSet()
-        for name in tool_names:
-            tool = tool_set.get_tool(name)
-            if tool:
-                subset.add_tool(tool)
-        return subset
+        return build_tool_subset(tool_set, tool_names)
 
     async def _resolve_tool_exec(
         self,
