@@ -1,9 +1,15 @@
-"""Oversized tool-result helpers extracted from the tool-loop agent runner.
+"""Helpers extracted from the tool-loop agent runner by T8-12.
 
-T8-12 splits the 2000-line runner into focused modules. The runner keeps thin
-delegating methods for these helpers so that instance-level patches in the
-upstream tests keep working; every helper takes the runner as its first
-argument instead of importing it, which keeps this module free of cycles.
+The module grew in three steps: Step 4a moved the oversized tool-result
+helpers here, Step 4b the tool-loop iteration helpers (plus the interrupt
+exception and result type they need), and Step 4c the tool sanitize and
+re-query helpers.
+
+The runner keeps thin delegating methods for all of them so that instance
+level patches and direct method calls in the upstream tests keep working.
+Every helper that needs runner state takes the runner as its first argument
+instead of importing it, which keeps this module free of cycles; helpers that
+need no runner state stay plain functions.
 """
 
 import asyncio
@@ -13,14 +19,20 @@ import uuid
 from contextlib import suppress
 from pathlib import Path
 
+from astrbot.core.agent.tool import ToolSet
+from astrbot.core.provider.entities import LLMResponse
 from astrbot.core.utils.direct_turns import is_current
 
 from ..message import Message
 
 __all__ = [
     "build_repeated_tool_call_guidance",
+    "build_tool_requery_context",
+    "build_tool_subset",
+    "has_meaningful_assistant_reply",
     "iter_tool_executor_results",
     "read_tool_hint",
+    "sanitize_malformed_tool_calls",
     "track_tool_call_streak",
     "truncate_tool_result_preview",
     "write_tool_result_overflow_file",
@@ -244,3 +256,79 @@ async def iter_tool_executor_results(
                 abort_task.cancel()
                 with suppress(asyncio.CancelledError):
                     await abort_task
+
+
+def sanitize_malformed_tool_calls(runner, llm_resp: LLMResponse) -> None:
+    """Normalize malformed tool call names.
+
+    Args:
+        runner: The agent runner owning the placeholder name.
+        llm_resp: The LLM response whose tool call lists should be sanitized.
+    """
+    llm_resp.tools_call_name = [
+        runner.MALFORMED_TOOL_NAME_PLACEHOLDER
+        if tool_name is None or tool_name.strip() == ""
+        else tool_name
+        for tool_name in llm_resp.tools_call_name
+    ]
+
+
+def build_tool_requery_context(
+    runner,
+    tool_names: list[str],
+    extra_instruction: str | None = None,
+) -> list[dict[str, T.Any]]:
+    """Build contexts for re-querying the LLM with param-only tool schemas.
+
+    Args:
+        runner: The agent runner owning the conversation messages.
+        tool_names: Tool names to re-query.
+        extra_instruction: Optional instruction appended to the template.
+
+    Returns:
+        Dumped conversation messages followed by one user instruction message.
+    """
+    contexts: list[dict[str, T.Any]] = []
+    for msg in runner.run_context.messages:
+        if hasattr(msg, "model_dump"):
+            contexts.append(msg.model_dump())  # type: ignore[call-arg]
+        elif isinstance(msg, dict):
+            contexts.append(copy.deepcopy(msg))
+    instruction = runner.SKILLS_LIKE_REQUERY_INSTRUCTION_TEMPLATE.format(
+        tool_names=", ".join(tool_names)
+    )
+    if extra_instruction:
+        instruction = f"{instruction}\n{extra_instruction}"
+    contexts.append({"role": "user", "content": instruction})
+    return contexts
+
+
+def has_meaningful_assistant_reply(llm_resp: LLMResponse) -> bool:
+    """Return whether the response carries non-empty assistant text.
+
+    Args:
+        llm_resp: The LLM response to inspect.
+
+    Returns:
+        True when the completion text has non-whitespace content.
+    """
+    text = (llm_resp.completion_text or "").strip()
+    return bool(text)
+
+
+def build_tool_subset(tool_set: ToolSet, tool_names: list[str]) -> ToolSet:
+    """Build a subset of tools from the given tool set based on tool names.
+
+    Args:
+        tool_set: Source tool set.
+        tool_names: Names to keep, in this order.
+
+    Returns:
+        A new tool set holding every matched tool.
+    """
+    subset = ToolSet()
+    for name in tool_names:
+        tool = tool_set.get_tool(name)
+        if tool:
+            subset.add_tool(tool)
+    return subset
