@@ -37,7 +37,7 @@
     "astrbot/core/star/updater.py": "b0aa31701e8920b1aeab378705c3f6e8c42873fa3dad4322d26f3549ae238db3",
     "astrbot/core/tools/computer_tools/python.py": "ad1ec10471e1a7c83c9134480f34418e2363407055bac83438d638b19e94300c",
     "astrbot/core/tools/computer_tools/shell.py": "fbdc78a1c5c357e29a05d83653fe54cab99adc147e6f323cbb6c1b254b16085e",
-    "astrbot/core/tools/computer_tools/util.py": "812c88a8cbe53387ba4ddf46dadcc830ec3a925afb3cd9d32e97ea9f9e32452a",
+    "astrbot/core/tools/computer_tools/util.py": "69657a09029f438f2a1f5ae149d9a2882e4208d771d723964bcf0c46af43ae28",
     "astrbot/core/utils/direct_turns.py": "4db50ced8adf8703feb86e049a16d89d219b0303706e5ad72e3b500e69d98353",
     "astrbot/dashboard/services/plugin_service.py": "3568f5a720f0c8f7490cc4a31d7cfcb68523b876e54e8d682a24dcc872b328fa"
   }
