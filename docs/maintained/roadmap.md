@@ -54,7 +54,7 @@ T7-90 脱敏 → T7-91 对外材料 → 转公开 + 发布 tag
 |---|---|---|---|---|
 | **S8-1** | **T8-13 异常兜底**：`util.py` EXECUTION 分支加前置判断，使无 `get_sender_id` 的事件返回拒绝串而非抛异常 | P2 | 进行中 | 已裁决：**只兜底、不登记为预期偏差、不退回上游闸门语义**；`code_delivery_policy.py` 一行不动（38–78 是 T8-10 禁区） |
 | **S8-2** | **文档欠账收口**：① `tasks.md` 的 T7-12 仍标 ⬜（依赖它的 T7-13/14/15 已完成）；② T8-10 行的行号已过时（实况：授权判定 **70–76**，「然后\|并\|再\|并且」在 **72**，非旧记的 80）；③ T8-13 行补本次取证结论与裁决 | P1 | ✅ | 2026-10-16 完成：T7-12 补记 ✅（无独立对话记录，据依赖链推断）、T8-10 行号订正为 **70–77 / 72**、T8-13 行已补取证与裁决 |
-| **S8-3** | **技术债 3**：`config/agent_runner.py` / `config/default.py` 的 format-only 提交 | P2 | 待办 | 先 `--diff` 确认纯格式再提交，会带出大 diff |
+| **S8-3** | **技术债 3**：`config/agent_runner.py` / `config/default.py` 的 format-only 提交 | P2 | ✅ | 2026-10-16 完成：**AST 前后完全一致**证明纯格式（实为 1+/3- 与 4+/1-，远小于预期）；`ruff format --check` 现为 **526 files already formatted** |
 | **S8-4** | **技术债 2**：`build_main_agent`(248) / `collect_initial_request`(220) / `_ensure_persona_and_skills`(178) 拆分 | P3（可选） | **可选 · 暂不做** | **2026-10-15 裁决：降级为可选**。三者共 642 行（`_ensure_persona_and_skills` 176 / `collect_initial_request` 218 / `build_main_agent` 248）、链式耦合、均被上游测试锁定（直调或 patch 目标）；拆完文件仍停在 ~1000 行。待核心打磨到位后再评估；若重启建议从 `collect_initial_request` 试水 |
 
 ## 3. 安全项：T8-10（转公开的前置建议）
