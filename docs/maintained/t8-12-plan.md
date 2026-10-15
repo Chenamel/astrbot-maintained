@@ -1,8 +1,25 @@
-# T8-12 拆分重写 · 执行计划（定稿）
+# T8-12 拆分重写 · 执行计划（定稿 · ✅ 已全部完成）
 
 > 定稿时间：2026-10-13。负责人拍板：① 保守粒度 ② 扁平同级模块 ③ 台账 36 → 39 ④ 文档订正纳入 Step 0'。
 > **本文件是计划，不是证据。** 任何"某功能是否已存在 / 某行为是什么 / 某代码在哪一行"的主张，
 > 一律以 `git log -S` / `git diff baseline/v4.28.2` / 文件实况读取为准；`docs/` 与交接文档仅作线索。
+
+## 0.0 最终状态（2026-10-15 结项）
+
+**✅ T8-12 已完成**：Step 0 / 0' / 1 / 2 / 3 / 4a / 4b / 4c 全部完成，Step 4d 取消。
+起点 `57bacfc09` → 终点 **`46af7b8dc`**，共 44 个提交，全部已推送。
+
+| 项 | 起 → 终 |
+|---|---|
+| 台账 | **36 → 39**（新增 #37 `tool_loop_support.py`、#38 `astr_main_agent_quote.py`、#39 `astr_main_agent_proactive.py`）|
+| `tool_loop_agent_runner.py` | **2039 → 1905**（−134）|
+| `astr_main_agent.py` | **1905 → 1725**（−180；原定外迁 13 个，实迁 9 个，见 §3.2）|
+| maintained 测试 | **303+1 → 390+1**（22 → 27 文件）|
+| 上游口径 | **295 passed + 17 xfailed 全程不变**（β xfail 8/8）|
+| 探针 | 基线 `maintained/baselines/hook_timing/57bacfc09.json`，**每步 MATCH** |
+
+**复盘与技术债**：见 `docs/maintained/t8-12-retrospective.md`（§4 为技术债清单，共 7 项）。
+**新对话交接**：见 `.workbuddy/handover-after-t8-12.md`。
 
 ## 0. 取证原则（本轮起生效，T8-12 全程适用）
 
