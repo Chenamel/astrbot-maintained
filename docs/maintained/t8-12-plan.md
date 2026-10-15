@@ -87,7 +87,7 @@
 | **3** | ✅ **已完成**（提交 `56803e88d` / `fc345c2c0` / `f7ddf1956` / `0fbd10f3f` / `319c06ff9` / `6105e6350`）`astr_main_agent` 外迁 —— quote **6** → #38；proactive **3** + 2 常量 → #39。**留守 4**（见 §3.2） | 2 条哈希（**实测 2 条**）+ 新增 2 条（#38 #39） | 探针一致 + **AST 断言 `MainAgentBuildConfig(...)` 仍在 `InternalAgentSubStage.initialize()` 内** |
 | **4a** | ✅ **已完成**（提交 `cd3fb47fe` / `03540b1f9` / `f18ae84ba` / `e5f196b3d` / `a51f47608`）工具结果落盘族外迁 → **#37**（**方案 a 薄委托**：runner 保留 3 个转发方法，保住上游 `runner._write_tool_result_overflow_file` 实例级 monkeypatch）。runner **2039 → 2018（-21）** | 新增 1 条（#37）+ runner 哈希 1 条（**实测 1+1**） | 探针 MATCH + 结构守卫 5 处齐全 + β xfail 8/8 + 新增 14 case |
 | **4b** | ✅ **已完成**（提交 `765346125` / `55806fe02` / `a553fba58` / `b228f8b7f` / `9c0774f33` / `538b1377c` / `4beff6462`）工具循环族外迁 → **#37**：`_track_tool_call_streak` / `_build_repeated_tool_call_guidance` / `_iter_tool_executor_results`，并把前置定义 `_ToolExecutionInterrupted` / `ToolExecutorResultT` 一并搬到 #37（runner 反向 import；**两者不进 `__all__`**）。⛔ **`_materialize_large_tool_result` 按裁决不搬**（monkeypatch 契约）。runner **2018 → 1935（-83）** | **不新增条目（仍 39）**，同步 runner + #37 两条哈希 | 探针 MATCH + 结构守卫 5 处齐全 + β xfail 8/8 + 新增 12 case |
-| **4c** | sanitize / `_resolve_tool_exec` 辅助族外迁 | 1 条哈希 | 同上 |
+| **4c** | ✅ **已完成**（提交 `0f5064a7a` / `fd5ffef34` / `0c1bca2d2` / `6409884b1` / `2b51b5f28`）sanitize / `_resolve_tool_exec` 辅助族外迁 → **#37**：`_sanitize_malformed_tool_calls` / `_build_tool_requery_context` / `_has_meaningful_assistant_reply` / `_build_tool_subset`。⛔ `_resolve_tool_exec` **留守**（不在清单，是 3 个函数的调用方）。runner **1935 → 1905（-30）**；T8-12 累计 **2039 → 1905**。 | **不新增条目（仍 39）**，同步 runner + #37 两条哈希 | 探针 MATCH + 结构守卫 5 处齐全 + β xfail 8/8 + 新增 15 case |
 | **4d** | **取消** `_simple_print_message_role` 外迁（调用点 1004/1015 紧贴 984 敏感区） | 0 | — |
 
 > **薄委托的一条已知例外**：薄委托的常规形态是**一行 `return` 转发**（4a 三个、4b 两个都是）。
@@ -298,6 +298,6 @@ Step 0 与 0' 互不依赖，可同批执行。
 
 `tests/maintained` 全绿（**2026-10-14 Step 3 后实测：349 passed + 1 skipped，26 个测试文件 + conftest**；
 演进：Step 0 前 303+1 / 22 文件 → Step 1 后 317+1 / 24 文件 → Step 2 后 335+1 / 25 文件 →
-Step 3 后 349+1 / 26 文件 → Step 4a 后 363+1 / 27 文件 → Step 4b 后 375+1 / 27 文件，只增不减）／上游 `295 passed + 17 xfailed` 不变（含 β xfail 8/8）／
+Step 3 后 349+1 / 26 文件 → Step 4a 后 363+1 / 27 文件 → Step 4b 后 375+1 / 27 文件 → Step 4c 后 390+1 / 27 文件，只增不减）／上游 `295 passed + 17 xfailed` 不变（含 β xfail 8/8）／
 ruff `check` 干净、`format --check` 仅剩 `config/agent_runner.py` 与 `config/default.py` 两个已同意延后的文件／
 双端（实例 + 仓）NO DRIFT／探针一致／β xfail 8/8。
