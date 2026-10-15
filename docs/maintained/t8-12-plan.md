@@ -119,7 +119,7 @@ Step 0 与 0' 互不依赖，可同批执行。
 | 3b | ⛔ **留守 4 个（不可外迁）**：`_append_video_attachment` / `_build_local_mode_prompt` / `_apply_local_env_tools` / `_filter_skills_for_current_config` | 见 §3.2 |
 | 4a | ✅ **已执行**（方案 a 薄委托）`_write_tool_result_overflow_file` / `_truncate_tool_result_preview` / `_read_tool_hint` → **#37**（runner 保留 3 个薄委托，保住上游 1990 行的实例级 monkeypatch）| 新增 1 条（#37）+ runner 哈希 1 条 | 探针 + β xfail 8/8 + 调用点仍为 5 |
 | 4b | ✅ **已执行**`_track_tool_call_streak` / `_build_repeated_tool_call_guidance` / `_iter_tool_executor_results` → #37（+ 前置定义 `_ToolExecutionInterrupted` / `ToolExecutorResultT`）。⛔ `_materialize_large_tool_result` **不搬**。**#37 `__all__` 最终 6 符号**：`build_repeated_tool_call_guidance` / `iter_tool_executor_results` / `read_tool_hint` / `track_tool_call_streak` / `truncate_tool_result_preview` / `write_tool_result_overflow_file` |
-| 4c | `_sanitize_malformed_tool_calls` / `_build_tool_requery_context` / `_build_tool_subset` / `_has_meaningful_assistant_reply` | 724,1890,1922 / 1875,1902 / 1866,1871 / 1897 |
+| 4c | ✅ **已执行**`_sanitize_malformed_tool_calls` / `_build_tool_requery_context` / `_has_meaningful_assistant_reply` / `_build_tool_subset` → #37。**签名规则**：访问 self 的两个带 `runner` 首参，不访问 self 的两个不带；`_has_meaningful_assistant_reply` 是 `@staticmethod`，runner 侧薄委托保留 `@staticmethod`。⛔ `_resolve_tool_exec` **不在清单**（留守）。**#37 `__all__` 最终 10 符号**（见 §3）|
 
 **不得外迁**：`_iter_llm_responses*` (1017，直接决定 yield 顺序)、`_sanitize_contexts_for_provider`
 （**241 在 `_complete` 内被调用**）、`_complete_with_assistant_response` 本体与 5 个调用点。
@@ -131,7 +131,7 @@ Step 0 与 0' 互不依赖，可同批执行。
 
 | # | 新增模块 | 被谁 import | 何时登记 |
 |---|---|---|---|
-| **37** | `astrbot/core/agent/runners/tool_loop_support.py` | 仅 `tool_loop_agent_runner.py`（已登记） | Step 4a。**\#37 是单模块，由 4a / 4b / 4c 共用**：4b / 4c 只往里加函数并同步 runner 哈希，**不再新增台账条目** |
+| **37** | `astrbot/core/agent/runners/tool_loop_support.py` | 仅 `tool_loop_agent_runner.py`（已登记） | Step 4a。**`__all__` 最终 10 符号**（4a 3 + 4b 3 + 4c 4）：`build_repeated_tool_call_guidance` / `build_tool_requery_context` / `build_tool_subset` / `has_meaningful_assistant_reply` / `iter_tool_executor_results` / `read_tool_hint` / `sanitize_malformed_tool_calls` / `track_tool_call_streak` / `truncate_tool_result_preview` / `write_tool_result_overflow_file`；内部符号 `_ToolExecutionInterrupted` / `ToolExecutorResultT` 不进 `__all__`。**\#37 是单模块，由 4a / 4b / 4c 共用**：4b / 4c 只往里加函数并同步 runner 哈希，**不再新增台账条目** |
 | **38** | `astrbot/core/astr_main_agent_quote.py`（**quote 6 函数**） | `astr_main_agent.py`（已登记）+ `internal.py`（已登记） | Step 3 |
 | **39** | `astrbot/core/astr_main_agent_proactive.py`（**proactive 3 函数 + 2 常量**） | 仅 `astr_main_agent.py`（已登记） | Step 3 |
 
