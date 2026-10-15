@@ -115,6 +115,20 @@ def test_execution_level_returns_the_policy_error(monkeypatch):
     )
 
 
+def test_execution_level_denies_an_event_without_a_sender():
+    """An event that cannot identify its sender is denied instead of raising.
+
+    The execution policy reads ``get_sender_id()`` directly, so an event
+    stand-in missing the method has to be rejected rather than crash the tool.
+    """
+    event = SimpleNamespace(role="admin", unified_msg_origin="umo", message_obj=None)
+    error = util.check_tool_permission(
+        _context(event), "Python execution", util.ToolPermissionLevel.EXECUTION
+    )
+    assert error is not None
+    assert "administrator" in error
+
+
 def test_execution_level_admits_an_authorized_request(monkeypatch):
     """An authorized current message passes the execution level."""
     monkeypatch.setattr(util, "execution_denial", lambda event, config: None)
