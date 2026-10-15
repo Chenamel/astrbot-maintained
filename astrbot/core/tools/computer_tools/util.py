@@ -113,7 +113,7 @@ def check_tool_permission(
     logger.info(
         "Execution entry operation=%s message_id=%s allowed=%s",
         operation_name,
-        getattr(event.message_obj, "message_id", ""),
+        getattr(getattr(event, "message_obj", None), "message_id", ""),
         error is None,
     )
     return error
