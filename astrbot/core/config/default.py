@@ -4150,7 +4150,10 @@ CONFIG_METADATA_3 = {
                         "description": "Agent 完成钩子时序",
                         "type": "string",
                         "options": ["enhanced", "legacy"],
-                        "labels": ["Enhanced（钩子先于回复）", "Legacy（与官方原版一致）"],
+                        "labels": [
+                            "Enhanced（钩子先于回复）",
+                            "Legacy（与官方原版一致）",
+                        ],
                         "hint": "enhanced：完成钩子在回复发出之前触发，审计/改写类插件可先拿到控制权（本分支默认）。"
                         "legacy：在官方原版存在的路径上恢复「回复先出、钩子后到」，供依赖消息已发送语义的社区插件使用；"
                         "本分支独有的路径（图片降级兜底、末轮补生成）仍保留优化。",

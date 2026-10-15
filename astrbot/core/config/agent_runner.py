@@ -80,9 +80,7 @@ AGENT_RUNNER_CONFIG_DEFAULTS: dict[str, dict[str, Any]] = {
             "tool_call_timeout": 120,
             "sanitize_context_by_modalities": False,
             "hook_timing_mode": HOOK_TIMING_MODE_DEFAULT,
-            "lightweight_proactive_tools": list(
-                DEFAULT_LIGHTWEIGHT_PROACTIVE_TOOLS
-            ),
+            "lightweight_proactive_tools": list(DEFAULT_LIGHTWEIGHT_PROACTIVE_TOOLS),
         },
     },
     "dify": {
