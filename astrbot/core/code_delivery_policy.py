@@ -68,6 +68,14 @@ def execution_denial(event, config) -> str | None:
         ):
             continue
         if re.search(
+            r"(?i)(?:文档|教程|示例|例子|例如|举例|说明书|readme|注释|书中|官方|这段|"
+            r"上[一面]|下[一面]|里写|写着|说的是|意思是|中提到|里提到)"
+            r"[^。！？!?\n]{0,12}(?:写|说|提到|表示|描述|是|：|:)",
+            clause,
+        ):
+            # Quoting a document, tutorial or snippet is not a run request.
+            continue
+        if re.search(
             r"^(?:(?:请|麻烦|帮我|替我|帮忙|现在|直接|实际|在电脑上|在本机|把这段代码|把这个脚本)\s*)*(?:编译并运行|运行|执行)(?:一下|一遍|它|这|该|代码|程序|脚本|命令|python|shell|cpp|c\+\+|\s|$)"
             r"|(?:然后|并|再|并且)\s*(?:实际|直接|帮我)?\s*(?:运行|执行)(?:一下|它|这|代码|程序|脚本|命令|\s|$)"
             r"|^(?:please\s+)?(?:run|execute|compile and run)(?!\s*[=(])(?:\s|$)"
