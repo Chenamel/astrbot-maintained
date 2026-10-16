@@ -31,24 +31,36 @@ ADMIN_CONFIG = {"admins_id": ["100"]}
 
 #: The inline regexes of ``execution_denial``, quoted verbatim from the source.
 DENIAL_REGEX_LITERALS = (
-    "negation",
-    r"(?:不要|别|无需|不用|禁止|不必|不能).{0,12}(?:运行|执行|编译)|\b(?:do not|don't|never)\s+(?:run|execute|compile)",
-), (
-    "explanation",
-    r"(?:解释|介绍|说明|如何|怎么|示例中|代码中|函数名|字符串).{0,12}(?:运行|执行)|\b(?:explain|describe|how to|example of)\b",
-), (
-    "authorize_cn",
-    r"^(?:(?:请|麻烦|帮我|替我|帮忙|现在|直接|实际|在电脑上|在本机|把这段代码|把这个脚本)\s*)*(?:编译并运行|运行|执行)(?:一下|一遍|它|这|该|代码|程序|脚本|命令|python|shell|cpp|c\+\+|\s|$)",
-), (
-    # The T8-10 privilege-escalation branch: quoting a document counts as consent.
-    "authorize_then",
-    r"|(?:然后|并|再|并且)\s*(?:实际|直接|帮我)?\s*(?:运行|执行)(?:一下|它|这|代码|程序|脚本|命令|\s|$)",
-), (
-    "authorize_en",
-    r"|^(?:please\s+)?(?:run|execute|compile and run)(?!\s*[=(])(?:\s|$)",
-), (
-    "authorize_and_then",
-    r"|\b(?:and|then)\s+(?:run|execute)(?!\s*[=(])(?:\s|$)",
+    (
+        "negation",
+        r"(?:不要|别|无需|不用|禁止|不必|不能).{0,12}(?:运行|执行|编译)|\b(?:do not|don't|never)\s+(?:run|execute|compile)",
+    ),
+    (
+        "explanation",
+        r"(?:解释|介绍|说明|如何|怎么|示例中|代码中|函数名|字符串).{0,12}(?:运行|执行)|\b(?:explain|describe|how to|example of)\b",
+    ),
+    (
+        "authorize_cn",
+        r"^(?:(?:请|麻烦|帮我|替我|帮忙|现在|直接|实际|在电脑上|在本机|把这段代码|把这个脚本)\s*)*(?:编译并运行|运行|执行)(?:一下|一遍|它|这|该|代码|程序|脚本|命令|python|shell|cpp|c\+\+|\s|$)",
+    ),
+    (
+        # The T8-10 branch: quoting a document used to count as consent.
+        "authorize_then",
+        r"|(?:然后|并|再|并且)\s*(?:实际|直接|帮我)?\s*(?:运行|执行)(?:一下|它|这|代码|程序|脚本|命令|\s|$)",
+    ),
+    (
+        # T8-10 fix: a reporting marker means the run verb is quoted, not requested.
+        "quoting_marker",
+        r"(?i)(?:文档|教程|示例|例子|例如|举例|说明书|readme|注释|书中|官方|这段|上[一面]|下[一面]|里写|写着|说的是|意思是|中提到|里提到)[^。！？!?\n]{0,12}(?:写|说|提到|表示|描述|是|：|:)",
+    ),
+    (
+        "authorize_en",
+        r"|^(?:please\s+)?(?:run|execute|compile and run)(?!\s*[=(])(?:\s|$)",
+    ),
+    (
+        "authorize_and_then",
+        r"|\b(?:and|then)\s+(?:run|execute)(?!\s*[=(])(?:\s|$)",
+    ),
 )
 
 #: The compiled refusal pattern, captured before any refactor.
