@@ -18,9 +18,9 @@
     "astrbot/core/astr_main_agent.py": "68f522df8a99a30e76660abcee68dee6b60ede226081789e44f2b9140666f938",
     "astrbot/core/astr_main_agent_proactive.py": "aa2b486e6dd597069b1c95b01a46889e94038c466a1128618daf93815c2c7cea",
     "astrbot/core/astr_main_agent_quote.py": "9f389aa9ce6994255350097eb61da7162566a451b7429f9df35561357008cdb6",
-    "astrbot/core/code_delivery_policy.py": "a524f0a16b6f3018e2342874a4cf3776e0d9f554e9f23874c9c85ef3b8e47b42",
+    "astrbot/core/code_delivery_policy.py": "c134583a9b8b692833c23ee323020c67211ed93ed521f17dc1cf4539f62b3e08",
     "astrbot/core/config/agent_runner.py": "1b3ae8fd311c4045ef9eeed800b90cf0d7f2c65de53edc74c0e595b4a25ea9ac",
-    "astrbot/core/config/default.py": "8d2159d34a0ec3cb26216c0429775cda1a18c15e3b239f8c590ef4ac4fd3bd44",
+    "astrbot/core/config/default.py": "5bb79ca68d637eabae38d6b893a43d2689350cc2a79f095740b6db84473a1d0c",
     "astrbot/core/cron/manager.py": "fe9bb7b4260d7ce44909b9cb06e772c34aebc6aa09f68659932b3bdf4cea4b03",
     "astrbot/core/pipeline/context_utils.py": "426ac085024dced768bd543903441ad6c69549ddd6e67d5acb93e3914585fc9d",
     "astrbot/core/pipeline/process_stage/follow_up.py": "44e217698ff22f7ec52fc943e6c449dae7b022e3ce38ba03a75f9c74253bc3b8",
@@ -37,7 +37,7 @@
     "astrbot/core/star/updater.py": "b0aa31701e8920b1aeab378705c3f6e8c42873fa3dad4322d26f3549ae238db3",
     "astrbot/core/tools/computer_tools/python.py": "ad1ec10471e1a7c83c9134480f34418e2363407055bac83438d638b19e94300c",
     "astrbot/core/tools/computer_tools/shell.py": "fbdc78a1c5c357e29a05d83653fe54cab99adc147e6f323cbb6c1b254b16085e",
-    "astrbot/core/tools/computer_tools/util.py": "c15ed6a2365543eb12e44f2ce388f719797a1fec2658aaf35f2d54b1117ef1db",
+    "astrbot/core/tools/computer_tools/util.py": "f72427444977446f955b964ac219c93588f3dfdad0fbf374f4962a68e25bb102",
     "astrbot/core/utils/direct_turns.py": "4db50ced8adf8703feb86e049a16d89d219b0303706e5ad72e3b500e69d98353",
     "astrbot/dashboard/services/plugin_service.py": "3568f5a720f0c8f7490cc4a31d7cfcb68523b876e54e8d682a24dcc872b328fa"
   }
