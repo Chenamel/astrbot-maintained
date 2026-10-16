@@ -56,16 +56,20 @@ def _context(event: SimpleNamespace, settings: dict | None = None) -> SimpleName
 
     Args:
         event: The event stand-in.
-        settings: Provider settings reported by the configuration.
+        settings: Provider settings reported by the configuration. Execution
+            level checks run in ``strict`` mode by default; the upstream
+            behaviour has its own tests.
 
     Returns:
         The tool context stand-in.
     """
+    provider_settings = {"execution_gate_mode": "strict"}
+    provider_settings.update(settings or {})
     return SimpleNamespace(
         context=SimpleNamespace(
             event=event,
             context=SimpleNamespace(
-                get_config=lambda umo: {"provider_settings": settings or {}}
+                get_config=lambda umo: {"provider_settings": provider_settings}
             ),
         )
     )
@@ -178,6 +182,40 @@ def test_levels_stay_independent(monkeypatch):
             util.ToolPermissionLevel.EXECUTION,
         )
         == "denied"
+    )
+
+
+def test_execution_level_falls_back_to_the_admin_check_in_legacy_mode():
+    """Legacy mode matches upstream: only the administrator check runs."""
+    context = _context(_event(), {"execution_gate_mode": "legacy"})
+    error = util.check_tool_permission(
+        context, "Python execution", util.ToolPermissionLevel.EXECUTION
+    )
+    assert error is not None
+    assert "only allowed for admin users" in error
+    assert "42" in error
+
+
+def test_execution_level_admits_admins_in_legacy_mode():
+    """An admin passes the legacy execution level with no run request."""
+    context = _context(_event(role="admin"), {"execution_gate_mode": "legacy"})
+    assert (
+        util.check_tool_permission(
+            context, "Python execution", util.ToolPermissionLevel.EXECUTION
+        )
+        is None
+    )
+
+
+def test_legacy_mode_skips_the_execution_policy(monkeypatch):
+    """Legacy mode never consults the current-message policy."""
+    monkeypatch.setattr(util, "execution_denial", lambda event, config: "denied")
+    context = _context(_event(role="admin"), {"execution_gate_mode": "legacy"})
+    assert (
+        util.check_tool_permission(
+            context, "Python execution", util.ToolPermissionLevel.EXECUTION
+        )
+        is None
     )
 
 
