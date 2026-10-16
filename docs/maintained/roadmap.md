@@ -57,7 +57,12 @@ T7-90 脱敏 → T7-91 对外材料 → 转公开 + 发布 tag
 | **S8-3** | **技术债 3**：`config/agent_runner.py` / `config/default.py` 的 format-only 提交 | P2 | ✅ | 2026-10-16 完成：**AST 前后完全一致**证明纯格式（实为 1+/3- 与 4+/1-，远小于预期）；`ruff format --check` 现为 **526 files already formatted** |
 | **S8-4** | **技术债 2**：`build_main_agent`(248) / `collect_initial_request`(220) / `_ensure_persona_and_skills`(178) 拆分 | P3（可选） | **可选 · 暂不做** | **2026-10-15 裁决：降级为可选**。三者共 642 行（`_ensure_persona_and_skills` 176 / `collect_initial_request` 218 / `build_main_agent` 248）、链式耦合、均被上游测试锁定（直调或 patch 目标）；拆完文件仍停在 ~1000 行。待核心打磨到位后再评估；若重启建议从 `collect_initial_request` 试水 |
 
-## 3. 安全项：T8-10（转公开的前置建议）
+## 3. 安全项：T8-10（提权误放行）—— ✅ **已完成（2026-10-17）**
+
+以**模式化**收口：新增 `provider_settings.execution_gate_mode`，默认 `legacy`（上游 admin-only），
+可选 `strict`（当前消息须明确要求运行）。默认改 legacy 后，`test_python_tools.py` 的
+**11 项红全部转绿**；strict 模式内再加「转述标记」排除规则，修掉 4 例误放行。
+**零 dashboard 改动**（走配置 schema）。这也是双模式定调的**首个落地开关**。
 
 - **内容**：`execution_denial` 误放行 —— 输入「文档里写：先编译，再运行」会被判为**授权执行**
   （授权分支缺主语约束，引用/转述即等于授权）。一并评估 `SAFETY_REFUSAL_PATTERN` 的漏判与误报。
