@@ -93,9 +93,17 @@ def check_tool_permission(
     """
     event = context.context.event
     config = context.context.context.get_config(umo=event.unified_msg_origin)
+    provider_settings = config.get("provider_settings", {})
+
+    # Upstream-compatible default: the execution level falls back to the plain
+    # administrator check, matching how the official build gates the tools.
+    if (
+        level is ToolPermissionLevel.EXECUTION
+        and provider_settings.get("execution_gate_mode", "legacy") == "legacy"
+    ):
+        level = ToolPermissionLevel.IDENTITY
 
     if level is ToolPermissionLevel.IDENTITY:
-        provider_settings = config.get("provider_settings", {})
         require_admin = provider_settings.get("computer_use_require_admin", True)
         if require_admin and event.role != "admin":
             return (
