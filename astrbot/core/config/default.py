@@ -153,6 +153,7 @@ DEFAULT_CONFIG = {
         },
         "computer_use_runtime": "none",
         "computer_use_require_admin": True,
+        "execution_gate_mode": "legacy",
         "sandbox": {
             "booter": "shipyard_neo",
             "shipyard_endpoint": "",
@@ -3766,6 +3767,19 @@ CONFIG_METADATA_3 = {
                         "description": "需要 AstrBot 管理员权限",
                         "type": "bool",
                         "hint": "开启后，需要 AstrBot 管理员权限才能调用使用电脑能力。在平台配置->管理员中可添加管理员。使用 /sid 指令查看管理员 ID。",
+                    },
+                    "provider_settings.execution_gate_mode": {
+                        "description": "执行类工具授权模式（本分支新增）",
+                        "type": "string",
+                        "options": ["legacy", "strict"],
+                        "labels": [
+                            "原版（仅管理员）",
+                            "严格（当前消息须明确要求运行）",
+                        ],
+                        "hint": "legacy：与官方原版一致，只校验 AstrBot 管理员权限，插件调用行为不受影响（默认）。"
+                        "strict：在管理员之外还要求当前消息明确要求「运行/执行」，转述文档、教程、代码不再被视为授权；"
+                        "代价是「麻烦你帮我运行一下」「跑一下」「启动」这类说法也会被拒绝，此时可退回 legacy。"
+                        "本项为维护分支新增能力，官方原版没有。",
                     },
                     "provider_settings.sandbox.booter": {
                         "description": "沙箱环境驱动器",
