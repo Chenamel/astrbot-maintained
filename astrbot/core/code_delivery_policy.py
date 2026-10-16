@@ -68,9 +68,7 @@ def execution_denial(event, config) -> str | None:
         ):
             continue
         if re.search(
-            r"(?i)(?:文档|教程|示例|例子|例如|举例|说明书|readme|注释|书中|官方|这段|"
-            r"上[一面]|下[一面]|里写|写着|说的是|意思是|中提到|里提到)"
-            r"[^。！？!?\n]{0,12}(?:写|说|提到|表示|描述|是|：|:)",
+            r"(?i)(?:文档|教程|示例|例子|例如|举例|说明书|readme|注释|书中|官方|这段|上[一面]|下[一面]|里写|写着|说的是|意思是|中提到|里提到)[^。！？!?\n]{0,12}(?:写|说|提到|表示|描述|是|：|:)",
             clause,
         ):
             # Quoting a document, tutorial or snippet is not a run request.
