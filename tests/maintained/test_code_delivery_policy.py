@@ -129,14 +129,14 @@ def test_non_admin_sender_is_always_denied():
     )
 
 
-def test_quoted_document_text_is_currently_authorized():
-    """Known misjudgment (T8-10): quoting a document counts as authorization.
+def test_quoted_document_text_is_no_longer_authorized():
+    """Fixed (T8-10): quoting a document no longer counts as authorization.
 
-    The ``然后|并|再|并且`` branch has no subject constraint, so "docs say:
-    compile, then run" authorizes execution. Pinned as **current** behaviour --
-    fixing T8-10 must flip this assertion.
+    The quoting-marker rule drops clauses that merely report what a document,
+    tutorial or snippet says, so "docs say: compile, then run" is denied.
+    A connective used by the sender themselves still authorizes execution.
     """
-    assert _outcome("文档中写：先编译，再运行") == "allow"
+    assert _outcome("文档中写：先编译，再运行") == "deny"
     # Same connective used by the sender themselves: a genuine authorization.
     assert _outcome("写个 python 脚本，然后运行") == "allow"
 
