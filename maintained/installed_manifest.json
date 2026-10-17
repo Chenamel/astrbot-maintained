@@ -18,7 +18,7 @@
     "astrbot/core/astr_main_agent.py": "68f522df8a99a30e76660abcee68dee6b60ede226081789e44f2b9140666f938",
     "astrbot/core/astr_main_agent_proactive.py": "aa2b486e6dd597069b1c95b01a46889e94038c466a1128618daf93815c2c7cea",
     "astrbot/core/astr_main_agent_quote.py": "9f389aa9ce6994255350097eb61da7162566a451b7429f9df35561357008cdb6",
-    "astrbot/core/code_delivery_policy.py": "c134583a9b8b692833c23ee323020c67211ed93ed521f17dc1cf4539f62b3e08",
+    "astrbot/core/code_delivery_policy.py": "3178b009b8886743bf2f47a28a2e872a6df1660a12b0f2651809bb1d06c0a3a4",
     "astrbot/core/config/agent_runner.py": "1b3ae8fd311c4045ef9eeed800b90cf0d7f2c65de53edc74c0e595b4a25ea9ac",
     "astrbot/core/config/default.py": "5bb79ca68d637eabae38d6b893a43d2689350cc2a79f095740b6db84473a1d0c",
     "astrbot/core/cron/manager.py": "fe9bb7b4260d7ce44909b9cb06e772c34aebc6aa09f68659932b3bdf4cea4b03",
