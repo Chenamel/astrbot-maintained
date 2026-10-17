@@ -1,47 +1,71 @@
-# AstrBot Maintained Fork
+# AstrBot 维护版（Maintained Fork）
 
-一个 [AstrBot](https://github.com/AstrBotDevs/AstrBot) 的**维护型源码 fork**，基线锁定于 `v4.28.2`。
+> 官方 [AstrBot](https://github.com/AstrBotDevs/AstrBot) 的长期维护分支，基线锁定 `v4.28.2`。
+> 一句话：**官方插件不用改一行就能用**，在此之上补一些官方没有的底层能力。
+>
+> A maintained fork of AstrBot pinned to the `v4.28.2` baseline: drop-in compatible
+> with upstream plugins, plus a few extra low-level APIs.
 
-> 上游原 README（简体中文等多语言版本）见 [AstrBotDevs/AstrBot](https://github.com/AstrBotDevs/AstrBot)，
-> 或本仓 `README_zh.md` 等文件；上游原文也可随时从 `upstream/master` 取回。
+---
 
-## 这是什么
+## 它是什么
 
-- **上游**：`AstrBotDevs/AstrBot`（AGPL-3.0，无附加例外）
-- **基线**：tag `v4.28.2` → commit `3c7adafa1397e182d60b1016bf88759265113c8a`
-- **主干分支**：`maintained/v4.28.2`（长期维护线，升基线不改名）
-- **锚点标签**：`baseline/v4.28.2`（永久指向基线提交，供回滚与三方合并比对）
+一个**独立仓库**（不在 GitHub 的 fork 网络里，也从不往上游推东西）。我们做的是：
 
-这是一个**独立仓库**（非 GitHub fork 网络），不向上游推送任何内容；
-本仓的定位是「兼容优先的维护版核心 + 插件公开 API 层」。
+- 拿上游 `v4.28.2` 的代码当基线
+- 修问题、补能力、做安全加固
+- 但**保证官方插件拿来就能跑**
 
-## 设计立场
+上游发布新版本时，我们会挑着合并过来；基线本身不轻易升。
 
-1. **兼容优先**：`astrbot.api.*` 与插件事实依赖的 core 路径全部冻结，原版插件零改动可用。
-2. **只做加法**：新增能力一律落 `astrbot/api/**`；core 内部最小侵入，新开关默认保持旧行为。
-3. **core 优先**：按类官方范式写代码；存量第三方插件仅作参考实现，不迁就其写法。
-4. **可回归**：core 改动登记 `maintained/installed_manifest.json`（SHA-256 台账），可脚本化校验。
-5. **合规**：AGPL §13 义务见 [`NOTICE`](./NOTICE)；变更台账见 [`CHANGELOG.md`](./CHANGELOG.md)。
+## 和官方版有什么不一样
 
-## 目录导览
+能实际感觉到的差别就这几条，而且**默认都跟官方一致**：
 
-| 路径 | 说明 |
+| 能力 | 默认（跟官方一样） | 可选（本 fork 才有） |
+|---|---|---|
+| Python / Shell 执行授权 | 只校验管理员权限 | `严格`模式：还要求你在**这条消息里**明确说“运行/执行”，引用文档里的“先编译，再运行”不再算授权 |
+| 完成钩子时序 | `原版`：回复先发出、钩子后触发 | `增强`：钩子先触发，审计/改写类插件能抢在回复发出前介入 |
+| 插件可用的扩展 API | — | `astrbot/api/**`：回合状态、交付策略、权限、媒体、运行时等（官方没有） |
+| 主动回复 | **默认关闭**（防止机器人自作主张刷屏） | 可自行开启 |
+
+想切换这些开关：进面板 → 配置页，每一项都有中文说明。
+
+## 想装来用？
+
+用法和官方 AstrBot 完全一样（launcher 或源码启动都行），配置文件也兼容。
+
+⚠️ **一条提醒**：面板顶部如果出现“AstrBot 有新版本”，**不要点升级**——那是上游 v4.29+，会把本 fork 的改动冲掉。想跟进新版本请等我们合并，或者自己合（见维护者文档）。
+
+## 给插件开发者
+
+- 新增能力全部落在 `astrbot/api/**`，外部只 `import astrbot.api.*`
+- `astrbot.api.*` 和插件实际依赖的 core 路径**冻结**，不会突然改掉
+- 想用新增能力（查询回合状态、判断执行权限等），翻 `astrbot/api/` 下的模块即可
+
+## 常见问题
+
+**官方插件能直接用吗？**
+能。兼容是本 fork 的第一优先级；一旦和我们的优化冲突，无条件退让给官方行为。
+
+**能升到官方最新版吗？**
+不建议直接升。我们按自己的节奏合并上游；你会 git 的话也可以自己合。
+
+**发现 bug / 想提需求？**
+直接开 issue，附上日志会很有帮助（日志默认写在 `data/logs/astrbot.log`）。
+
+**这个仓库会公开吗？**
+远期计划公开，但有几处内容需要先脱敏，具体进度见 `docs/maintained/roadmap.md`。
+
+## 文档导航
+
+| 想看什么 | 去哪 |
 |---|---|
-| [`README_MAINTAINED.md`](./README_MAINTAINED.md) | 本 fork 的详细说明（设计立场 / 上游同步 / 台账校验） |
-| [`maintained/`](./maintained/) | 版本、core 受保护文件 SHA-256 台账 |
-| [`docs/maintained/`](./docs/maintained/) | 规范文档：proposal / design / tasks / project_rules |
-| [`tests/maintained/`](./tests/maintained/) | 本 fork 的测试 |
-| [`CHANGELOG.md`](./CHANGELOG.md) | 相对上游的变更台账（区别于上游 `changelogs/`） |
-| `astrbot/`、`dashboard/`、`docs/` 等 | 上游内容，除已登记补丁外**保持原样** |
-
-## 上游同步
-
-```bash
-git fetch upstream --tags --prune
-git switch -c tmp/sync-<ref> maintained/v4.28.2
-git merge --no-commit --no-ff <upstream ref>
-# 骨架文件因零冲突原则不应冲突；README.md 由 merge=ours 策略自动保留本 fork 版本
-```
+| 维护者向说明（基线、台账、怎么同步上游） | [`README_MAINTAINED.md`](./README_MAINTAINED.md) |
+| 规范与决策记录 | [`docs/maintained/`](./docs/maintained/)（design / project_rules / tasks / roadmap / inventory） |
+| 相对上游的改动清单 | [`CHANGELOG.md`](./CHANGELOG.md) |
+| core 改动台账（SHA-256，可脚本校验） | [`maintained/installed_manifest.json`](./maintained/installed_manifest.json) |
+| 上游官方说明 | [`README_zh.md`](./README_zh.md) 等，或 [上游仓库](https://github.com/AstrBotDevs/AstrBot) |
 
 ## 许可证
 

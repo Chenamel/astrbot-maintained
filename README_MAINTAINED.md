@@ -2,7 +2,8 @@
 
 一个 [AstrBot](https://github.com/AstrBotDevs/AstrBot) 的**维护型源码 fork**，锁基线于 `v4.28.2`。
 
-本文件是本 fork 的说明；上游自身说明见 [`README.md`](./README.md)（未改动）。
+本文件是**维护者向**的说明（基线、台账、上游同步）；面向访客的主页说明见
+[`README.md`](./README.md)（本 fork 自写版，已替换上游默认 README）。
 
 ## 这是什么
 
