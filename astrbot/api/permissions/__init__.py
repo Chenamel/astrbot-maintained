@@ -102,6 +102,12 @@ def execution_denial(event: Any, config: Any) -> str | None:
         A human-readable reason when the operation must be refused, otherwise
         ``None``.
     """
+    provider_settings = (
+        config.get("provider_settings", {}) if isinstance(config, dict) else {}
+    )
+    if provider_settings.get("execution_gate_mode", "legacy") == "legacy":
+        # Upstream-compatible default: the administrator check alone decides.
+        return None if is_admin(event, config) else EXECUTION_NOT_AUTHORIZED
     decider = resolve(_MODULE, "execution_denial", None)
     if decider is not None:
         try:
