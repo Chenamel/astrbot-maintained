@@ -4,10 +4,12 @@ This module is the single source of truth for the upstream tests this fork fails
 **on purpose**. Every entry maps a pytest node id to a ``(group, reason)`` pair:
 
 ``alpha``
-    Execution-tool authorisation was tightened deliberately: non-admins never
-    receive the execute tools, and admins must ask for execution inside the
-    current message. Upstream still expects the tools to be present, so those
-    tests fail here by design.
+    Execution-tool authorisation tightening. **Reverted on purpose on
+    2026-10-17 (T8-15)**: the tightening is now a mode
+    (``provider_settings.execution_gate_mode``) that defaults to ``legacy``, so
+    the default run matches upstream again and this group holds **no entry**.
+    The behaviour is still available by opting into ``strict``; see
+    ``docs/maintained/inventory.md`` section "α 组回退".
 ``beta``
     The agent-completion hook now fires **before** the reply is emitted. This is
     an architectural improvement of this fork -- it lets reply pre-audit and
@@ -51,43 +53,6 @@ _BETA_REASON = (
 )
 
 DEVIATIONS: dict[str, tuple[str, str]] = {
-    # alpha -- execution-tool authorisation tightening (9 entries).
-    "tests/unit/test_astr_main_agent.py::test_proactive_agent_respects_runtime_and_safety_settings[True-local-cron]": (
-        ALPHA,
-        _ALPHA_REASON,
-    ),
-    "tests/unit/test_astr_main_agent.py::test_proactive_agent_respects_runtime_and_safety_settings[True-local-background]": (
-        ALPHA,
-        _ALPHA_REASON,
-    ),
-    "tests/unit/test_astr_main_agent.py::test_proactive_agent_respects_runtime_and_safety_settings[True-sandbox-cron]": (
-        ALPHA,
-        _ALPHA_REASON,
-    ),
-    "tests/unit/test_astr_main_agent.py::test_proactive_agent_respects_runtime_and_safety_settings[True-sandbox-background]": (
-        ALPHA,
-        _ALPHA_REASON,
-    ),
-    "tests/unit/test_astr_main_agent.py::test_proactive_agent_respects_runtime_and_safety_settings[False-local-cron]": (
-        ALPHA,
-        _ALPHA_REASON,
-    ),
-    "tests/unit/test_astr_main_agent.py::test_proactive_agent_respects_runtime_and_safety_settings[False-local-background]": (
-        ALPHA,
-        _ALPHA_REASON,
-    ),
-    "tests/unit/test_astr_main_agent.py::test_proactive_agent_respects_runtime_and_safety_settings[False-sandbox-cron]": (
-        ALPHA,
-        _ALPHA_REASON,
-    ),
-    "tests/unit/test_astr_main_agent.py::test_proactive_agent_respects_runtime_and_safety_settings[False-sandbox-background]": (
-        ALPHA,
-        _ALPHA_REASON,
-    ),
-    "tests/unit/test_astr_main_agent.py::TestEnsurePersonaAndSkills::test_persona_empty_tools_keeps_local_runtime_builtin_tools": (
-        ALPHA,
-        _ALPHA_REASON,
-    ),
     # beta -- agent-completion hook timing (8 entries).
     "tests/test_tool_loop_agent_runner.py::test_skills_like_requery_reply_reaches_stream_bridge_once[False-True-False-False]": (
         BETA,
@@ -126,8 +91,9 @@ DEVIATIONS: dict[str, tuple[str, str]] = {
 #: Node ids marked with ``xfail`` during the current pytest session.
 #:
 #: The root ``conftest.py`` appends every node id it marks. The guard test in
-#: ``tests/maintained/test_p11_deviations.py`` asserts that all 17 deviations
-#: were matched, so a silent miss (renamed test or changed parametrisation)
+#: ``tests/maintained/test_p11_deviations.py`` asserts that all registered
+#: deviations were matched, so a silent miss (renamed test or changed
+#: parametrisation)
 #: cannot go unnoticed.
 APPLIED: list[str] = []
 
