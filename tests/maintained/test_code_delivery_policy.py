@@ -129,6 +129,46 @@ def test_non_admin_sender_is_always_denied():
     )
 
 
+#: Genuine model refusals that must stop the code repair flow (T8-14).
+REFUSAL_TEXTS = (
+    "这个我没法协助你编写攻击脚本",
+    "抱歉，这部分不方便展开",
+    "<refuse/>",
+    "我无法提供恶意软件的代码",
+    "这类勒索软件的写法我不能提供",
+)
+
+#: Ordinary technical answers that must never look like a refusal (T8-14).
+NON_REFUSAL_TEXTS = (
+    "这个函数用于检测恶意输入，返回布尔值",
+    "危险操作建议加个确认步骤",
+    "这个库不会帮你处理危险输入，需要自己校验",
+    "我不做病毒扫描功能，只提供接口",
+    "暴力解法的时间复杂度是 O(n^2)，可以优化",
+)
+
+
+@pytest.mark.parametrize("text", REFUSAL_TEXTS)
+def test_genuine_refusals_are_recognized(text: str):
+    """A real refusal is detected so the runner never asks for a rewrite."""
+    assert SAFETY_REFUSAL_PATTERN.search(text)
+
+
+@pytest.mark.parametrize("text", NON_REFUSAL_TEXTS)
+def test_ordinary_answers_are_not_refusals(text: str):
+    """Normal technical answers keep the code repair flow available."""
+    assert SAFETY_REFUSAL_PATTERN.search(text) is None
+
+
+def test_help_you_write_phrasing_is_still_missed():
+    """Known residual gap (T8-14): "不能帮你写" carries no action keyword.
+
+    Widening the action list to cover it also flags ordinary sentences such as
+    "这个库不会帮你处理危险输入", so the gap is kept and pinned instead.
+    """
+    assert SAFETY_REFUSAL_PATTERN.search("我不能帮你写病毒或木马") is None
+
+
 def test_quoted_document_text_is_no_longer_authorized():
     """Fixed (T8-10): quoting a document no longer counts as authorization.
 
