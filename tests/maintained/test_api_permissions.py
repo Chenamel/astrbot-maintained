@@ -62,6 +62,24 @@ def test_admin_is_not_denied_by_fallback_layer():
     assert permissions.execution_denial(_event("10001"), config) is None
 
 
+def test_legacy_gate_mode_mirrors_upstream_for_admins():
+    """Legacy mode keeps the administrator check as the only requirement."""
+    config = {
+        "admins_id": ["10001"],
+        "provider_settings": {"execution_gate_mode": "legacy"},
+    }
+    assert permissions.execution_denial(_event("10001"), config) is None
+
+
+def test_legacy_gate_mode_still_denies_non_admins():
+    """The mode never degrades into an unconditional allow."""
+    config = {
+        "admins_id": ["10001"],
+        "provider_settings": {"execution_gate_mode": "legacy"},
+    }
+    assert permissions.execution_denial(_event("99999"), config)
+
+
 def test_denial_never_raises_on_foreign_objects():
     reason = permissions.execution_denial(object(), None)
     assert reason is None or isinstance(reason, str)
