@@ -69,7 +69,7 @@ def execution_denial(event, config) -> str | None:
         ):
             continue
         if re.search(
-            r"(?i)(?:文档|教程|示例|例子|例如|举例|说明书|readme|注释|书中|官方|这段|上[一面]|下[一面]|里写|写着|说的是|意思是|中提到|里提到)[^。！？!?\n]{0,12}(?:写|说|提到|表示|描述|是|：|:)",
+            r"(?i)(?:文档|教程|示例|例子|例如|举例|说明书|readme|注释|书中|官方|上[一面]|下[一面]|里写|写着|说的是|意思是|中提到|里提到)[^。！？!?\n]{0,12}(?:写|说|提到|表示|描述|是|：|:)",
             clause,
         ):
             # Quoting a document, tutorial or snippet is not a run request.
@@ -228,6 +228,18 @@ def apply_execution_policy(event, config, request) -> None:
         config: Effective configuration.
         request: Assembled provider request, modified per request only.
     """
+    provider_settings = config.get("provider_settings", {})
+    message_id = getattr(getattr(event, "message_obj", None), "message_id", "")
+    if provider_settings.get("execution_gate_mode", "legacy") == "legacy":
+        # Upstream-compatible default: keep every tool available and let the
+        # per-call administrator gate decide at invocation time.
+        logger.info(
+            "Execution policy message_id=%s allowed=%s removed=%s",
+            message_id,
+            True,
+            "",
+        )
+        return
     error = execution_denial(event, config)
     removed = []
     if error and request.func_tool:
