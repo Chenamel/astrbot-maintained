@@ -28,6 +28,14 @@ from astrbot.core.agent.tool import FunctionTool, ToolSet
 from astrbot.core.message.components import Plain
 
 ADMIN_CONFIG = {"admins_id": ["100"]}
+STRICT_CONFIG = {
+    "admins_id": ["100"],
+    "provider_settings": {"execution_gate_mode": "strict"},
+}
+LEGACY_CONFIG = {
+    "admins_id": ["100"],
+    "provider_settings": {"execution_gate_mode": "legacy"},
+}
 
 #: The inline regexes of ``execution_denial``, quoted verbatim from the source.
 DENIAL_REGEX_LITERALS = (
@@ -50,8 +58,9 @@ DENIAL_REGEX_LITERALS = (
     ),
     (
         # T8-10 fix: a reporting marker means the run verb is quoted, not requested.
+        # "这段" deliberately stays out: "帮我运行这段代码：" is a genuine request.
         "quoting_marker",
-        r"(?i)(?:文档|教程|示例|例子|例如|举例|说明书|readme|注释|书中|官方|这段|上[一面]|下[一面]|里写|写着|说的是|意思是|中提到|里提到)[^。！？!?\n]{0,12}(?:写|说|提到|表示|描述|是|：|:)",
+        r"(?i)(?:文档|教程|示例|例子|例如|举例|说明书|readme|注释|书中|官方|上[一面]|下[一面]|里写|写着|说的是|意思是|中提到|里提到)[^。！？!?\n]{0,12}(?:写|说|提到|表示|描述|是|：|:)",
     ),
     (
         "authorize_en",
@@ -205,11 +214,11 @@ def test_drop_execution_tools_keeps_an_empty_tool_set():
 
 
 def test_authorized_request_leaves_the_tool_set_untouched():
-    """An authorized request is never rebuilt, so the object identity holds."""
+    """An authorized strict-mode request is never rebuilt, so identity holds."""
     original = ToolSet([_tool("astrbot_execute_shell", is_execution_tool=True)])
     request = _request(func_tool=original)
 
-    policy.apply_execution_policy(_Event(sender_id="100"), ADMIN_CONFIG, request)
+    policy.apply_execution_policy(_Event(sender_id="100"), STRICT_CONFIG, request)
 
     assert request.func_tool is original
 
@@ -218,8 +227,10 @@ def test_authorized_request_leaves_the_tool_set_untouched():
     ("sender_id", "tools"),
     [("", 1), ("100", 1), ("", 0)],
 )
-def test_execution_prompt_is_injected_for_every_outcome(sender_id: str, tools: int):
-    """The prompt is appended whether or not execution is authorized.
+def test_strict_mode_injects_the_prompt_and_drops_unauthorized_tools(
+    sender_id: str, tools: int
+):
+    """Strict mode gates the tool set and appends the policy prompt.
 
     Args:
         sender_id: Event sender; empty means unauthorized.
@@ -231,12 +242,32 @@ def test_execution_prompt_is_injected_for_every_outcome(sender_id: str, tools: i
         else SimpleNamespace(func_tool=None, system_prompt="")
     )
 
-    policy.apply_execution_policy(_Event(sender_id=sender_id), ADMIN_CONFIG, request)
+    policy.apply_execution_policy(_Event(sender_id=sender_id), STRICT_CONFIG, request)
 
     assert "Execution authorization is per current message only" in (
         request.system_prompt
     )
     assert "Source-writing tasks must deliver complete source" in request.system_prompt
+
+
+def test_legacy_mode_keeps_the_tools_and_skips_the_prompt():
+    """Legacy mode matches upstream: no filtering and no prompt injection."""
+    request = _request(_tool("astrbot_execute_python", is_execution_tool=True))
+
+    policy.apply_execution_policy(_Event(sender_id=""), LEGACY_CONFIG, request)
+
+    assert [tool.name for tool in request.func_tool.tools] == ["astrbot_execute_python"]
+    assert request.system_prompt == ""
+
+
+def test_missing_mode_setting_defaults_to_legacy():
+    """A config without the mode key behaves exactly like legacy."""
+    request = _request(_tool("astrbot_execute_python", is_execution_tool=True))
+
+    policy.apply_execution_policy(_Event(sender_id=""), ADMIN_CONFIG, request)
+
+    assert [tool.name for tool in request.func_tool.tools] == ["astrbot_execute_python"]
+    assert request.system_prompt == ""
 
 
 def test_public_symbols_are_unchanged():
