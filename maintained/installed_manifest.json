@@ -6,7 +6,7 @@
     "astrbot/api/delivery/__init__.py": "3774f7cb029cff83bc18eda1f581233534c7acf1ad170eab713cc49a3c310db9",
     "astrbot/api/embedding/__init__.py": "c1593a28c6541584b63e2d1ae822f7a83f1c6ed11140203086ab6a612574f889",
     "astrbot/api/media/__init__.py": "18eb28314aefa6b5595d118d42d5081890c90ab4d984aa723405e88b49fb07b9",
-    "astrbot/api/permissions/__init__.py": "723455337ba879171a5376f185e160c5a5264d009dc470bc57b5494f60706489",
+    "astrbot/api/permissions/__init__.py": "16f82d72e9c797b528de6f77213786b394e54193421baf5ada9819ed8769c090",
     "astrbot/api/proactive/__init__.py": "b05da0ffa7147143bc0190fe254e08b1cd11fbc14d473bc10193951c6365ea9f",
     "astrbot/api/runtime/__init__.py": "21f78d398f0702d34687b07ddc11cc40ff01fec394f5e4aa707ba996173ed25f",
     "astrbot/api/turns/__init__.py": "26fe891ef89fe2414ec42350f27fc78ad5829d3195ab54008a5ed77db2aecedd",
