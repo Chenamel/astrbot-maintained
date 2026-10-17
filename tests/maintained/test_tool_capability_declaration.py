@@ -23,6 +23,9 @@ from astrbot.core.message.components import Plain
 #: Minimal JSON schema accepted by the tool schema validator.
 PARAMS: dict = {"type": "object", "properties": {}}
 
+#: Config opting into the strict execution gate added by the maintained fork.
+STRICT_CONFIG = {"provider_settings": {"execution_gate_mode": "strict"}}
+
 
 def _tool(name: str, **kwargs) -> FunctionTool:
     """Return a tool with a valid schema.
@@ -82,7 +85,7 @@ def _names(request: SimpleNamespace) -> list[str]:
 
 
 def test_unauthorized_request_drops_declared_execution_tools():
-    """Execution tools declaring themselves are removed without authorization.
+    """Strict mode removes self-declared execution tools without authorization.
 
     The second tool has a name no allowlist ever contained, so this fails again
     if core ever goes back to matching tool names.
@@ -92,8 +95,18 @@ def test_unauthorized_request_drops_declared_execution_tools():
         _tool("custom_plugin_exec", is_execution_tool=True),
         _tool("web_search"),
     )
-    apply_execution_policy(_Event(), {}, request)
+    apply_execution_policy(_Event(), STRICT_CONFIG, request)
     assert _names(request) == ["web_search"]
+
+
+def test_legacy_mode_keeps_execution_tools_without_authorization():
+    """Legacy mode matches upstream: the per-call gate decides, not the filter."""
+    request = _request(
+        _tool("astrbot_execute_python", is_execution_tool=True),
+        _tool("web_search"),
+    )
+    apply_execution_policy(_Event(), {}, request)
+    assert _names(request) == ["astrbot_execute_python", "web_search"]
 
 
 def test_authorized_request_keeps_execution_tools():
@@ -143,9 +156,9 @@ def test_proactive_path_accepts_declared_tools():
 
 def test_proactive_path_accepts_configured_tools():
     """A listed tool joins the proactive path without declaring itself."""
-    assert _apply(_tool("uapi_weather"), misc={"lightweight_proactive_tools": ["uapi_weather"]}) == [
-        "uapi_weather"
-    ]
+    assert _apply(
+        _tool("uapi_weather"), misc={"lightweight_proactive_tools": ["uapi_weather"]}
+    ) == ["uapi_weather"]
 
 
 def test_proactive_path_falls_back_to_the_default_list():
