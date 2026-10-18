@@ -33,7 +33,10 @@ from astrbot.core.code_delivery_policy import (
     code_task_spec,
     has_code_delivery,
 )
-from astrbot.core.config.agent_runner import normalize_hook_timing_mode
+from astrbot.core.config.agent_runner import (
+    normalize_hook_timing_mode,
+    set_hook_timing_mode,
+)
 from astrbot.core.exceptions import EmptyModelOutputError
 from astrbot.core.message.components import Json
 from astrbot.core.message.message_event_result import (
@@ -416,6 +419,9 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         # "enhanced" fires the completion hook before the reply is emitted;
         # "legacy" restores the upstream timing on paths that have a counterpart.
         self.hook_timing_mode = normalize_hook_timing_mode(hook_timing_mode)
+        # Recorded here so every build path (main, background, cron and any
+        # future one) reports the same mode through the plugin-facing helper.
+        set_hook_timing_mode(self.hook_timing_mode)
         self._tool_schema_param_set = None
         self._skill_like_raw_tool_set = None
         if tool_schema_mode == "skills_like":
