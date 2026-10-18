@@ -1,12 +1,11 @@
 """Guard the registry of intentional upstream deviations (P11).
 
 The registry in ``maintained/p11_deviations.py`` is what makes "the suite is
-green" a well-defined statement: 8 upstream tests fail on purpose (the beta
-group) and the root ``conftest.py`` marks them ``xfail(strict=True)``. The
-alpha group holds no entry since its tightening became an opt-in mode on
-2026-10-17 (T8-15). These tests guard the registry itself -- a renamed upstream
-test, a watered-down reason, or a deleted red-line note must turn the suite red
-instead of silently disabling the alarm.
+green" a well-defined statement. Both groups are empty since T8-15 and T8-16
+turned their behaviour into opt-in modes, so the default run matches upstream on
+every test. These tests guard the registry itself -- a renamed upstream test, a
+watered-down reason, or a deleted red-line note must turn the suite red instead
+of silently disabling the alarm.
 """
 
 from __future__ import annotations
@@ -19,10 +18,10 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 #: Number of deviations per group (see ``docs/maintained/inventory.md`` §4 P11).
-#: Alpha is zero since T8-15 turned the tightening into an opt-in mode.
+#: Both groups are zero since T8-15/T8-16 turned them into opt-in modes.
 EXPECTED_COUNTS = {
     p11_deviations.ALPHA: 0,
-    p11_deviations.BETA: 8,
+    p11_deviations.BETA: 0,
 }
 
 ALPHA_ANCHOR_FILE = Path("astrbot/core/astr_main_agent.py")
@@ -47,8 +46,9 @@ def _test_name(node_id: str) -> str:
 def test_registry_matches_the_documented_groups():
     """The registry holds exactly the documented alpha and beta deviations.
 
-    Alpha stays empty: its execution-tool tightening is reachable only through
-    ``execution_gate_mode=strict``, so the default run keeps no deviation.
+    Both groups stay empty: the alpha tightening is reachable through
+    ``execution_gate_mode=strict`` and the beta timing through
+    ``hook_timing_mode=enhanced``, so the default run keeps no deviation.
     """
     groups = [group for group, _ in p11_deviations.DEVIATIONS.values()]
     for group, expected in EXPECTED_COUNTS.items():
