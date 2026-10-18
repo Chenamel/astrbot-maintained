@@ -11,6 +11,9 @@ HOOK_TIMING_MODES = ("enhanced", "legacy")
 #: ``hook_timing_mode`` setting, but is opt-in under the dual-mode rule.
 HOOK_TIMING_MODE_DEFAULT = "legacy"
 
+#: Mode that fires the completion hook before the reply is emitted.
+HOOK_TIMING_MODE_ENHANCED = "enhanced"
+
 #: Mode that restores the upstream timing ("reply first, completion hook after")
 #: on every code path that has an upstream counterpart.
 HOOK_TIMING_MODE_LEGACY = "legacy"

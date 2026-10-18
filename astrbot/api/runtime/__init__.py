@@ -44,7 +44,7 @@ _HOOK_TIMING_MODULE = "astrbot.core.config.agent_runner"
 #: is emitted, so audit and rewrite plugins get control first. This is this
 #: fork's default and the value returned when the core side is unavailable.
 HOOK_TIMING_ENHANCED: str = resolve(
-    _HOOK_TIMING_MODULE, "HOOK_TIMING_MODE_DEFAULT", "enhanced"
+    _HOOK_TIMING_MODULE, "HOOK_TIMING_MODE_ENHANCED", "enhanced"
 )
 
 #: Hook timing mode that restores the upstream timing ("reply first, completion
