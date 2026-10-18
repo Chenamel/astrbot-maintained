@@ -22,17 +22,17 @@ SESSION_STR = "aiocqhttp:GroupMessage:123456"
 
 # (misc section, expected hook_timing_mode, expected tool_schema_mode)
 MODE_CASES = [
-    ({}, "enhanced", "full"),
+    ({}, "legacy", "full"),
     ({"hook_timing_mode": "legacy"}, "legacy", "full"),
-    ({"tool_schema_mode": "skills_like"}, "enhanced", "skills_like"),
+    ({"tool_schema_mode": "skills_like"}, "legacy", "skills_like"),
     (
         {"hook_timing_mode": "legacy", "tool_schema_mode": "skills_like"},
         "legacy",
         "skills_like",
     ),
     # Invalid values keep the defaults instead of switching semantics.
-    ({"hook_timing_mode": "nonsense"}, "enhanced", "full"),
-    ({"tool_schema_mode": "nonsense"}, "enhanced", "full"),
+    ({"hook_timing_mode": "nonsense"}, "legacy", "full"),
+    ({"tool_schema_mode": "nonsense"}, "legacy", "full"),
 ]
 
 
