@@ -111,19 +111,19 @@ def hook_timing_mode() -> str:
     tell the user when the mode is ``"legacy"``.
 
     Returns:
-        ``"enhanced"`` or ``"legacy"``. Falls back to :data:`HOOK_TIMING_ENHANCED`
+        ``"enhanced"`` or ``"legacy"``. Falls back to :data:`HOOK_TIMING_LEGACY`
         when the core helper is unavailable, raises, or reports an unknown value.
     """
     helper = resolve(_HOOK_TIMING_MODULE, "hook_timing_mode", None)
     if helper is None:
-        return str(HOOK_TIMING_ENHANCED)
+        return str(HOOK_TIMING_LEGACY)
     try:
         mode = helper()
     except Exception:  # noqa: BLE001 - fall through to the fork default
-        return str(HOOK_TIMING_ENHANCED)
+        return str(HOOK_TIMING_LEGACY)
     if mode in (HOOK_TIMING_ENHANCED, HOOK_TIMING_LEGACY):
         return str(mode)
-    return str(HOOK_TIMING_ENHANCED)
+    return str(HOOK_TIMING_LEGACY)
 
 
 async def extract_quoted_message_images(event: Any, component: Any) -> list[Any]:
