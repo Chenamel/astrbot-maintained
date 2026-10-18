@@ -10,8 +10,12 @@
    需观察 1 个（`livingmemory` 入库文本可能早于审计）。
 2. **官方生态抽样**：71 个候选仓库（47 个已上架）中，受益 7 / 有风险 3（+2 待复核）/ 无影响 4。
    推测 2443 个插件里真正受损的 **≤20–40 个**，集中在「钩子内二次发信」「读已发 message_id」两类。
-3. **结论**：`enhanced`（钩子早于回复）**保持为默认**——受益侧是硬证据（上游时序下有些插件
+3. **原结论**：`enhanced`（钩子早于回复）**保持为默认**——受益侧是硬证据（上游时序下有些插件
    **根本无法正确工作**）；`legacy` 只作逃生舱。
+   > **2026-10-18（T8-16）按双模式定调更新**：默认改为 **`legacy`**，`enhanced` 转为**可选**。
+   > 改的是默认值、**不是删代码**：enhanced 的代码路径完整保留，面板切到 `enhanced` 即恢复旧行为；
+   > β 红线（代码不得被上游合并删除）依旧有效。上面第 1–2 点的论证仍然成立，只是从"默认"
+   > 变成"推荐给需要它的用户"。
 4. **对外暴露只读查询**（铁律 1），插件可自检当前模式并自行降级或提示用户，避免静默故障。
 5. **legacy 范围已定稿（方案乙）**：只延后 **1130 一处**（现 `1142` 提前 / `1166` 延后，同一处的两个分支）；
    **1093（现 1100）与 1325（现 1340）保持不动** —— 1093 与基线 913 逐字相同，动它只会偏离上游；
@@ -103,7 +107,7 @@
 
 `astrbot/core/config/agent_runner.py:9` 的 `AGENT_RUNNER_CONFIG_DEFAULTS["local"]["misc"]`
 （现为 `max_steps` / `tool_schema_mode` / `tool_call_timeout` / `sanitize_context_by_modalities`）
-新增 **`hook_timing_mode`**，默认 **`enhanced`**，可选 **`legacy`**；
+新增 **`hook_timing_mode`**，默认 **`legacy`**（2026-10-18 起；初版为 `enhanced`），可选 **`enhanced`**；
 同步 `astrbot/core/config/default.py` 的 misc schema。
 
 ### 4.2 传参链（照 `tool_schema_mode` 的既有先例）
@@ -132,7 +136,7 @@
 `_finalize_aborted_step`(1309) 独立调用 `on_agent_done`，本轮不处理。
 
 **开关本身**（T8-07 落地）：配置项 `agent_runner.config.misc.hook_timing_mode`
-（默认 `enhanced`，可选 `legacy`），沿 `tool_schema_mode` 的既有链路传到 runner；
+（默认 `legacy`，可选 `enhanced`），沿 `tool_schema_mode` 的既有链路传到 runner；
 对外经 `astrbot.api.runtime.hook_timing_mode()` 只读暴露。
 
 ### 4.4 api 暴露（铁律 1：新能力只落 `astrbot/api/**`）
@@ -141,7 +145,7 @@
 
 - 必须有：模块 docstring、显式 `__all__`、逐符号 docstring、常量 `#:` 注释（§9 文档门槛）
 - 同步 `docs/maintained/api-contract.md`
-- **降级语义**：core 缺席时返回 `enhanced`（与 fork 默认一致），不得抛异常
+- **降级语义**：core 缺席时返回 `legacy`（与 fork 默认一致），不得抛异常
 - 测试：`tests/maintained/test_api_doc_gate.py`、`test_api_surface.py`（含 `EXPECTED_ALL`）必须全绿
 - 插件用法：自检当前模式，遇 `legacy` 时自行降级或提示用户，避免静默故障
 
@@ -170,7 +174,7 @@
 | 字段 | 变更前 | 变更后 | 默认配置下的行为变化 |
 |---|---|---|---|
 | `tool_schema_mode` | 恒为数据类默认 `"full"` | 读 `misc.tool_schema_mode` | **无**（配置默认即 `"full"`） |
-| `hook_timing_mode` | 恒为数据类默认 `"enhanced"` | 读 `misc.hook_timing_mode` | **无**（配置默认即 `"enhanced"`） |
+| `hook_timing_mode` | 恒为数据类默认 `"legacy"` | 读 `misc.hook_timing_mode` | **无**（配置默认即 `"legacy"`） |
 
 ⇒ 两者都是「配置驱动、默认值不变」，符合兼容边界的**加法规则**：
 只有显式改配置的用户才会看到差异，而那正是他想要的语义。
