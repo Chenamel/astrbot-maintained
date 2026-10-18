@@ -157,8 +157,8 @@
 
 **结论与处置**：
 
-1. 这是**补丁自身的既存回归**，与阶段 7 的 P4/P5/P7/P8 打磨无关（打磨前后均为 17 项失败）。
-2. 因此阶段 7 的 core 打磨验收标准为「**不新增失败**（17 → 17）」，而非"上游测试全绿"。
+1. 这是**补丁自身的既存回归**，与阶段 7 的 P4/P5/P7/P8 打磨无关（打磨前后均为 17 项失败；**2026-10-18 起已归零**）。
+2. 因此阶段 7 的 core 打磨验收标准为「**不新增失败**（17 → 17）」（**现已达成 17 → 0**），而非"上游测试全绿"。
 3. 与 `inventory.md` 对 `tool_loop_agent_runner.py` 的判定一致（该文件被列为需**拆分重写**的 🟡 项）；
    真正的修复应在"插件/补丁重写"批次统一做，避免在零测试保护下动交付时序。
 4. **副作用提示**：`tests/test_process_stage_images.py` 全绿，说明图片降级链路的上游预期未被破坏。
@@ -169,7 +169,7 @@
 
 | 组 | 数量 | 断言在测什么 | 维护版做了什么 | 影响 |
 |---|---|---|---|---|
-| **α 执行工具授权收紧** | 9（`test_proactive_agent_respects_runtime_and_safety_settings` ×8 + `test_persona_empty_tools_keeps_local_runtime_builtin_tools` ×1） | `runtime == "local"` 时工具集应含 `astrbot_execute_python` / `astrbot_execute_shell` | `apply_execution_policy`（`astr_main_agent.py:1857`，**无任何条件、每次请求都调用**）在 `execution_denial` 非空时过滤掉 `EXECUTION_TOOL_NAMES`（python/ipython/shell/shell_session） | **有真实影响且对全部对话生效**：非管理员**永远**拿不到执行工具；管理员也必须在**当前消息里明确要求运行/执行**（写代码、解释、引言都不算授权）。属**有意的安全加固**（防"引用的代码被当授权执行"），方向是**更严格** |
+| **α 执行工具授权收紧** | 9（`test_proactive_agent_respects_runtime_and_safety_settings` ×8 + `test_persona_empty_tools_keeps_local_runtime_builtin_tools` ×1） | `runtime == "local"` 时工具集应含 `astrbot_execute_python` / `astrbot_execute_shell` | `apply_execution_policy`（`astr_main_agent.py:1680`（2026-10-18 核实行号），**无任何条件、每次请求都调用**）在 `execution_denial` 非空时过滤掉 `EXECUTION_TOOL_NAMES`（python/ipython/shell/shell_session） | **有真实影响且对全部对话生效**：非管理员**永远**拿不到执行工具；管理员也必须在**当前消息里明确要求运行/执行**（写代码、解释、引言都不算授权）。属**有意的安全加固**（防"引用的代码被当授权执行"），方向是**更严格** |
 | **β hook 发射时序** | 8（`test_skills_like_requery_reply_reaches_stream_bridge_once`） | 前两次发射时 hook 标记应为 `False`（"保持既有 `llm_result` 顺序，只有新增的流式增量跟在 hook 之后"） | 维护版里 hook 标记**更早**被置 True（实测四个发射点全为 `True`） | 🟢 **本项目的核心架构优化，属设计预期** —— **保留现状，坚决不改回上游；严禁上游合并时覆盖**（见下方 β 章节与 `project_rules.md` §5） |
 | **γ 对照** | **0**（`test_process_stage_images.py` **125 全绿**） | 图片不可用降级链路的既有预期 | 未改动语义 | 无需处理；此组全绿**正是 P4 零行为变化的证据** |
 
@@ -249,7 +249,8 @@
 
 #### P11 机械定型（2026-10-10，T8-01）
 
-上游测试文件**一字不改**（零冲突原则 §3）。改用**两个新增文件**把 17 项标记为 `xfail(strict=True)`：
+上游测试文件**一字不改**（零冲突原则 §3）。改用**两个新增文件**把 17 项标记为 `xfail(strict=True)`
+（**2026-10-18 起注册表为空**：α 组随 T8-15、β 组随 T8-16 分别回退，默认模式与上游一致）：
 仓库根 `conftest.py`（`pytest_collection_modifyitems` 打标）+ `maintained/p11_deviations.py`（注册表，
 单一真相源）。逐条 nodeid 如下（2026-10-10 实测，pytest 9.1.1）：
 
