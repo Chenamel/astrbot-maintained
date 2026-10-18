@@ -11,11 +11,12 @@ This module is the single source of truth for the upstream tests this fork fails
     The behaviour is still available by opting into ``strict``; see
     ``docs/maintained/inventory.md`` section "α 组回退".
 ``beta``
-    The agent-completion hook now fires **before** the reply is emitted. This is
-    an architectural improvement of this fork -- it lets reply pre-audit and
-    other personified interventions take control before the user sees the reply.
-    It must never be reverted to the upstream timing; see
-    ``docs/maintained/project_rules.md`` section 5 (merge red line).
+    Agent-completion hook timing. **Reverted on purpose on 2026-10-18 (T8-16)**:
+    the mode now defaults to ``legacy``, so the default run matches upstream and
+    this group holds **no entry**. The improved timing stays available through
+    ``agent_runner.config.misc.hook_timing_mode = enhanced`` and the code path
+    must never be deleted by an upstream merge; see
+    ``docs/maintained/inventory.md`` section "β 组回退 / α 组回退".
 
 The root ``conftest.py`` turns each registered node id into an
 ``xfail(strict=True)`` marker: the test still runs, an expected failure is
@@ -53,39 +54,8 @@ _BETA_REASON = (
 )
 
 DEVIATIONS: dict[str, tuple[str, str]] = {
-    # beta -- agent-completion hook timing (8 entries).
-    "tests/test_tool_loop_agent_runner.py::test_skills_like_requery_reply_reaches_stream_bridge_once[False-True-False-False]": (
-        BETA,
-        _BETA_REASON,
-    ),
-    "tests/test_tool_loop_agent_runner.py::test_skills_like_requery_reply_reaches_stream_bridge_once[False-True-False-True]": (
-        BETA,
-        _BETA_REASON,
-    ),
-    "tests/test_tool_loop_agent_runner.py::test_skills_like_requery_reply_reaches_stream_bridge_once[False-True-True-True]": (
-        BETA,
-        _BETA_REASON,
-    ),
-    "tests/test_tool_loop_agent_runner.py::test_skills_like_requery_reply_reaches_stream_bridge_once[False-False-False-True]": (
-        BETA,
-        _BETA_REASON,
-    ),
-    "tests/test_tool_loop_agent_runner.py::test_skills_like_requery_reply_reaches_stream_bridge_once[True-True-False-False]": (
-        BETA,
-        _BETA_REASON,
-    ),
-    "tests/test_tool_loop_agent_runner.py::test_skills_like_requery_reply_reaches_stream_bridge_once[True-True-False-True]": (
-        BETA,
-        _BETA_REASON,
-    ),
-    "tests/test_tool_loop_agent_runner.py::test_skills_like_requery_reply_reaches_stream_bridge_once[True-True-True-True]": (
-        BETA,
-        _BETA_REASON,
-    ),
-    "tests/test_tool_loop_agent_runner.py::test_skills_like_requery_reply_reaches_stream_bridge_once[True-False-False-True]": (
-        BETA,
-        _BETA_REASON,
-    ),
+    # Both groups are empty: the alpha tightening and the beta hook timing are
+    # opt-in modes now, so the default run matches upstream on every test.
 }
 
 #: Node ids marked with ``xfail`` during the current pytest session.
