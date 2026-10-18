@@ -45,9 +45,13 @@
 
 1. 🔴 **三套记忆同时注入**（`enhance_mode` RAG + `livingmemory` + `self_learning`）
    ⇒ 上下文重复、口径可能互相矛盾，且**吃 token**
-2. 🔴 **`on_decorating_result` 四个插件改同一条消息链**
-   （AtTool 转 At、splitter 分段、enhance_mode 改文本、meme_manager 替换）
-   ⇒ **顺序敏感**：谁先谁后决定结果；某一方把另一方的标记切开就会失效
+2. 🟢→🟡 **`on_decorating_result` 四个插件改同一条消息链**（2026-10-18 实测修订）
+   - **已排除一个疑似冲突**：AtTool（转 `[mention:ID]` → 真 At，`main.py:296`）与
+     enhance_mode（只解析**进来的** At，无输出构造）**方向相反，不冲突**
+   - 实测：模型自主输出 mention 标签 → 蓝色真 At 组件 ✅（23:05:49，消息链
+     `[引用消息][At:2494306515]`，对比历史回复无 At ⇒ 是模型动态加的，非自带）
+   - 引用（`[引用消息]`）为**每条回复自带**
+   - 剩余顺序敏感点：splitter 分段是否会把其他插件注入的组件切开（待群内长回复实测）
 3. 🟡 **两个插件可拦截**（`content_safety_guard`、`debounce`）⇒ 拦截优先级不确定
 4. 🟡 **`on_llm_request` 九个插件叠加注入** ⇒ 系统提示膨胀，可能挤掉人设/工具描述
 
