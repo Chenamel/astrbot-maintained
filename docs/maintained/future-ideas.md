@@ -49,13 +49,37 @@
 已做过一批（T8-12 等），收益递减；改 core 越多、合上游越痛。
 **状态：按需**，遇到具体瓶颈再做，不主动开。
 
-## 与已装插件的分工（避免打架）
+## 本机插件完整扫描（2026-10-18，17 个）
 
-| 插件 | 职责 |
-|---|---|
-| `astrbot_plugin_astrbot_enhance_mode` | 群聊上下文 / Memory RAG / 主动回复 / 封禁 / WebUI |
-| `astrbot_plugin_livingmemory` | 长期记忆 |
-| `astrbot_plugin_splitter` | 分段发送 |
-| `astrbot_plugin_wake_enhance` | 唤醒判定（正则、持续对话、白名单） |
+用户提醒"是不是已有 @ 工具" ⇒ 全量扫描，结论：**①②③ 的想法本机插件几乎都覆盖了**。
 
-fork 的新能力若与以上重叠，优先让插件做；fork 只补**底层缺口**。
+| 插件 | 职责 | 覆盖哪个想法 |
+|---|---|---|
+| `astrbot_plugin_AtTool` | 给模型 `get_group_members` 工具 + 把模型输出的 `[mention:ID]` 标签转成真实 At 组件 | ⭐ **覆盖①的「@ 谁」** |
+| `astrbot_plugin_astrbot_enhance_mode` | React 群聊上下文、`enhance_memory_rag_read/write`、封禁、主动回复、WebUI | ⭐ **覆盖①的「看上下文 / 搜历史（爬楼）」** |
+| `astrbot_plugin_self_learning` v4.3.0 | 采集并注入上下文，表达风格 / 群组黑话 / 社交关系 / 长期记忆 / **人格演化** | ⭐ **覆盖①的「拟人」** |
+| `astrbot_plugin_livingmemory` | 长期记忆（偏好/人物/计划） | 覆盖①的记忆部分 |
+| `astrbot_plugin_splitter` | 分段发送 | ⭐ **覆盖②断句** |
+| `astrbot_plugin_wake_enhance` | 唤醒判定（正则、持续对话、白名单） | 覆盖①的"何时回复" |
+| `astrbot_plugin_proactive_chat` | 主动聊天 | 与官方主动回复重叠 |
+| `astrbot_plugin_qq_group_daily_analysis` | 群日报分析（读群消息） | 与历史检索重叠 |
+| 其余（content_safety_guard / debounce / help_typst / image_studio / music / parser 链接解析 / random_likes / uapipro_toolbox / meme_manager） | 各自领域 | 无关 |
+
+### 修正后的判断
+
+- **①c（回复形式决策）** 里：
+  - **「@ 谁」已被 AtTool 覆盖**（查成员 + `[mention:ID]` 标签 → 真实 At 组件）
+  - 「搜历史」已被 `enhance_memory_rag_read` 覆盖
+  - 「拟人」已被 `self_learning` 覆盖
+  - **唯一未覆盖的只剩「让模型主动引用（Reply）某条消息」** —— 单点，价值存疑
+  ⇒ **①c 优先级下调**，暂不动工
+- ⚠️ **更值得警惕的是重叠**：17 个插件里至少 6 个在同时做上下文 / 记忆 / 拟人
+  （enhance_mode、livingmemory、self_learning、proactive_chat、qq_group_daily_analysis、
+  content_safety_guard）⇒ **可能互相打架**，这比"缺功能"更可能是表现不稳的原因
+- **fork 的定位回到**：只补**插件确实做不到**的底层能力，且要有证据
+
+### 下一步建议（待用户定）
+
+1. 做一次**只读链路盘点**：这些插件分别在什么时候注入上下文、谁改消息链、谁在做分段/主动
+   ⇒ 先搞清楚实际链路，再决定要不要动 fork
+2. 若盘点后确认"引用"是唯一缺口 ⇒ 再评估值不值得为它单独建通道
