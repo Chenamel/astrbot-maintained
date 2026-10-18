@@ -6,9 +6,10 @@ from typing import Any
 #: Accepted values for ``agent_runner.config.misc.hook_timing_mode``.
 HOOK_TIMING_MODES = ("enhanced", "legacy")
 
-#: Default mode: the agent-completion hook fires **before** the reply is emitted,
-#: so audit and rewrite plugins get control first. This is a fork optimisation.
-HOOK_TIMING_MODE_DEFAULT = "enhanced"
+#: Default mode: match upstream ("reply first, completion hook after"). The
+#: fork optimisation (hook before the reply) stays available through the
+#: ``hook_timing_mode`` setting, but is opt-in under the dual-mode rule.
+HOOK_TIMING_MODE_DEFAULT = "legacy"
 
 #: Mode that restores the upstream timing ("reply first, completion hook after")
 #: on every code path that has an upstream counterpart.
