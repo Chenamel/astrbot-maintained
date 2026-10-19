@@ -74,3 +74,26 @@
 
 > 影响：每条消息多一次 Embedding 调用（siliconflow）+ 上下文注入约 2 条记忆。
 > 备份：`.workbuddy/livingmemory_config.backup-*.json`
+
+
+## 六、主动回复触发源调查（2026-10-19，为重写做准备）
+
+用户反馈"群友觉得不聪明"的**真因是主动回复**：莫名其妙冒出来说话、不带上下文、
+开口没信息量、图片被忽略。查配置得到的触发源清单：
+
+| 候选 | 配置 | 状态 | 判断 |
+|---|---|---|---|
+| `enhance_mode.active_reply` | `enable: false` | **关** | 不是它 |
+| `enhance_mode.followup` | `{enable: true, window_sec: 300}` | **开** | ⚠️ 5 分钟窗口内会追加回复 |
+| `wake_enhance.continuous_awakening` | `{enable: true, waking_interval: 20}` | **开** | ⚠️ 唤醒后 20 分钟内免 @ 持续响应 |
+| `proactive_chat` | `auto_trigger: false` | 半关 | 不自动触发 |
+
+⇒ "莫名其妙冒出来"多半来自 **followup + 持续唤醒**，而不是专门的主动回复功能。
+重写前必须先把这两条的实际行为审计清楚（谁在发、上下文里有什么、图有没有带上）。
+
+### 待办（新对话开工前先做）
+1. 关掉 followup / 持续唤醒各试一天，确认哪个是主因
+2. 抓一次真实"主动回复"的完整日志，看上下文里**有没有图片**
+   （群历史转述配置 `group_history_enhancement.image_caption=true`，但主动链路是否带图未验证）
+3. 确认现有魔改插件的许可证状况（决定能否参考/重写）
+
