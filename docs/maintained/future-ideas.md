@@ -125,3 +125,40 @@
 
 ## 开工条件
 用户安排在完成其他事项后、开新对话进行。本文档为交接依据。
+
+
+---
+
+# core 自带的记忆/历史能力盘点（2026-10-19 只读调研）
+
+> 回答"我提到的记忆库是插件的还是 core 的"，以及"要不要自己造"。
+
+## 归属澄清
+| 之前提到的 | 真实归属 |
+|---|---|
+| `livingmemory` 727 条 memory_atoms | **外部插件**（astrbot_plugin_livingmemory） |
+| `platform_message_history` 2279 条 | **core 自带**（`core/db/po.py:246`，内置星写入）✅ |
+
+## core 能力清单
+| 能力 | 持久化 | 保留策略 | 插件可调用 | 当前启用 |
+|---|---|---|---|---|
+| `platform_message_history` | ✅ SQLite | 每会话 **700 条滚动裁剪** | ✅ `context.message_history_manager` | ✅ |
+| `conversations`（会话+checkpoint） | ✅ SQLite | **40 轮 + LLM 压缩**（老轮次原文丢失） | ✅ `context.conversation_manager` | ✅ |
+| 知识库 RAG（FAISS） | ✅ | 手动管理 | ✅ `context.kb_manager.retrieve` | ❌ 全局 `kb_names=[]` |
+| `provider_ltm_settings` | ❌ **内存 deque** | 1000 条，**重启即失** | ❌ 无接口 | group_icl=false |
+| sp 会话 KV | ✅ | 手动 | ✅ `sp.session_put/get` | ✅ |
+| `cron_manager` / `context.send_message` | ✅ | — | ✅ | 0 条任务 / 可用 |
+
+⚠️ **`provider_ltm_settings` 名字像长期记忆，其实不是**：它只是群聊上下文注入（内存）+ 写历史表 + 概率主动回复，没有"总结成记忆"。
+
+## 结论（用于主动回复插件）
+- **可直接复用 core 的**：`send_message`(主动发且自动落历史)、`cron_manager`(定时触发)、
+  `message_history_manager`(群流水 700 条)、`kb_manager`(语义检索)、sp KV(存自有状态)
+- **core 没有、必须自建的**：**跨会话长程记忆**（总结 + 持久 + 重要度/衰减）。
+  core 无任何"把对话总结成记忆并持久"的实现。
+- `conversations` 会因 40 轮压缩丢失原文，**不能当长程记忆源**。
+
+## 待验证（未测，不要当成结论）
+1. livingmemory 的召回在"主动回复"这种非用户触发场景是否生效（它的 recall 挂在 `on_llm_request`）
+2. enhance_mode 主动回复生成时会不会带上 livingmemory 的召回结果
+⇒ 这两点决定"新插件复用 livingmemory 还是自建记忆层"，**必须实测**
