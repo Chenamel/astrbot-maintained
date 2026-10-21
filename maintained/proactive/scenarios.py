@@ -323,6 +323,37 @@ SCENARIOS: list[Scenario] = [
             M("小助手", OTHER_BOT, "默认是 8080 端口", is_bot=True),
         ],
     ),
+    Scenario(
+        key="human_rapid_qa",
+        family="two_bots",
+        name="真人跟我快速一问一答（反向验证：不该被误伤）",
+        expect="REPLY",
+        note="对方是真人名、连续快速来回 —— 循环打断不能误伤，否则机器人会突然不理人",
+        messages=[
+            M("阿星", U1, "这个配置文件在哪"),
+            M("hesder", ME, "看 config 目录", is_bot=True),
+            M("阿星", U1, "没找到"),
+            M("hesder", ME, "那可能在 data 下", is_bot=True),
+            M("阿星", U1, "还是没有，能给个具体路径吗"),
+        ],
+    ),
+    Scenario(
+        key="bot_loop_anon",
+        family="two_bots",
+        name="昵称不像机器人，但已来回 6 条",
+        expect="SKIP",
+        note="无昵称线索时窗口是 6 条，跑够 6 条照样拦住",
+        messages=[
+            M("林三", U2, "今天天气怎么样"),
+            M("周七", U3, "今天不错"),
+            M("hesder", ME, "是的", is_bot=True),
+            M("周七", U3, "适合出门"),
+            M("hesder", ME, "对", is_bot=True),
+            M("周七", U3, "那就好"),
+            M("hesder", ME, "嗯", is_bot=True),
+            M("周七", U3, "是的呢"),
+        ],
+    ),
     # ---------------------------------------------------------------- recall
     Scenario(
         key="recall_then_silence",
