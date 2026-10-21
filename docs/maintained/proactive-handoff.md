@@ -217,3 +217,26 @@ python .workbuddy/shadow_report.py --scenarios
 | `human_rapid_qa`（**真人**跟我快问快答 5 条） | **未误伤** | 走了正常模型判定，防护没介入 ✅ |
 
 最后一条是这次验证最有价值的：防护拦得住互刷，又不会让机器人突然不理真人。
+
+### T2 实时转发展开 ✅
+
+在 `on_group_message` **最前面**（"文本为空就 return"之前）检测 `Forward` 组件，
+当场调 `get_forward_msg` 展开，展开文本直接当判定对象。
+
+- 拿 client 的方式：`getattr(event, "bot", None).api.call_action`（getattr 一路兜底，
+  非 aiocqhttp 平台自动跳过）。core 的 `OneBotClient` 没从 `astrbot.api` 导出，插件侧只能这样
+- 容错：未知 payload 形状（`data` 包裹 / 裸 `messages`）、嵌套转发、非文本段
+  （图/文件转 `[image]` 这类占位）都能处理；最多 30 个节点 / 1500 字；全程 try/except
+- 落日志：`forward_chars` 字段，能直接看出这次到底展开了多少内容
+
+**回放验证**（给回放事件挂了个假 OneBot client，不用等群里真有人发转发）：
+
+| 场景 | 改前 | 改后 | forward_chars |
+|---|---|---|---|
+| `fwd_bare`（裸转发） | NO_JUDGE（盲区） | **进判定** | 35 |
+| `fwd_nested`（嵌套） | NO_JUDGE（盲区） | **进判定** | 35 |
+| `fwd_bare_with_words` | 进判定（但看不到内容） | 进判定（内容可见） | 35 |
+| `fwd_quoted_question` | SKIP | SKIP | 0（当前消息本身没转发组件，符合预期） |
+
+判定器现在能看到转发里的原文，例如给出的理由是
+"小林已在回答（版本问题），且图片占位无上下文，符合 N1/N2" —— 说明它真的读到了转发内容。

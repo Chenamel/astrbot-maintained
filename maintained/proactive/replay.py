@@ -181,6 +181,40 @@ def load_plugin(context: Context):
     return module, module.ProactiveShadow(context)
 
 
+SAMPLE_FORWARD = {
+    "messages": [
+        {
+            "sender": {"nickname": "阿星", "user_id": "10001"},
+            "content": [{"type": "text", "data": {"text": "这个报错你们见过吗"}}],
+        },
+        {
+            "sender": {"nickname": "小林", "user_id": "10002"},
+            "content": [{"type": "text", "data": {"text": "见过，是版本问题"}}],
+        },
+        {
+            "sender": {"nickname": "阿星", "user_id": "10001"},
+            "content": [{"type": "image", "data": {"file": "x.jpg"}}],
+        },
+    ]
+}
+"""Roughly what a real OneBot ``get_forward_msg`` returns."""
+
+
+class FakeBot:
+    """Stands in for the OneBot client so expansion can be tested offline."""
+
+    def __init__(self, payload: dict | None = None) -> None:
+        self.api = self
+        self.payload = payload if payload is not None else SAMPLE_FORWARD
+        self.calls: list[tuple] = []
+
+    async def call_action(self, action: str, **params):
+        self.calls.append((action, params))
+        if action == "get_forward_msg":
+            return self.payload
+        return {}
+
+
 class ReplayEvent(AstrMessageEvent):
     """A group message event built from an archived or synthetic row."""
 
@@ -192,7 +226,9 @@ class ReplayEvent(AstrMessageEvent):
         components: list,
         message_str: str,
         timestamp: int,
+        bot=None,
     ) -> None:
+        self.bot = bot
         obj = AstrBotMessage()
         obj.type = MessageType.GROUP_MESSAGE
         obj.self_id = "3944860270"
@@ -382,6 +418,7 @@ class Runner:
                 "family": record.get("family"),
                 "expect": record.get("expect"),
                 "msg_id": record.get("msg_id"),
+                "forward_chars": record.get("forward_chars", 0),
                 "current": record.get("current", "")[:80],
             }
         )
@@ -408,6 +445,7 @@ class Runner:
                 "current": (event.message_str or "")[:80],
                 "context": [],
                 "images": 0,
+                "forward_chars": 0,
                 "elapsed_ms": 0,
                 "raw": "",
                 "decision": "NO_JUDGE",
@@ -427,6 +465,7 @@ class Runner:
                         "family",
                         "expect",
                         "msg_id",
+                        "forward_chars",
                         "current",
                     )
                 }
@@ -537,13 +576,18 @@ async def replay_scenarios(
             )
         insert_rows(scratch, db_rows)
         target = sc.messages[sc.target]
+        comps = components_for(target)
+        # Only forward scenarios get a OneBot client, so the other cases keep
+        # exercising the "no adapter support" path.
+        bot = FakeBot() if any(isinstance(c, Forward) for c in comps) else None
         event = ReplayEvent(
             group_id=gid,
             sender_id=target.uid,
             sender_name=target.name,
-            components=components_for(target),
+            components=comps,
             message_str=target.plain_text(),
             timestamp=base_ts + len(sc.messages) * 20,
+            bot=bot,
         )
         async with semaphore:
             await runner.fire(

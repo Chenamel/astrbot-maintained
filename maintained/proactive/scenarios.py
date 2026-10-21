@@ -105,9 +105,9 @@ SCENARIOS: list[Scenario] = [
         key="fwd_bare",
         family="forward",
         name="裸发合并转发，无人引用",
-        expect="NO_JUDGE",
-        note="转发里没有纯文本，适配器给的 message_str 为空，当前实现直接返回；"
-        "历史库只留 [Forward] 占位，事后无法补拉 —— 这是 P0 实时转发展开要解决的头号盲区",
+        expect="SKIP",
+        note="T2 之前这里是 NO_JUDGE（转发无纯文本，直接返回）；"
+        "现在会当场展开，判定对象变成转发内容 —— 回放里用假 client 验证，forward_chars>0",
         messages=[
             M("阿星", U1, "昨天那段聊天我整理了一下"),
             M("阿星", U1, kind="forward"),
@@ -139,8 +139,8 @@ SCENARIOS: list[Scenario] = [
         key="fwd_nested",
         family="forward",
         name="转发套转发",
-        expect="NO_JUDGE",
-        note="嵌套转发同样没有纯文本",
+        expect="SKIP",
+        note="嵌套转发同样没有纯文本，靠 T2 当场展开才能进判定",
         messages=[
             M("阿星", U1, kind="forward"),
             M("小林", U2, kind="forward"),
