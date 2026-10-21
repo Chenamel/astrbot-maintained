@@ -117,3 +117,71 @@
 - 每个改动单独提交，推送到 maintained/v4.28.2
 - 汇报时给出具体数字/日志证据，不要只说"已完成"
 ```
+
+## 6. 自动化回放测试结果（2026-10-21 实跑，532 条判定）
+
+### 怎么跑的
+
+- 工具：`maintained/proactive/replay.py --sample 500`（用法与真假边界见 `maintained/proactive/README.md`）
+- 链路：插件自己的 `on_group_message`，配真 `Context` + 真 provider（`ProviderOpenAIResponses`，
+  由 core 的工厂逻辑按实例配置造）+ 真 `PlatformMessageHistoryManager`（SQLite）
+- 语料：真实群消息 **499 条**（7 个群按大小比例分配）+ 手工极端场景 **33 条**
+- 判定模型 `deepseek-v4.1-flash`，用时 644 秒，结果明细 `.workbuddy/proactive_replay_20261021-234608.json`
+
+### 真实语料
+
+| 决策 | 条数 | 占比 |
+|---|---|---|
+| SKIP | 438 | 88% |
+| REPLY | 29 | **5.8%** |
+| ERROR | 32 | 6% |
+
+- REPLY 率 5.8%，与线上影子跑出来的 7% 基本吻合 ⇒ **回放可信，可以替代等真实流量**
+- 29 条 REPLY 全是实质增量（给排查路径、给具体字段/文件名、给操作步骤），无一条纯情绪
+- 32 条 ERROR **全是 25s 超时**；并发降到 2 后重跑 30 条 → 0 超时、41 秒
+  ⇒ 是并发打满 provider 限流，不是链路问题；后续固定用 `--concurrency 2`
+
+### 极端场景（33 条，与预期一致 26/33）
+
+| 族 | 条数 | 一致 | 说明 |
+|---|---|---|---|
+| 合并转发 | 5 | 4/5 | 裸转发/嵌套转发 **根本不进判定**（无纯文本） |
+| 语音 | 3 | 2/3 | 语音转文字前判定偏保守 |
+| 双机器人 | 5 | 4/5 | 见下，属"碰巧没踩雷" |
+| 刷屏拆句 | 3 | 3/3 | 拆句末尾/中间的提问都能接住 |
+| 提示注入 | 3 | 3/3 | 三条全 SKIP，理由正确（识别为越狱/劫持） |
+| 长代码贴 | 3 | 2/3 | 一条 PARSE_FAIL，**真 bug**，见下 |
+| 撤回 / 闭嘴 / 吐槽 / 话题并行 / 基线 | 8 | 8/8 | 全对 |
+
+### 四个偏差的结论
+
+1. **`fwd_quoted_question` 期望 REPLY 实得 SKIP** —— 判定器说"报错指向转发的那段内容，
+   图已无法回溯、缺少关键上下文"。**转发内容在主动路径里完全不可见，即便被人引用也不行**
+   （历史库只有 `[Forward]` 占位）⇒ 直接坐实 P0「实时转发展开」的必要性。
+2. **`voice_with_question` 期望 REPLY 实得 SKIP** —— 语音没转文字时判定器偏保守。
+   属内容提取层（P1）前置依赖，不是判定标准的问题。
+3. **`bot_helpful_but_wrong` 期望 REPLY 实得 SKIP** —— 模型无从得知"默认 8080"是错的，
+   **预期本身不可判定**，非缺陷。
+4. **`code_paste_question` 得到 PARSE_FAIL** —— **真 bug**：模型 `draft` 里带真实换行时
+   `json.loads` 抛 `Invalid control character`，判定被静默丢弃（表现为"该说的时候没说"）。
+   已复现：`json.loads(blob, strict=False)` 可解。长回复场景必踩。
+
+### 双机器人：判定器"碰巧"没踩雷，护不住
+
+5 条里 4 条 SKIP，但理由清一色是"没增量 / 没人提问 / 属可回可不回"，
+**没有一条是因为"对方是机器人"**。换个措辞（比如对方接了一句有信息量的话）就会 REPLY，
+两个机器人就能互相触发。 ⇒ P0 防护必须做，且不能只靠模型判断。
+
+### 新增可用命令
+
+```bash
+# 只看回放记录
+python .workbuddy/shadow_report.py --source replay
+# 只看某次回放
+python .workbuddy/shadow_report.py --run 20261021-234608
+# 只看极端场景
+python .workbuddy/shadow_report.py --scenarios
+```
+
+> 注意：`shadow_log.jsonl` 现在是**线上判定 + 回放判定混在一起**（951 条），
+> 回放记录带 `source=replay` / `run_id` / `scenario` 三个标记，用上面的参数筛。
