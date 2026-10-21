@@ -624,6 +624,41 @@ def summarise(records: list[dict], title: str) -> None:
             print(f"    {key:14} {fam[key]:3}  与预期一致 {agree}/{len(sub)}")
 
 
+def selftest() -> int:
+    """Deterministic checks on the plugin's parser. No model calls.
+
+    A draft with real newlines used to raise ``Invalid control character``
+    inside ``json.loads``, which silently dropped the whole decision. These
+    cases pin that down so it cannot come back unnoticed.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "proactive_shadow_selftest", PLUGIN_DIR / "main.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    # __new__ skips __init__: the parser needs no context.
+    plugin = module.ProactiveShadow.__new__(module.ProactiveShadow)
+
+    cases = [
+        ('{"decision":"REPLY","reason":"a","draft":"line1\nline2"}', "REPLY"),
+        ('```json\n{"decision":"SKIP","reason":"b","draft":""}\n```', "SKIP"),
+        ('{"decision":"REPLY","reason":"第一行\n第二行","draft":"x"}', "REPLY"),
+        ("not json at all", "PARSE_FAIL"),
+    ]
+    failures = 0
+    print("=== 解析器自检（不调模型）===")
+    for raw, want in cases:
+        got = plugin._parse(raw)
+        ok = got["decision"] == want
+        failures += 0 if ok else 1
+        print(
+            f"  {'OK  ' if ok else 'FAIL'} 期望 {want:11} 实际 {got['decision']:11}"
+            f" {raw[:34]!r}"
+        )
+    print(f"  => {len(cases) - failures}/{len(cases)} 通过")
+    return 1 if failures else 0
+
+
 async def main_async(args) -> int:
     cfg = load_cmd_config()
     provider_id = (
@@ -737,7 +772,10 @@ def main() -> int:
         "--log", default="", help="改写影子日志路径（默认仍写插件的 shadow_log.jsonl）"
     )
     ap.add_argument("--out", default="")
+    ap.add_argument("--selftest", action="store_true", help="只跑解析器自检，不调模型")
     args = ap.parse_args()
+    if args.selftest:
+        return selftest()
     return asyncio.run(main_async(args))
 
 

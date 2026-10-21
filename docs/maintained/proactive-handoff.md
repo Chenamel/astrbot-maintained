@@ -240,3 +240,22 @@ python .workbuddy/shadow_report.py --scenarios
 
 判定器现在能看到转发里的原文，例如给出的理由是
 "小林已在回答（版本问题），且图片占位无上下文，符合 N1/N2" —— 说明它真的读到了转发内容。
+
+### T3 修 PARSE_FAIL 解析 bug ✅
+
+`json.loads(blob)` → `json.loads(blob, strict=False)`。一行。
+
+根因：模型 `draft` 里带**真实换行**时 json 报 `Invalid control character`，
+整个判定被静默丢弃 —— 表现就是"该说的时候没说"，而且长回复必踩（越想说清楚越容易触发）。
+
+验证：`python maintained/proactive/replay.py --selftest`（**不调模型**，确定性）：
+
+```
+OK   REPLY       '{"decision":"REPLY","reason":"a","draft":"line1\nline2"}'
+OK   SKIP        '```json\n{"decision":"SKIP",...}\n```'
+OK   REPLY       '{"decision":"REPLY","reason":"第一行\n第二行","draft":"x"}'
+OK   PARSE_FAIL  'not json at all'
+=> 4/4 通过
+```
+
+第 4 条是防止修过头：真不是 JSON 的时候仍然要判失败，不能什么都吞。
