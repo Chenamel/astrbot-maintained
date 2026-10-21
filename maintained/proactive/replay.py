@@ -643,6 +643,11 @@ def selftest() -> int:
         ('{"decision":"REPLY","reason":"a","draft":"line1\nline2"}', "REPLY"),
         ('```json\n{"decision":"SKIP","reason":"b","draft":""}\n```', "SKIP"),
         ('{"decision":"REPLY","reason":"第一行\n第二行","draft":"x"}', "REPLY"),
+        # a stray trailing brace really does happen: it was caught in replay
+        (
+            '{"decision":"REPLY","reason":"a","draft":"x"}}',
+            "REPLY",
+        ),
         ("not json at all", "PARSE_FAIL"),
     ]
     failures = 0
