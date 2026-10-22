@@ -48,7 +48,9 @@ EXPECTED_ALL = {
     },
     "proactive": {
         "available",
+        "generate_with_persona",
         "is_lightweight_proactive",
+        "persona_available",
         "proactive_switch_is_disabled",
     },
     "content": {
@@ -90,6 +92,7 @@ CAPABILITY_KEYS = {
     "delivery.code_policy",
     "permissions.execution_policy",
     "proactive.lightweight",
+    "proactive.persona",
     "media.unavailable_contract",
     "content.parts",
     "runtime.helpers",

@@ -29,6 +29,7 @@ def capabilities() -> dict[str, bool]: ...
 | `delivery.code_policy` | `astrbot.core.code_delivery_policy` | ❌ False | ✅ True |
 | `permissions.execution_policy` | `astrbot.core.code_delivery_policy.execution_denial` | ❌ False | ✅ True |
 | `proactive.lightweight` | `astrbot.core.astr_main_agent._is_lightweight_proactive_request` | ❌ False | ✅ True |
+| `proactive.persona` | `astrbot.core.proactive_persona.generate_with_persona` | ❌ False | ✅ True |
 | `media.unavailable_contract` | `astrbot.core.provider.entities.IMAGE_INPUT_UNAVAILABLE_NOTICE` | ❌ False | ✅ True |
 | `content.parts` | `astrbot.core.agent.message.TextPart` | ❌ False | ✅ True |
 | `runtime.helpers` | `astrbot.core.utils.io.download_image_by_url` | ❌ False | ✅ True |
@@ -194,6 +195,22 @@ def capabilities() -> dict[str, bool]: ...
 | `available() -> bool` | 函数 | 轻量主动判定是否就位 | `False` |
 | `proactive_switch_is_disabled() -> bool` | 函数 | **恒返回 `True`**，声明铁律 6 不变量 | 恒 `True` |
 | `is_lightweight_proactive(event) -> bool` | 函数 | 该请求是否被判定为轻量主动场景 | **`False`**（fail-closed：宁可走完整路径，也不误入轻量路径） |
+| `persona_available() -> bool` | 函数 | 人格感知生成是否就位 | `False` |
+| `generate_with_persona(context, event, prompt, ...) -> LLMResponse \| None` | 协程 | 生成**带人格**的话：先过 `on_llm_request` 钩子，再调 provider | **`None`**（fail-closed：拿不到人格就不生成，由插件自行降级） |
+
+#### 为什么需要 `generate_with_persona`
+
+`Context.llm_generate()` 与 `Context.tool_loop_agent()` 都**直接调 provider**，跳过了
+`on_llm_request` 钩子 —— 而人格（self_learning）、长期记忆（livingmemory）、群上下文
+（enhance_mode）正是挂在这个钩子上注入的。插件因此无法生成"像这个机器人说的话"，
+主动回复读起来像客服工单。
+
+本函数构造 `ProviderRequest` 后先跑
+`call_event_hook(event, EventType.OnLLMRequestEvent, req)`，再拿（可能已被改写的）
+`req` 调 provider，与 pipeline 内 `internal.py` 的做法一致。
+
+**纯加法**：没有插件调用它就不会执行，且不触碰铁律 6 的开关语义
+（它只生成文本，**不发送**，发送与否由插件决定）。
 
 ## 4. 明确不做
 

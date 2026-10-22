@@ -1,13 +1,13 @@
 {
   "proactive_must_remain_disabled": true,
   "files": {
-    "astrbot/api/_bridge.py": "86b7f55ec580e62f3dee448be88cac7169042210f26b8dc045fb111a2a9274c8",
+    "astrbot/api/_bridge.py": "7f0585b9288ae72d2b9dfcc89045fb76f5085371ca3017d55bec9d51a48d14ff",
     "astrbot/api/content/__init__.py": "0278cd6931e16fd3fc456fc0fea305f1950942e92df0807eb1753225778a8ee0",
     "astrbot/api/delivery/__init__.py": "3774f7cb029cff83bc18eda1f581233534c7acf1ad170eab713cc49a3c310db9",
     "astrbot/api/embedding/__init__.py": "c1593a28c6541584b63e2d1ae822f7a83f1c6ed11140203086ab6a612574f889",
     "astrbot/api/media/__init__.py": "18eb28314aefa6b5595d118d42d5081890c90ab4d984aa723405e88b49fb07b9",
     "astrbot/api/permissions/__init__.py": "16f82d72e9c797b528de6f77213786b394e54193421baf5ada9819ed8769c090",
-    "astrbot/api/proactive/__init__.py": "b05da0ffa7147143bc0190fe254e08b1cd11fbc14d473bc10193951c6365ea9f",
+    "astrbot/api/proactive/__init__.py": "b96e87863e2ddf957f3bffaed1e38ae52e2bd30cad870c4d91281363a7245af5",
     "astrbot/api/runtime/__init__.py": "eb6528b4629d2f040b6efc40c514eebd9c8c9c1f403d5a26fbb13709308e3bd6",
     "astrbot/api/turns/__init__.py": "26fe891ef89fe2414ec42350f27fc78ad5829d3195ab54008a5ed77db2aecedd",
     "astrbot/core/agent/runners/tool_loop_agent_runner.py": "18db1f618f25d43bb2b5d1a37e403b50a3e364ee76d907a6f90fb1bea6f3d08a",
@@ -30,6 +30,7 @@
     "astrbot/core/pipeline/respond/stage.py": "40565107607bb6aba6b79bfaf6f0e0ea5e8cc0f59034b0e34b5c4be346b80f66",
     "astrbot/core/pipeline/scheduler.py": "d496ea168517357a41a357e13a08db75eecebbd9bf443f0f2bb4023723bfa304",
     "astrbot/core/platform/sources/aiocqhttp/aiocqhttp_message_event.py": "9d20073743a23390b2becd97ec36a6a563da292c2604a886e695200a503686d0",
+    "astrbot/core/proactive_persona.py": "7d649c42444fe20bee89992d222d12ffe6d60d653b3018fe6c13e795b745b547",
     "astrbot/core/provider/entities.py": "4036a6b08e3869091606ec944ce810b0d050655975d1d61654e98e225484914b",
     "astrbot/core/provider/sources/openai_source.py": "502967d1a4f056c927f94db5e4a99389ce4eb5496b710338d83564793a969205",
     "astrbot/core/star/maintenance.py": "9dfde79480d9eb89959b995216717c76f832b63d2cb993bcf08c70a623ffcbdf",

@@ -49,6 +49,10 @@ CAPABILITIES: dict[str, tuple[str, str]] = {
         "astrbot.core.astr_main_agent",
         "_is_lightweight_proactive_request",
     ),
+    "proactive.persona": (
+        "astrbot.core.proactive_persona",
+        "generate_with_persona",
+    ),
     "media.unavailable_contract": (
         "astrbot.core.provider.entities",
         "IMAGE_INPUT_UNAVAILABLE_NOTICE",
