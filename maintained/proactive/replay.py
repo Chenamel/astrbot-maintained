@@ -739,8 +739,9 @@ async def main_async(args) -> int:
     started = time.time()
     results = await asyncio.gather(
         *(
-            replay_group(g, q, provider, provider_id, tmp, run_id, sem, log,
-                         args.willingness)
+            replay_group(
+                g, q, provider, provider_id, tmp, run_id, sem, log, args.willingness
+            )
             for g, q in zip(groups, quota)
             if q > 0
         )
@@ -806,7 +807,9 @@ def main() -> int:
     )
     ap.add_argument("--out", default="")
     ap.add_argument("--selftest", action="store_true", help="只跑解析器自检，不调模型")
-    ap.add_argument("--willingness", action="store_true", help="开启回复意愿值（默认关闭）")
+    ap.add_argument(
+        "--willingness", action="store_true", help="开启回复意愿值（默认关闭）"
+    )
     args = ap.parse_args()
     if args.selftest:
         return selftest()
