@@ -502,8 +502,11 @@ async def replay_group(
         candidates = candidates[plugin.context_size :]
     step = max(1, len(candidates) // sample)
     picked = candidates[::step][:sample]
+    # The replay drives messages far faster than a real group, so the
+    # rate limits are lifted; the guard logic itself is still exercised.
     plugin.cooldown = 0.0
     plugin.pause_sec = 0.0
+    plugin.max_per_hour = 0
     if log_path:
         plugin.log_path = Path(log_path)
     runner = Runner(plugin, run_id)
@@ -537,8 +540,11 @@ async def replay_scenarios(
     await db.initialize()
     context = build_context(db, provider, provider_id)
     _, plugin = load_plugin(context)
+    # The replay drives messages far faster than a real group, so the
+    # rate limits are lifted; the guard logic itself is still exercised.
     plugin.cooldown = 0.0
     plugin.pause_sec = 0.0
+    plugin.max_per_hour = 0
     if log_path:
         plugin.log_path = Path(log_path)
     runner = Runner(plugin, run_id)
@@ -646,6 +652,17 @@ def selftest() -> int:
         # a stray trailing brace really does happen: it was caught in replay
         (
             '{"decision":"REPLY","reason":"a","draft":"x"}}',
+            "REPLY",
+        ),
+        # Chinese comma between fields (real traffic), plus one inside the
+        # text that must survive untouched
+        (
+            '{"decision":"SKIP","reason":"你好，世界"，"draft":""}',
+            "SKIP",
+        ),
+        # the model sometimes answers with a Python dict instead of JSON
+        (
+            "{'decision':'REPLY','reason':'x','draft':'y'}",
             "REPLY",
         ),
         ("not json at all", "PARSE_FAIL"),
