@@ -485,6 +485,7 @@ async def replay_group(
     run_id: str,
     semaphore: asyncio.Semaphore,
     log_path: str = "",
+    willingness: bool = False,
 ):
     """Replay one archived group through its own context and plugin."""
     rows = load_group_rows(group)
@@ -510,6 +511,8 @@ async def replay_group(
     plugin.cooldown = 0.0
     plugin.pause_sec = 0.0
     plugin.max_per_hour = 0
+    if willingness:
+        plugin.willing_enabled = True
     if log_path:
         plugin.log_path = Path(log_path)
     runner = Runner(plugin, run_id)
@@ -536,6 +539,7 @@ async def replay_scenarios(
     semaphore: asyncio.Semaphore,
     keys: list[str] | None,
     log_path: str = "",
+    willingness: bool = False,
 ):
     """Replay the hand-built edge cases, each in its own fake group."""
     scratch = make_scratch(tmp, "scenarios")
@@ -548,6 +552,8 @@ async def replay_scenarios(
     plugin.cooldown = 0.0
     plugin.pause_sec = 0.0
     plugin.max_per_hour = 0
+    if willingness:
+        plugin.willing_enabled = True
     if log_path:
         plugin.log_path = Path(log_path)
     runner = Runner(plugin, run_id)
@@ -733,7 +739,8 @@ async def main_async(args) -> int:
     started = time.time()
     results = await asyncio.gather(
         *(
-            replay_group(g, q, provider, provider_id, tmp, run_id, sem, log)
+            replay_group(g, q, provider, provider_id, tmp, run_id, sem, log,
+                         args.willingness)
             for g, q in zip(groups, quota)
             if q > 0
         )
@@ -751,6 +758,7 @@ async def main_async(args) -> int:
             sem,
             args.scenario.split(",") if args.scenario else None,
             log,
+            args.willingness,
         )
         summarise(scen, "极端场景")
         all_records.extend(scen)
@@ -798,6 +806,7 @@ def main() -> int:
     )
     ap.add_argument("--out", default="")
     ap.add_argument("--selftest", action="store_true", help="只跑解析器自检，不调模型")
+    ap.add_argument("--willingness", action="store_true", help="开启回复意愿值（默认关闭）")
     args = ap.parse_args()
     if args.selftest:
         return selftest()
