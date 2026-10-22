@@ -78,6 +78,44 @@
 | 3.2 | 生成器接新 API，影子模式下只记录"本来会说的话" | 日志新增 `persona_text` 字段 |
 | 3.3 | 回放对比：旧 draft vs 新生成 | 抽样 20 条，看是否更像人 |
 
+### 阶段二 · 结果（已完成，提交 `0f1c24877`）
+
+新增 `astrbot/core/proactive_persona.py`，公开为
+`astrbot.api.proactive.generate_with_persona` / `persona_available`。
+它构造 `ProviderRequest` → 跑 `call_event_hook(event, EventType.OnLLMRequestEvent, req)`
+→ 再拿（可能已被改写的）`req` 调 provider，与 pipeline 内 `internal.py` 的做法一致。
+
+**纯加法**：没有插件调用就不会执行；只生成文本，**不发送**（发送仍由插件决定）；
+不碰 `proactive_must_remain_disabled` 语义。
+
+契约三处同步（门禁逼出来的，不是可选的）：
+`docs/maintained/api-contract.md` + `tests/maintained/test_api_surface.py` 的
+`EXPECTED_ALL` / `CAPABILITY_KEYS` + `astrbot/api/proactive/__init__.py` 的 `__all__`。
+台账 39 → **40** 条，实例与仓库**双端 NO DRIFT**。
+
+测试 `tests/maintained/test_proactive_persona.py` 7 条，核心一条是
+**证明插件改写 req 后真的传到了 provider**（钩子返回 True 时 provider 一次都不该被调用）。
+
+### 阶段三 · 结果（已完成）
+
+- **T5**：判定器不再写 `draft`，改输出 `target / tone / needs_quote / needs_at / is_long_task`。
+  prompt 里明确写了"你只判断该不该开口，不要写要说的话"。
+- 生成器接 `generate_with_persona`，REPLY 时才调用（约 4% 的消息，成本可控），
+  结果落日志 `persona_text` 字段。
+- 配置项：`persona_enabled`（默认开）、`persona_provider_id`（空=当前 provider）、
+  `persona_timeout_sec`（30）。
+
+**回放抽样的对比**（这是方案 A 的价值所在）：
+
+| | 文本 |
+|---|---|
+| 旧（判定小模型顺手写） | 「PCL 可以用 HMCL 或直接下官方 launcher 做兜底；镜像没了还有 BMCLAPI 的镜像源和 GitHub Release 直连。」 |
+| 新（走人格链生成） | 「阿星你找的是哪个软件/项目的配置文件？文件名或者大概路径知道吗，不然没法判断放哪。」 |
+
+⚠️ **一个诚实的边界**：回放环境里 `on_llm_request` 钩子上**没有插件挂载**，
+所以上面验证的是"链路通 + prompt 让输出更像人"；**self_learning 人格真正注入的效果，
+要等机器人在真实群里跑起来才能看到**。
+
 ### 阶段四 · 多维度复核（约 0.5h，见下）
 
 ---

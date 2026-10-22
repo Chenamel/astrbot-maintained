@@ -145,6 +145,9 @@ class SingleProviderManager:
 
     def __init__(self, provider, provider_id: str) -> None:
         self.inst_map = {provider_id: provider}
+        # Persona generation falls back to the current provider when no id is
+        # given, so the stand-in has to expose one too.
+        self.curr_provider_inst = provider
 
     async def get_provider_by_id(self, provider_id: str):
         return self.inst_map.get(provider_id)
