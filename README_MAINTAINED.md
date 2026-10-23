@@ -30,6 +30,18 @@
 | `tests/maintained/` | 本 fork 的测试 |
 | `CHANGELOG.md` | 相对上游的变更台账（区别于上游 `changelogs/`） |
 
+## 相比上游新增（基线 v4.28.2）
+
+完整版见 [`docs/maintained/fork-advantages.md`](./docs/maintained/fork-advantages.md)
+（含"有代价 / 还不成熟"的部分）。摘要：
+
+| 类 | 内容 |
+|---|---|
+| **台账与漂移检测** | `maintained/installed_manifest.json` 记 40 个受保护文件的 SHA-256；`check_drift.py` 可双端（仓库 + 实例）校验，`apply_patches.py` 一键重打。上游没有这套，而上游周更、补丁被覆盖是静默的 |
+| **底层能力（只做加法）** | 新增 `astrbot/api/{turns,delivery,permissions,media,content,runtime,embedding,proactive}`，core 侧缺失时优雅降级返回安全默认值。其中 `api.proactive.generate_with_persona` 让插件能生成**带人格的话** —— 基线上 `Context.llm_generate` / `tool_loop_agent` 都跳过 `on_llm_request` 钩子，插件做不到这件事 |
+| **安全加固** | `execution_gate_mode` **默认 `legacy`（＝上游 admin-only）**，可选 `strict`；转述不再被误判为授权；真拒答不再触发补生成。默认不比上游严也不比上游松 |
+| **主动回复（影子模式）** | 判定/生成分离 + 回复意愿值 + 按群/时段配额 + 沉默退避。**目前只判定不发送**，一条都没真发过 |
+
 ## 上游同步
 
 ```bash
