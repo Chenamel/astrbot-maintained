@@ -339,7 +339,30 @@ MaiBot_Enhancement: {"enable_maibot_features": True,
 `Context.llm_generate`（绕过钩子）。两份都落日志（`persona_text` /
 `persona_control`），直接对比就能知道钩子到底贡献了多少。
 
-已临时开启，等真实 REPLY 触发后看对比。
+已临时开启。
+
+**实验设计**：两份用**同一个 provider**（`persona_provider_id or provider_id`），
+唯一变量是走不走 `on_llm_request` 钩子。
+（一开始漏了这个 fallback，对照那份直接拿不到 provider 返回空 —— 已修，
+现在两份才真正可比。）
+
+**先做的阴性对照（回放环境，钩子上没有插件挂载）**：
+
+```
+【触发】阿星贴了 ModuleNotFoundError 的 Traceback
+  走钩子: 先 pip show astrbot 看装没装、装哪了，再确认 main.py 跑的是不是同一个解释器（venv 没激活最常见）。
+  不走钩: 先 pip show astrbot 看装没装、装哪了，再确认你运行 main.py 的解释器跟装包的是同一个，虚拟环境没激活的话最容易出这个。
+```
+
+两份**语义几乎相同，只是措辞不同** ⇒ 说明两件事：
+1. 方法学没有假阳性（不是随便就"看出差异"）
+2. 回放环境里钩子确实是空跑 —— 没插件挂上去
+
+于是**真实环境里若出现差异，差异只能来自钩子上的插件（livingmemory 等）**，
+这就是我们要测的东西。样本等真实 REPLY 触发后补上。
+
+顺带：判定超时 `timeout_sec` 25 → **40**（今天 33 条 ERROR 全是 timeout，
+分散在白天各小时，配额不是瓶颈，是 provider 偶发慢）。
 
 ### 8.5 待用户决策
 
