@@ -95,7 +95,12 @@ class Scenario:
 
 
 # ids used across the scenarios
-ME = "3944860270"  # this bot
+ME = "SELF"
+"""Placeholder for *our* bot. The replay replaces it with the real id.
+
+No account number is hardcoded here: this corpus has to work for somebody
+else's instance too.
+"""
 OTHER_BOT = "3614096161"  # another bot in the same group
 U1, U2, U3 = "10001", "10002", "10003"
 

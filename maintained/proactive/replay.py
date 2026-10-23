@@ -56,7 +56,45 @@ INSTANCE = Path(
 PLUGIN_DIR = INSTANCE / "core/data/plugins/astrbot_plugin_proactive_shadow"
 CMD_CONFIG = INSTANCE / "core/data/cmd_config.json"
 DB_PATH = INSTANCE / "core/data/data_v4.db"
-BOT_IDS = {"bot", "3944860270"}
+PLACEHOLDER_SELF = "SELF"
+"""Scenario marker for our own bot; replaced at run time by :func:`infer_self_id`."""
+
+SELF_ID = "bot"
+"""Our own account id. Set from ``--self-id`` or :func:`infer_self_id` in main."""
+
+
+def bot_ids() -> set[str]:
+    """Ids that count as "us" when reading history back."""
+    return {"bot"} | ({SELF_ID} if SELF_ID and SELF_ID != "bot" else set())
+
+
+def infer_self_id() -> str:
+    """Best-effort guess at the account id our bot uses in the archive.
+
+    Rows written by the bot carry ``type: "bot"``; most adapters also store the
+    literal ``"bot"`` as the sender, but some store the real account id. No
+    number is hardcoded, so this resolves correctly for somebody else's
+    instance too. Falls back to ``"bot"``.
+    """
+    counts: dict[str, int] = {}
+    try:
+        with closing(sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)) as con:
+            for sender, content in con.execute(
+                "SELECT sender_id, content FROM platform_message_history"
+            ):
+                try:
+                    parsed = json.loads(content)
+                except json.JSONDecodeError:
+                    continue
+                if parsed.get("type") == "bot" and sender and sender != "bot":
+                    counts[sender] = counts.get(sender, 0) + 1
+    except sqlite3.Error:
+        return "bot"
+    if counts:
+        return max(counts, key=counts.get)
+    return "bot"
+
+
 GROUP_PREFIX = "default:GroupMessage:"
 
 # ``astrbot.api`` must come first: core has a provider <-> context import cycle
@@ -234,7 +272,7 @@ class ReplayEvent(AstrMessageEvent):
         self.bot = bot
         obj = AstrBotMessage()
         obj.type = MessageType.GROUP_MESSAGE
-        obj.self_id = "3944860270"
+        obj.self_id = SELF_ID
         obj.session_id = group_id
         obj.message_id = "0"
         obj.group = Group(group_id=group_id)
@@ -367,12 +405,12 @@ def list_groups(min_rows: int = 30) -> list[tuple[str, int]]:
 
 
 def is_archived_bot(row: Row) -> bool:
-    return row.sender_id in BOT_IDS or row.content.get("type") == "bot"
+    return row.sender_id in bot_ids() or row.content.get("type") == "bot"
 
 
 def at_bot(content: dict) -> bool:
     return any(
-        p.get("type") == "at" and str(p.get("user_id", "")) in BOT_IDS
+        p.get("type") == "at" and str(p.get("user_id", "")) in bot_ids()
         for p in content.get("message") or []
     )
 
@@ -568,7 +606,7 @@ async def replay_scenarios(
                 (
                     "default",
                     user_id,
-                    msg.uid,
+                    SELF_ID if msg.uid == PLACEHOLDER_SELF else msg.uid,
                     msg.name,
                     json.dumps(
                         {
@@ -591,13 +629,14 @@ async def replay_scenarios(
             )
         insert_rows(scratch, db_rows)
         target = sc.messages[sc.target]
+        target_uid = SELF_ID if target.uid == PLACEHOLDER_SELF else target.uid
         comps = components_for(target)
         # Only forward scenarios get a OneBot client, so the other cases keep
         # exercising the "no adapter support" path.
         bot = FakeBot() if any(isinstance(c, Forward) for c in comps) else None
         event = ReplayEvent(
             group_id=gid,
-            sender_id=target.uid,
+            sender_id=target_uid,
             sender_name=target.name,
             components=comps,
             message_str=target.plain_text(),
@@ -806,11 +845,18 @@ def main() -> int:
         "--log", default="", help="改写影子日志路径（默认仍写插件的 shadow_log.jsonl）"
     )
     ap.add_argument("--out", default="")
+    ap.add_argument(
+        "--self-id", default="", help="本机器人的账号 id；留空则自动从历史库推断"
+    )
     ap.add_argument("--selftest", action="store_true", help="只跑解析器自检，不调模型")
     ap.add_argument(
         "--willingness", action="store_true", help="开启回复意愿值（默认关闭）"
     )
     args = ap.parse_args()
+    global SELF_ID
+    SELF_ID = args.self_id.strip() or infer_self_id()
+    if not args.selftest and not args.dry_run:
+        print(f"本机器人 id: {SELF_ID}")
     if args.selftest:
         return selftest()
     return asyncio.run(main_async(args))
