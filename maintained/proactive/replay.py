@@ -268,13 +268,17 @@ class ReplayEvent(AstrMessageEvent):
         message_str: str,
         timestamp: int,
         bot=None,
+        message_id: str = "",
     ) -> None:
         self.bot = bot
         obj = AstrBotMessage()
         obj.type = MessageType.GROUP_MESSAGE
         obj.self_id = SELF_ID
         obj.session_id = group_id
-        obj.message_id = "0"
+        # Distinct ids matter: the plugin remembers them so a reply can
+        # quote an earlier message, and the judge numbers the context by
+        # position rather than by id.
+        obj.message_id = message_id or f"{group_id}-{timestamp}"
         obj.group = Group(group_id=group_id)
         obj.sender = MessageMember(user_id=sender_id, nickname=sender_name)
         obj.message = components
@@ -563,6 +567,7 @@ async def replay_group(
             components=[Plain(text=row.text)],
             message_str=row.text,
             timestamp=int(time.time()),
+            message_id=str(row.id),
         )
         async with semaphore:
             await runner.fire(event, msg_id=str(row.id))
@@ -642,6 +647,7 @@ async def replay_scenarios(
             message_str=target.plain_text(),
             timestamp=base_ts + len(sc.messages) * 20,
             bot=bot,
+            message_id=f"{gid}-{len(sc.messages)}",
         )
         async with semaphore:
             await runner.fire(

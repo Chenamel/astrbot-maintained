@@ -466,3 +466,39 @@ MaiBot_Enhancement: {"enable_maibot_features": True,
 | `is_long_task` | 80 条里 **0 条**为 True | 要么 prompt 定义不清、要么确实没场景，需观察或澄清 |
 | 时段/群配额 | 白天每小时打满 60 | 功能已在，只差配置 |
 | 形态层（碎片/错字） | 未开始 | 必须先确认 splitter 会不会重复分段 |
+
+## 10. S9-6 第 1 项：引用（Reply）已就绪
+
+数据依据：80 条真实 REPLY 里 **37.5% 判定需要引用**，但发送端此前完全没实现。
+
+### 10.1 一个绕不开的前置问题：历史库没有 message_id
+
+```
+platform_message_history 字段: id, platform_id, user_id, sender_id,
+                              sender_name, content, llm_checkpoint_id
+```
+
+**没有任何平台消息 id** ⇒ 想引用"上一条"，光查库是做不到的。
+所以插件必须**自己记 id**：`_recent_ids`（每群一个 deque，上限 `quote_history`，默认 20）。
+
+⚠️ 关键细节：记 id 必须放在**任何 return 之前**。配额和冷却会跳过消息，
+如果在判定之后才记，`#1 / #2` 的编号就会和群里实际看到的错位 —— 引用就会引错人。
+
+### 10.2 做法
+
+1. prompt 里给背景**从新到旧编号**（`#1` 是最新，也就是判定对象）
+2. 判定器输出 `quote_n`（1 = 引用 #1，0 = 不引用）
+3. `_quote_id()` 把编号换算成真实 message_id（越界或重启后为空则降级为不引用）
+4. 日志新增 `quote_id` 字段
+
+### 10.3 验证（回放，已改用可区分的 message_id）
+
+```
+quote_n=1  quote_id='12471'        ← 真实历史行 id
+quote_n=1  quote_id='90000001-3'   ← 场景第 3 条
+```
+
+编号与 id 对齐正确。
+
+⚠️ 边界：目前**只在日志里落地**，真正组装 `Reply` 组件要等 S9-7 真发送时接上；
+且 `#1` 就是当前消息是最常见情况，引用更早消息依赖 `_recent_ids`（重启即清空）。
