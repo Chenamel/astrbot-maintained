@@ -287,3 +287,65 @@ T4 回归的 200 条真实语料里还剩 1 条 PARSE_FAIL —— 跟换行无�
 `voice`（语音没转文字，判定偏保守）和 `baseline`/`spam_split` 各 1 条（属判定的边界判断，非缺陷）。
 
 **结论：三项 P0 改动都生效，且没有让原有判定质量退化。**
+
+## 8. 人格来源实测（2026-10-23 晚，重要发现）
+
+### 8.1 self_learning 一直是禁用状态
+
+机器人日志每次启动都写着：
+
+```
+Plugin astrbot_plugin_self_learning (4.3.0) ...
+Plugin astrbot_plugin_self_learning is disabled.
+```
+
+禁用列表存在 `data_v4.db` 的 `preferences` 表（`scope=global`）里：
+
+```
+key   = inactivated_plugins
+value = ["data.plugins.astrbot_plugin_mcwatcher.main",
+         "data.plugins.astrbot_plugin_proactive_chat.main",
+         "data.plugins.astrbot_plugin_self_learning.main"]     ← 10-05 起被禁
+```
+
+也就是说：我们之前盘点出的「人格主宰 self_learning（命中 6494）」
+**从来没参与过**。昨晚那些像人话的 `persona_text`，功劳不在它，而是
+**livingmemory（活跃、确实挂在 `on_llm_request` 上）+ PERSONA_PROMPT 的指令**。
+
+### 8.2 即便启用，它的钩子注入默认也是关的
+
+`astrbot_plugin_self_learning_config.json`：
+
+```
+Runtime_Internal_Settings: {"enable_llm_hooks": False, ...}
+```
+
+所以「启用插件」和「人格真正注入」是**两件事**，都要打开才行。
+
+### 8.3 一个巧合：它内置了 MaiBot 增强
+
+```
+MaiBot_Enhancement: {"enable_maibot_features": True,
+                     "enable_expression_patterns": True, ...}
+```
+
+我们刚调研完的对标物（maibot），功能就内置在这个**已经装着但被禁用**的插件里。
+学黑话、表情模式、拟人表达 —— 它可能正好补上我们缺的 L2/L3。
+
+### 8.4 已做的定量验证：对照生成
+
+新增 `persona_control_enabled`（默认关闭）：同一条判定为 REPLY 的消息，
+**生成两次** —— 一次走 `on_llm_request` 钩子（方案 A），一次直接用
+`Context.llm_generate`（绕过钩子）。两份都落日志（`persona_text` /
+`persona_control`），直接对比就能知道钩子到底贡献了多少。
+
+已临时开启，等真实 REPLY 触发后看对比。
+
+### 8.5 待用户决策
+
+**要不要启用 self_learning？** 我的看法：
+
+- 好处：它是现成的人格演化 + 学黑话 + MaiBot 式表达，正是我们缺的
+- 风险：它和我们的新插件**同时**往 `on_llm_request` 里注入，可能叠加或冲突
+  （这正是"重叠比缺功能更危险"那个警告）
+- 建议做法：**先跑完对照实验**，看清钩子现在贡献了多少，再决定要不要加这一路
