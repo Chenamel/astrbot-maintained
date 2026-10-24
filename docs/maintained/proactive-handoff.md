@@ -655,3 +655,36 @@ tests/test_followup_delivery.py
 `shadow_log.jsonl` 目前 ~8MB，按每天数 MB 增长，几个月后会到百 MB 级。
 建议加"按大小归档"（如超过 50MB 就改名加时间戳并新建），**未实施**，
 等真发送跑一段时间确认格式稳定后再做。
+
+### 13.4 一个自己踩的坑：变量顺序导致插件全线崩溃
+
+重启后每条群消息都在报错：
+
+```
+UnboundLocalError: cannot access local variable 'persona_text'
+```
+
+接入发送时我把 `sent = await self._maybe_send(event, persona_text, ...)` 放在了
+`persona_text = ""` **之前** —— 语法检查完全通过，但运行时每收到一条消息就抛异常，
+**判定全部失效**（表现为机器人彻底不判定，而日志里只有 ERRO，不显眼）。
+
+已修（把发送移到生成之后），并用 AST 静态核对赋值顺序（939 行赋值 / 952 行使用）。
+
+⚠️ **教训（已立为约定）**：改这个插件后**必须跑一次回放**。
+`py_compile` 只能查语法，查不出这类运行时错误。回放会真正执行 `on_group_message`，
+是唯一能在真机上跑之前发现问题的方法。
+
+### 13.5 发送路径已实测
+
+把回放的群临时加入 `live_groups`，确认真的走到了发送：
+
+```
+[proactive-shadow] 发送失败: AttributeError: 'NoneType' object has no attribute 'platform_insts'
+```
+
+回放用的是假 context（没有平台），必然失败 —— 但这正好验证了三件事：
+1. `_maybe_send` 确实被调用（走到了 `context.send_message`）
+2. **异常被捕获**，只记日志，判定循环继续，不会崩
+3. 白名单生效：不在 `live_groups` 的群根本不进这条路径
+
+验证后已把 `live_groups` 恢复为仅 `1105248343`。
