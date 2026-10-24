@@ -135,6 +135,31 @@ T7-90 脱敏 → T7-91 对外材料 → 转公开 + 发布 tag
 复验：入仓代码与实例插件均已无硬编码号码（全仓扫描通过）；
 回放 two_bots **3/3**、forward **1/1**，防护仍生效。
 
+
+### 4.2 B1 脱敏：已扫描出的实例专属信息（2026-10-25 全仓扫描）
+
+用户要求"检查工作区有什么不应该推送的"。扫描结果（**当前私有仓，暂无风险**；
+开源前按此清单处理）：
+
+| 位置 | 内容 | 处理时机 |
+|---|---|---|
+| `docs/maintained/future-ideas.md:105` | 本实例机器人 QQ 号 + 昵称 | B1（最该先清：直接暴露账号） |
+| `docs/maintained/proactive-handoff.md:63` | 绝对路径，含系统用户名 + 实例 UUID | B1 |
+| `docs/maintained/proactive-handoff.md:84` | 同上（测试用 python 路径） | B1，或改成占位符 |
+| `tests/maintained/README.md:18` | 同上 | B1 |
+| `maintained/proactive/replay.py:53` | 默认实例路径 | ✅ **已可移植**：支持 `PROACTIVE_INSTANCE` 环境变量，且有"找不到时给出提示"（2026-10-25） |
+| `proactive-handoff.md` / `roadmap.md` 中引用的 `3944860270` | 记录旧代码用，说明问题用 | 无害，B1 时顺手替换成 `<bot-id>` |
+
+**没有发现的问题**（扫描确认干净）：
+
+- ❌ 无真实密钥 / token / 口令（命中的全是上游 README 与 `web.py` 正常代码）
+- ❌ 无本仓库维护者的邮箱（命中的都是上游的 `community@astrbot.app` 等）
+- ❌ `.workbuddy/` **未被 git 跟踪**（0 个文件），本地记忆不会进仓库
+- ❌ 无未跟踪的散落文件（`git status` 干净）
+
+> 顺带澄清：GitHub 推送报 `email privacy restrictions` 是**提交作者邮箱**触发的账户设置，
+> 与本地记忆文件无关（记忆在 `.workbuddy/`，不入仓）。两件事互不影响。
+
 ## 5. 长期 / 运维
 
 - **上游新版本跟进**：合并时优先保护 β hook 完成时序（`project_rules.md` §5 合并红线），

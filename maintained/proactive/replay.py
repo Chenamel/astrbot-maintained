@@ -859,6 +859,13 @@ def main() -> int:
         "--willingness", action="store_true", help="开启回复意愿值（默认关闭）"
     )
     args = ap.parse_args()
+    if not DB_PATH.exists() and not args.selftest:
+        print(
+            f"找不到实例数据库：{DB_PATH}\n"
+            "请用 PROACTIVE_INSTANCE 环境变量指定你的实例目录，例如：\n"
+            "  PROACTIVE_INSTANCE=/path/to/instance python maintained/proactive/replay.py"
+        )
+        return 2
     global SELF_ID
     SELF_ID = args.self_id.strip() or infer_self_id()
     if not args.selftest and not args.dry_run:
