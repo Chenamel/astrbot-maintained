@@ -776,3 +776,33 @@ UnboundLocalError: cannot access local variable 'persona_text'
 
 **教训**：给插件加 schema 后，必须核对「schema 字段集合 ⊇ 代码读取集合」，
 否则会静默丢失配置。已记入约定。
+
+### 15.6 ⚠️ 补全 schema 时踩的第二个坑：object 没有 items 会让插件**加载失败**
+
+补全 schema 后用户一重载，插件**直接起不来**（WebUI 显示「加载失败插件」，
+错误只有一个词：`'items'`）。判定和真发送当时全停。
+
+根因：我把 `group_quota`（群号 → 数字的动态字典）声明成 `"type": "object"`，
+但 AstrBot 解析 schema 时 **object 必须带 `items`**，缺了就 KeyError——
+而动态键的映射根本没法写 `items`。
+
+**修法（绕开，而不是对抗）**：
+
+1. schema 里删掉 `group_quota` / `hourly_quota_rules` 两项（32 项保留，
+   全部是简单类型，WebUI 仍可改）
+2. 这两项**迁到独立文件 `quotas.json`**（与 main.py 同目录，AstrBot 不重写它）：
+
+   ```json
+   {"group_quota": {"1039252505": 10}, "hourly_quota_rules": []}
+   ```
+
+3. 代码优先读 `quotas.json`，读不到再退回 config（兼容）
+
+回放复验：插件正常加载、判定正常、防护一致，错误 0。
+
+**教训升级**（两条合一）：
+
+- schema 字段集合必须 ⊇ 代码读取集合（否则配置静默丢失）
+- **schema 里不能用「无 items 的 object」承载动态键**——不是丢配置的问题，
+  是**插件直接加载失败**。动态键的配置放独立文件。
+
