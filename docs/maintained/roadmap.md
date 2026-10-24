@@ -33,7 +33,8 @@
 近期队列（按此推进）
         │
         ├─ N1  拒答漏判：SAFETY_REFUSAL_PATTERN 扩词    ← ✅ T8-14（2026-10-17 已扩词表）
-        ├─ N2  实例重启复核（默认行为已变，必须实测）    ← ⏸ 待用户择机
+        ├─ N2  实例重启复核                            ← ⏸ 待用户整机重启后跑
+        │        工具：maintained/tools/instance_check.py（只读）
         └─ N3  增强模式骨架（hook_timing_mode 等收编进模式开关，默认改 legacy）  ← ✅ T8-16
         │
         ▼
