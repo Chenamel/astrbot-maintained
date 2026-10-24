@@ -531,3 +531,57 @@ OK  ''               命中=假
 
 ⚠️ 验证用的屏蔽词**已恢复为空**：我不能替你决定"广告"在你的群里是不是正常词
 （比如真有人讨论广告投放）。需要的话自己加，功能已就绪。
+
+## 12. 真机暴露的 bug：生成内容里混进了控制标签（已修）
+
+重启后第一条真实数据就露馅了：
+
+```
+说了: <quote id="-995144350"/>难受在追击不稳定吧，被怪先手那回合亏麻…
+```
+
+### 12.1 根因
+
+`astrbot_plugin_astrbot_enhance_mode` 在 **`on_llm_request`** 里注入了指令，
+要求模型用控制标签表达引用和 @：
+
+```
+When you want to quote/reply to a specific message, place <quote id="msg_id"/> …
+When you want to mention/@ a user in your reply, use a control tag: <mention id="user_id"/>.
+```
+
+它自己在 `on_llm_response` 里把这些标签解析成真正的组件。
+**我们的生成不走 `on_llm_response`**（只调 provider），所以标签没人解析，
+原样留在文本里 —— 真发送的话，群友会看到一串 XML。
+
+⇒ 这同时也**反过来证明了钩子确实在工作**：enhance_mode 的注入确实生效了。
+
+### 12.2 修法
+
+生成后清理控制标签，但**不丢掉里面的 id**：
+
+- `CONTROL_TAG_RE` 剥掉 `quote / mention / refuse / at / reply` 标签
+- `QUOTE_TAG_RE` 把模型给的 id 留下来，记到日志 `quote_id_tag`，
+  用于和我们自己算的 `quote_id` 对照（模型可能知道更准的引用目标，也可能幻觉）
+
+自检 4/4 通过。
+
+### 12.3 顺带发现：enhance_mode 本身就有主动回复机制
+
+它的测试文件名暴露了这一点：
+
+```
+tests/test_active_judge_policy.py
+tests/test_active_reply_context.py
+tests/test_followup_delivery.py
+```
+
+即**引用 + 主动回复的协议，生态里已经有一套现成的**。
+
+我们的影子插件和它**不冲突**（它是真发送，我们只判定不发送），
+但将来 S9-7 真发送时，有两条路：
+
+1. 用我们自己的 `quote_id` 组装 `Reply` 组件
+2. **直接沿用 enhance_mode 的标签协议**，让它去解析
+
+第 2 条更省事，也少一层重复。**留到 S9-7 再决定**，现在不预先选。
