@@ -752,3 +752,27 @@ UnboundLocalError: cannot access local variable 'persona_text'
 - 非真发送群全部降到 10 以下
 
 配置生效需重载插件。
+
+### 15.5 ⚠️ 加 schema 引入的回归：未声明的配置项会被 AstrBot 丢弃
+
+重载后验证 `group_quota` 时发现**配置值为空**。查下来是：
+
+> **AstrBot 保存插件配置时，只保留 `_conf_schema.json` 里声明过的字段，
+> 未声明的一律丢弃。**
+
+证据：配置文件的字段集合与 schema 的字段集合**完全一致**（13 个）。
+我加 schema 时只写了 13 项，而代码实际读 **34 项** ⇒ **21 项被丢弃**，包括
+`group_quota`、`hourly_quota_rules`、`ban_regex`、`quote_history`、
+退避开关与参数、意愿值参数、`max_images`、`pause_after_errors_sec` 等。
+
+**为什么没炸**：这些项代码里都有默认值，所以只是"配了不生效"，不会崩溃 ——
+这也是它藏得住的原因。
+
+**已修**：
+1. schema 补全到 **34 项**，与代码读取项**逐一核对一致**（脚本校验：缺失 0、多余 0）
+2. `group_quota` 让代码**同时兼容两种格式**（`{"gid": n}` 和
+   `[{"group": gid, "quota": n}]`），因为 WebUI 对动态字典的序列化不确定
+3. 重配 `group_quota = {"1039252505": 10}`，并按 §13.4 约定跑回放复验：运行时错误 0
+
+**教训**：给插件加 schema 后，必须核对「schema 字段集合 ⊇ 代码读取集合」，
+否则会静默丢失配置。已记入约定。
