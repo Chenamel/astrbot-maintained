@@ -84,3 +84,4 @@ PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 补丁缺席时（当前基线）与补丁就位时（阶段 4 恢复后）**同一份测试都要通过**。因此凡是
 依赖核心能力的断言都写成"相对 `available()` 判断"，而不是硬编码 `False`/`None`。
 真正硬编码的只有两类：**契约常量** 与 **安全不变量**（例如"非管理员恒被拒绝"）。
+| `test_mem_sample.py` | 只读内存采样工具：判定计数（跳过回放）、CSV 趋势解析 |
