@@ -1,7 +1,7 @@
 {
   "proactive_must_remain_disabled": true,
   "files": {
-    "astrbot/__init__.py": "882fea775ad332ffd4c76beeb61d2b112ffe34471cefcaafe0c180434d0ce99c",
+    "astrbot/__init__.py": "cc3f4ce1afd6cb6e7636fb72b28beefdd8bd99de63f94ed271ac18f0a0992d08",
     "astrbot/api/_bridge.py": "7f0585b9288ae72d2b9dfcc89045fb76f5085371ca3017d55bec9d51a48d14ff",
     "astrbot/api/content/__init__.py": "0278cd6931e16fd3fc456fc0fea305f1950942e92df0807eb1753225778a8ee0",
     "astrbot/api/delivery/__init__.py": "3774f7cb029cff83bc18eda1f581233534c7acf1ad170eab713cc49a3c310db9",
