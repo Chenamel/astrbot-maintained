@@ -143,11 +143,14 @@ def resolve_core(instance: Path) -> Path:
     Raises:
         FileNotFoundError: When no core directory can be located.
     """
-    if (instance / "astrbot").is_dir():
-        return instance
+    # Launcher-managed instances keep the package under core/, so that is the
+    # real one. Checking a stray <instance>/astrbot first made the report look
+    # clean while the running code was untouched.
     core = instance / "core"
     if (core / "astrbot").is_dir():
         return core
+    if (instance / "astrbot").is_dir():
+        return instance
     raise FileNotFoundError(f"no AstrBot core found under {instance}")
 
 

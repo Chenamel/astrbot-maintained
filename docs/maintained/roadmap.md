@@ -184,9 +184,25 @@ T7-90 脱敏 → T7-91 对外材料 → 转公开 + 发布 tag
 
 ### 6.1 品牌与版本（2026-10-26）
 
-- 品牌：AstrBot → **Hesder**（取自机器人昵称；LICENSE/NOTICE 保留上游版权，AGPL 合规）
-- 版本：`4.28.2-mtn1`（`astrbot/__init__.py` 的 `__version__`；pyproject 构建元数据暂不动）
-- dashboard 已重建部署；实例旧 dist 备份为 `dist.bak-20261026-000333`
+- **品牌改名放弃（2026-10-26 用户决定）**：改名需要连带改 launcher 母本
+  （`versions/v4.28.2.zip` 解压覆盖实例）+ 重建前端，成本高收益低，
+  ⇒ **继续用 AstrBot**，只保留版本后缀。前端改动已回滚，实例 dist 保持原样。
+- 版本：`4.28.2-mtn1`（`astrbot/__init__.py` 的 `__version__`；pyproject 构建元数据不动）
+  面板将显示 `AstrBot v4.28.2-mtn1`
+
+### 6.1.1 ⚠️ 顺带修掉两个"假绿灯"（2026-10-26）
+
+改版本时才发现：**部署路径一直有个陷阱**。
+
+1. **我的一次误部署**：`cp` 拷到了 `<instance>/astrbot/...`，而 launcher 实例
+   真正运行的是 `<instance>/core/astrbot/...`。误建副本已删除。
+2. **`check_drift.py` 的路径 bug（更隐蔽）**：`resolve_core` 原本**优先**匹配
+   `<instance>/astrbot`，于是它校验了我误建的那个目录，
+   报出 **NO DRIFT 假象** —— 实际运行的 core 根本没变。
+   已改为 **core/ 优先**，并在注释里写明原因。
+
+⇒ 教训：**"工具报绿"不等于"部署生效"**。以后改完 core，除跑 `check_drift`
+  外，至少确认一次解析出的 core 目录是 `<inst>/core`。
 
 ### 6.2 用量统计补齐（2026-10-26）
 
