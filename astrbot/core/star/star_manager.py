@@ -30,6 +30,7 @@ from astrbot.core import (
 )
 from astrbot.core.agent.handoff import FunctionTool, HandoffTool
 from astrbot.core.config.astrbot_config import AstrBotConfig
+from astrbot import __version_base__
 from astrbot.core.config.default import VERSION
 from astrbot.core.platform.register import unregister_platform_adapters_by_module
 from astrbot.core.provider.register import llm_tools
@@ -690,10 +691,17 @@ class PluginManager:
         try:
             current_version = Version(VERSION)
         except InvalidVersion:
-            return (
-                False,
-                f"Invalid current AstrBot version: {VERSION}. Cannot check plugin version range.",
-            )
+            # A custom suffix (e.g. 4.28.2-mtn1) is not PEP 440; plugin ranges
+            # only need the numeric base, so falling back keeps every plugin
+            # loadable on a branded build.
+            try:
+                current_version = Version(__version_base__)
+            except InvalidVersion:
+                return (
+                    False,
+                    f"Invalid current AstrBot version: {VERSION}. "
+                    "Cannot check plugin version range.",
+                )
 
         if not specifier.contains(current_version, prereleases=True):
             return (

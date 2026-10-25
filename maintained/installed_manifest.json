@@ -1,7 +1,7 @@
 {
   "proactive_must_remain_disabled": true,
   "files": {
-    "astrbot/__init__.py": "6e31b9df4dd484123cde70b116b19c2f966a91fab143e5d8931a75dc923616be",
+    "astrbot/__init__.py": "882fea775ad332ffd4c76beeb61d2b112ffe34471cefcaafe0c180434d0ce99c",
     "astrbot/api/_bridge.py": "7f0585b9288ae72d2b9dfcc89045fb76f5085371ca3017d55bec9d51a48d14ff",
     "astrbot/api/content/__init__.py": "0278cd6931e16fd3fc456fc0fea305f1950942e92df0807eb1753225778a8ee0",
     "astrbot/api/delivery/__init__.py": "3774f7cb029cff83bc18eda1f581233534c7acf1ad170eab713cc49a3c310db9",
@@ -36,7 +36,7 @@
     "astrbot/core/provider/sources/openai_source.py": "502967d1a4f056c927f94db5e4a99389ce4eb5496b710338d83564793a969205",
     "astrbot/core/star/context.py": "c81797905b5ff9222d969f213e01d96064df526a2ac78a44795c76e79be3cd52",
     "astrbot/core/star/maintenance.py": "9dfde79480d9eb89959b995216717c76f832b63d2cb993bcf08c70a623ffcbdf",
-    "astrbot/core/star/star_manager.py": "b47eb9f33c0028d72991197faa082442d9bd3dc156c634be69c746b1d3aced56",
+    "astrbot/core/star/star_manager.py": "899666b2b8572c04bf9cb99ec00d9c483aebe7bc388ee7e2f5fcba86fe780376",
     "astrbot/core/star/updater.py": "b0aa31701e8920b1aeab378705c3f6e8c42873fa3dad4322d26f3549ae238db3",
     "astrbot/core/tools/computer_tools/python.py": "ad1ec10471e1a7c83c9134480f34418e2363407055bac83438d638b19e94300c",
     "astrbot/core/tools/computer_tools/shell.py": "fbdc78a1c5c357e29a05d83653fe54cab99adc147e6f323cbb6c1b254b16085e",
