@@ -91,6 +91,27 @@ async def generate_with_persona(
         image_urls=req.image_urls,
         contexts=req.contexts or None,
     )
+
+    async def _with_stats():
+        resp = await coro
+        # Mirror the agent-runner usage stats so dashboard totals cover this
+        # path too; a stats failure must never break the reply.
+        try:
+            from astrbot.core import db_helper
+
+            await db_helper.insert_provider_stat(
+                umo=getattr(event, "unified_msg_origin", "") or "unknown",
+                conversation_id=None,
+                provider_id=chat_provider_id or provider.meta().id,
+                provider_model=provider.get_model(),
+                status="completed" if resp.role != "err" else "error",
+                stats=resp.stats.to_dict() if resp.stats else {},
+                agent_type="proactive_persona",
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        return resp
+
     if timeout:
-        return await asyncio.wait_for(coro, timeout=timeout)
-    return await coro
+        return await asyncio.wait_for(_with_stats(), timeout=timeout)
+    return await _with_stats()

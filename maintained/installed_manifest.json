@@ -1,6 +1,7 @@
 {
   "proactive_must_remain_disabled": true,
   "files": {
+    "astrbot/__init__.py": "6e31b9df4dd484123cde70b116b19c2f966a91fab143e5d8931a75dc923616be",
     "astrbot/api/_bridge.py": "7f0585b9288ae72d2b9dfcc89045fb76f5085371ca3017d55bec9d51a48d14ff",
     "astrbot/api/content/__init__.py": "0278cd6931e16fd3fc456fc0fea305f1950942e92df0807eb1753225778a8ee0",
     "astrbot/api/delivery/__init__.py": "3774f7cb029cff83bc18eda1f581233534c7acf1ad170eab713cc49a3c310db9",
@@ -30,9 +31,10 @@
     "astrbot/core/pipeline/respond/stage.py": "40565107607bb6aba6b79bfaf6f0e0ea5e8cc0f59034b0e34b5c4be346b80f66",
     "astrbot/core/pipeline/scheduler.py": "d496ea168517357a41a357e13a08db75eecebbd9bf443f0f2bb4023723bfa304",
     "astrbot/core/platform/sources/aiocqhttp/aiocqhttp_message_event.py": "9d20073743a23390b2becd97ec36a6a563da292c2604a886e695200a503686d0",
-    "astrbot/core/proactive_persona.py": "7d649c42444fe20bee89992d222d12ffe6d60d653b3018fe6c13e795b745b547",
+    "astrbot/core/proactive_persona.py": "e28904debbaf854cce7a574ca48ed448b26d4d85a22cf82754bbd1ad0c4a8a1e",
     "astrbot/core/provider/entities.py": "4036a6b08e3869091606ec944ce810b0d050655975d1d61654e98e225484914b",
     "astrbot/core/provider/sources/openai_source.py": "502967d1a4f056c927f94db5e4a99389ce4eb5496b710338d83564793a969205",
+    "astrbot/core/star/context.py": "c81797905b5ff9222d969f213e01d96064df526a2ac78a44795c76e79be3cd52",
     "astrbot/core/star/maintenance.py": "9dfde79480d9eb89959b995216717c76f832b63d2cb993bcf08c70a623ffcbdf",
     "astrbot/core/star/star_manager.py": "b47eb9f33c0028d72991197faa082442d9bd3dc156c634be69c746b1d3aced56",
     "astrbot/core/star/updater.py": "b0aa31701e8920b1aeab378705c3f6e8c42873fa3dad4322d26f3549ae238db3",

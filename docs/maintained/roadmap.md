@@ -168,7 +168,37 @@ T7-90 脱敏 → T7-91 对外材料 → 转公开 + 发布 tag
 - **部署复核常态化**：core 改动后 `apply_patches --apply` → 重启 → 三端口与主动消息开关复核。
 - **变更台账**：`CHANGELOG.md` 与 `maintained/installed_manifest.json` 同步维护。
 
-## 6. 明确不做（红线）
+## 6. 红线（2026-10-26 修订）
+
+> **用户拍板（2026-10-26）**：以后**没有合并上游的打算**，为实用主义做个性化分支。
+> 据此修订："零冲突（不改上游文件）"原则**废止** —— 允许修改上游文件（含 dashboard）。
+> **保留的铁律**：① 改 core 必登记台账（防 ImportError 的初衷不变）；
+> ② AGPL 合规（LICENSE/NOTICE 保留，页面保留出处）；
+> ③ 改动仍走测试门禁与"一改动一提交"。
+
+1. 不动主动回复开关（`proactive_must_remain_disabled` 恒 true）。
+2. ~~不改上游既有文件、不改上游测试~~ **已废止（2026-10-26）**：允许改，但 core 改动仍必登记台账。
+3. T7-90 解除前不做脱敏与对外材料。（品牌改为 Hesder 后，脱敏清单需复核。）
+4. T8-10 未单独排期前不动 `code_delivery_policy.py` 的 38–78。
+5. 不用被明确拒绝过的方案绕过障碍（如「函数内延迟反向导入」）。
+
+### 6.1 品牌与版本（2026-10-26）
+
+- 品牌：AstrBot → **Hesder**（取自机器人昵称；LICENSE/NOTICE 保留上游版权，AGPL 合规）
+- 版本：`4.28.2-mtn1`（`astrbot/__init__.py` 的 `__version__`；pyproject 构建元数据暂不动）
+- dashboard 已重建部署；实例旧 dist 备份为 `dist.bak-20261026-000333`
+
+### 6.2 用量统计补齐（2026-10-26）
+
+此前 `provider_stats` 只记录 agent-runner 路径（正常对话/人格生成），
+`Context.llm_generate` 这条直接路径不记录 —— 判定每 1500 次/天全都不见，
+WebUI 用量因此严重失真（实测只覆盖 12%）。
+
+- `Context.llm_generate` 新增**可选** `umo` 参数；传入即落一条
+  `agent_type="llm_generate"` 的统计（不传行为不变，向后兼容）
+- `proactive_persona` 落 `agent_type="proactive_persona"`
+- 插件判定/对照/人格生成三条调用都已传 `umo`
+- 台账随之 40 → **42**（新增 `astrbot/__init__.py`、`astrbot/core/star/context.py`）
 
 1. 不动主动回复开关（`proactive_must_remain_disabled` 恒 true）。
 2. 不改上游既有文件、不改上游测试。

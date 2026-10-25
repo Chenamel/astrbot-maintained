@@ -178,6 +178,7 @@ class Context:
         tools: ToolSet | None = None,
         system_prompt: str | None = None,
         contexts: list[Message] | None = None,
+        umo: str | None = None,
         **kwargs: Any,
     ) -> LLMResponse:
         """Call the LLM to generate a response. The method will not automatically execute tool calls. If you want to use tool calls, please use `tool_loop_agent()`.
@@ -210,6 +211,26 @@ class Context:
             system_prompt=system_prompt,
             **kwargs,
         )
+        # The agent-runner path already persists usage stats; this direct path
+        # did not, which is why dashboard usage looked incomplete. Opt-in via
+        # umo so callers without a session context stay untouched.
+        if umo:
+            try:
+                from astrbot.core import db_helper
+
+                await db_helper.insert_provider_stat(
+                    umo=umo,
+                    conversation_id=None,
+                    provider_id=chat_provider_id,
+                    provider_model=prov.get_model(),
+                    status="completed"
+                    if llm_resp.role != "err"
+                    else "error",
+                    stats=llm_resp.stats.to_dict() if llm_resp.stats else {},
+                    agent_type="llm_generate",
+                )
+            except Exception as e:  # noqa: BLE001 - stats must not break callers
+                logger.warning("Persist llm_generate stats failed: %s", e)
         return llm_resp
 
     async def tool_loop_agent(

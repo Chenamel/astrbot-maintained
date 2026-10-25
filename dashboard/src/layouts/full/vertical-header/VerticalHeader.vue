@@ -1104,8 +1104,8 @@ onMounted(async () => {
       @click="handleLogoClick"
     >
       <span class="logo-text Outfit"
-        >Astr<span class="logo-text bot-text-wrapper"
-          >Bot
+        >Hes<span class="logo-text bot-text-wrapper"
+          >der
           <img
             v-if="isChristmas"
             src="@/assets/images/xmas-hat.png"
