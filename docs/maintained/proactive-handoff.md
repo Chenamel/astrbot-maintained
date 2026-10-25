@@ -806,3 +806,44 @@ UnboundLocalError: cannot access local variable 'persona_text'
 - **schema 里不能用「无 items 的 object」承载动态键**——不是丢配置的问题，
   是**插件直接加载失败**。动态键的配置放独立文件。
 
+## 16. 真发送首夜的三连 bug + 工具调用泄漏的根因（2026-10-25 晚）
+
+### 16.1 三个插件 bug（均已修，待重载）
+
+首夜 sent=0，真发送一次都没发出去。逐一查明：
+
+| bug | 现象 | 根因 | 修法 |
+|---|---|---|---|
+| **发送失败** | `AttributeError: 'list' object has no attribute 'chain'` | `send_message` 要 **MessageChain 对象**，我传了裸 list | `MessageChain(chain=chain)`（`astrbot.api.event` 有导出，铁律合规） |
+| **group_quota 失效** | 22h 内该群判定 957 条（≈43.5/h），远超 10/h | `_hour_stamps` 是**全局**计数，按群配额却拿全局计数对比 —— 忙群还会吃掉闲群额度 | 新增 `_group_stamps` 按群计数；全局列表只服务兜底 `max_per_hour` |
+| **sent 字段缺失** | 部分记录没有 sent 键 | bot_guard 拦截路径的 `_append` 在 sent 定义前，字段漏了 | guard record 补 `"sent": False` |
+
+回放复验：运行时错误 0、场景一致、所有记录带 sent 字段。
+（注：昨晚重载后"恰好 10 条"是碰巧 —— 当时按全局计数对比 10，夜间全局计数低；
+白天其他群流量上来后，该群会被错误地完全跳过。真正的按群语义是这次修的。）
+
+### 16.2 用户报的「对话中无法调用工具」：根因是上下文污染
+
+截图：正常对话里机器人把 `<play_song_by_name song_name="青花瓷" artist="周杰伦"/>`
+当纯文本发了出去，点歌没执行。
+
+**排除法定位**：
+
+1. 音乐插件用的是 `@filter.llm_tool()` —— AstrBot 的 function calling 工具注册
+2. provider source 类型是 **`openai_responses`**（走 `/v1/responses` 端点）
+3. **直接调 API 实测**：带 tools 请求 → 响应**正确返回**
+   `function_call: play_song_by_name {"song_name": "青花瓷", "artist": "周杰伦"}`
+   ⇒ 中转站、模型、function calling **全都正常**
+4. 查历史库：`<play_song` 标签文本在 **1105248343 群有 3 条**：
+   - **2026-10-13 04:45 就泄漏过**（XML parameter 风格）
+   - 2026-10-25 12:47（即截图这次）再次泄漏，且带 enhance_mode 的 `<quote>` 标签
+
+**结论：上下文污染的自我延续** —— 10-13 的一次泄漏留在历史里，
+模型看到"范例"后模仿，把工具调用写成文本；文本再次入历史，进一步强化。
+API 层越正常，越说明是历史教坏的。
+
+**修复选项（待用户确认，均未执行）**：
+
+- **清污染**：删除该群历史里那 3 条机器人消息（破坏性操作，需确认），
+  或在 WebUI 重置该群会话
+- 长期：正常对话的最终输出前剥离工具标签（属上游/音乐插件范畴，fork 不急动）
