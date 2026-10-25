@@ -22,6 +22,7 @@ import yaml
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
 
+from astrbot import __version_base__
 from astrbot.core import (
     DependencyConflictError,
     logger,
@@ -30,7 +31,6 @@ from astrbot.core import (
 )
 from astrbot.core.agent.handoff import FunctionTool, HandoffTool
 from astrbot.core.config.astrbot_config import AstrBotConfig
-from astrbot import __version_base__
 from astrbot.core.config.default import VERSION
 from astrbot.core.platform.register import unregister_platform_adapters_by_module
 from astrbot.core.provider.register import llm_tools

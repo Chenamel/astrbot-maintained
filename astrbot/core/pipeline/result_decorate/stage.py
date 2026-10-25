@@ -13,6 +13,7 @@ from astrbot.core.platform.message_type import MessageType
 from astrbot.core.star.session_llm_manager import SessionServiceManager
 from astrbot.core.star.star import star_map
 from astrbot.core.star.star_handler import EventType, star_handlers_registry
+from astrbot.core.utils.control_tags import strip_control_tags
 
 from ..context import PipelineContext
 from ..stage import Stage, register_stage, registered_stages
@@ -187,6 +188,18 @@ class ResultDecorateStage(Stage):
                     f"{handler.handler_name} stopped event propagation.",
                 )
                 return
+
+        # Last line of defence: a plugin asked the model to emit control tags
+        # (quote/mention/refuse) and was supposed to parse them back. If any
+        # slipped through -- hook order, a code block, an intermediate turn --
+        # they would reach the group as literal text.
+        if (pending := event.get_result()) is not None and pending.chain:
+            stripped = strip_control_tags(pending.chain)
+            if stripped:
+                logger.warning(
+                    "Removed leftover control tags from %d component(s) before sending",
+                    stripped,
+                )
 
         # 流式输出不执行下面的逻辑
         if is_stream:

@@ -38,6 +38,7 @@ from astrbot.core.star.filter.platform_adapter_type import (
 )
 from astrbot.core.subagent_orchestrator import SubAgentOrchestrator
 from astrbot.core.utils.astrbot_path import get_astrbot_system_tmp_path
+from astrbot.core.utils.control_tags import strip_control_tags
 
 from ..exceptions import ProviderNotFoundError
 from .filter.command import CommandFilter
@@ -223,9 +224,7 @@ class Context:
                     conversation_id=None,
                     provider_id=chat_provider_id,
                     provider_model=prov.get_model(),
-                    status="completed"
-                    if llm_resp.role != "err"
-                    else "error",
+                    status="completed" if llm_resp.role != "err" else "error",
                     stats=llm_resp.stats.to_dict() if llm_resp.stats else {},
                     agent_type="llm_generate",
                 )
@@ -658,6 +657,16 @@ class Context:
                 session = MessageSesion.from_str(session)
             except BaseException as e:
                 raise ValueError("不合法的 session 字符串: " + str(e))
+
+        # Proactive sends bypass the pipeline's decorate stage, so the same
+        # control-tag sweep has to happen here too.
+        if message_chain is not None and message_chain.chain:
+            stripped = strip_control_tags(message_chain.chain)
+            if stripped:
+                logger.warning(
+                    "Removed leftover control tags from %d component(s) before proactive send",
+                    stripped,
+                )
 
         for platform in self.platform_manager.platform_insts:
             if platform.meta().id == session.platform_name:
