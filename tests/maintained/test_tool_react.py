@@ -14,13 +14,20 @@ class _Tool:
 
 class _Event:
     platform = "aiocqhttp"
+    message_type = None  # set below to GROUP_MESSAGE by default
 
     def __init__(self, fail_on: set[str] | None = None) -> None:
+        from astrbot.api.platform import MessageType
+
         self.reacted: list[str] = []
         self.fail_on = fail_on or set()
+        self.message_type = MessageType.GROUP_MESSAGE
 
     def get_platform_name(self) -> str:
         return self.platform
+
+    def get_message_type(self):
+        return self.message_type
 
     async def react(self, emoji: str) -> None:
         if emoji in self.fail_on:
@@ -123,4 +130,17 @@ async def test_skipped_on_other_platforms() -> None:
 async def test_disabled_by_default() -> None:
     event = _Event()
     await _make().on_tool_respond(event, _Tool("play_song_by_name"), {}, _Result())
+    assert event.reacted == []
+
+
+@pytest.mark.asyncio
+async def test_private_messages_are_skipped() -> None:
+    """QQ rejects reactions on private messages, so do not even call."""
+    from astrbot.api.platform import MessageType
+
+    event = _Event()
+    event.message_type = MessageType.FRIEND_MESSAGE
+    await _make({"enabled": True, "emoji_ids": "182"}).on_tool_respond(
+        event, _Tool("play_song_by_name"), {}, _Result()
+    )
     assert event.reacted == []

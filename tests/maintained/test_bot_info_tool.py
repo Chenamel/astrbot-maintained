@@ -83,6 +83,11 @@ class _ReactEvent:
     def get_platform_name(self) -> str:
         return self.platform
 
+    def get_message_type(self):
+        from astrbot.api.platform import MessageType
+
+        return MessageType.GROUP_MESSAGE
+
     async def react(self, emoji: str) -> None:
         self.reacted.append(emoji)
 
