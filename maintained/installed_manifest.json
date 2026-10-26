@@ -28,7 +28,7 @@
     "astrbot/core/pipeline/context_utils.py": "426ac085024dced768bd543903441ad6c69549ddd6e67d5acb93e3914585fc9d",
     "astrbot/core/pipeline/process_stage/follow_up.py": "9f2ca004fdfb2c6dd96bdabf476407204940c8a3244d4d87aba0ee8ac192c300",
     "astrbot/core/pipeline/process_stage/method/agent_sub_stages/image_input.py": "8a94c377d6aa9283beaeb4afb6c71c8568a38abe48aed7e58c6ce6d996760a32",
-    "astrbot/core/pipeline/process_stage/method/agent_sub_stages/internal.py": "b514c7864340349489675b9ae3faf6bf23c27c95f34043122e6a62f8bba7b965",
+    "astrbot/core/pipeline/process_stage/method/agent_sub_stages/internal.py": "9785311abaf30d6c183979d821377a0f6a4478f056f780059250f9cbba2125c5",
     "astrbot/core/pipeline/process_stage/stage.py": "2a26f18d3eceef1f6768e0f1619182c69a63da3c1273633f82d36ed118a11b55",
     "astrbot/core/pipeline/respond/stage.py": "40565107607bb6aba6b79bfaf6f0e0ea5e8cc0f59034b0e34b5c4be346b80f66",
     "astrbot/core/pipeline/result_decorate/stage.py": "55014eb4dd5487d92f93ca5a84312f4f9039d693800fba25f5b4f132fb526489",
@@ -45,7 +45,7 @@
     "astrbot/core/tools/computer_tools/shell.py": "fbdc78a1c5c357e29a05d83653fe54cab99adc147e6f323cbb6c1b254b16085e",
     "astrbot/core/tools/computer_tools/util.py": "f72427444977446f955b964ac219c93588f3dfdad0fbf374f4962a68e25bb102",
     "astrbot/core/utils/control_tags.py": "e3d7358a9c1e7aba5a9186f71c9e89a9ea1d5176c4af2fbc3343c778235cf736",
-    "astrbot/core/utils/direct_turns.py": "b33b274eb47ace43489adc321cbda3478967ff5bb954efced1233125bbbed236",
+    "astrbot/core/utils/direct_turns.py": "855c01a768a022557d800011bbbc1f3306ae19bb96122fcd09c2427d7f80a54e",
     "astrbot/dashboard/services/plugin_service.py": "3568f5a720f0c8f7490cc4a31d7cfcb68523b876e54e8d682a24dcc872b328fa",
     "astrbot/core/platform/astr_message_event.py": "0de9266da8e2fa9d2b719ac8c8647e7203b21443b6716db6fec59155589ab7cb"
   }

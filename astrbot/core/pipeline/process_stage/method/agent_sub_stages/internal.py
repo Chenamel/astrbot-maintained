@@ -32,7 +32,7 @@ from astrbot.core.config.agent_runner import (
     resolve_context_compression_config,
     set_hook_timing_mode,
 )
-from astrbot.core.message.components import At, File, Image, Record, Reply, Video
+from astrbot.core.message.components import File, Image, Record, Reply, Video
 from astrbot.core.message.message_event_result import (
     MessageChain,
     MessageEventResult,
@@ -49,7 +49,7 @@ from astrbot.core.provider.entities import (
 )
 from astrbot.core.star.star_handler import EventType
 from astrbot.core.utils.astrbot_path import get_astrbot_temp_path
-from astrbot.core.utils.direct_turns import coordinator, is_current
+from astrbot.core.utils.direct_turns import coordinator, is_current, mentions_self
 from astrbot.core.utils.media_utils import (
     IMAGE_COMPRESS_DEFAULT_QUALITY,
     normalize_model_image_max_size,
@@ -206,10 +206,9 @@ class InternalAgentSubStage(Stage):
             has_reply = any(
                 isinstance(comp, Reply) for comp in event.message_obj.message
             )
-            has_bot_mention = any(
-                isinstance(comp, At) and str(comp.qq) == str(event.get_self_id())
-                for comp in event.message_obj.message
-            )
+            # Quoting one of the bot's own messages is calling it just as much
+            # as an @ is, so reuse the shared check instead of an At-only one.
+            has_bot_mention = mentions_self(event)
 
             if (
                 not has_provider_request
