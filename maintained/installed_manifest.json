@@ -46,6 +46,7 @@
     "astrbot/core/tools/computer_tools/util.py": "f72427444977446f955b964ac219c93588f3dfdad0fbf374f4962a68e25bb102",
     "astrbot/core/utils/control_tags.py": "e3d7358a9c1e7aba5a9186f71c9e89a9ea1d5176c4af2fbc3343c778235cf736",
     "astrbot/core/utils/direct_turns.py": "4db50ced8adf8703feb86e049a16d89d219b0303706e5ad72e3b500e69d98353",
-    "astrbot/dashboard/services/plugin_service.py": "3568f5a720f0c8f7490cc4a31d7cfcb68523b876e54e8d682a24dcc872b328fa"
+    "astrbot/dashboard/services/plugin_service.py": "3568f5a720f0c8f7490cc4a31d7cfcb68523b876e54e8d682a24dcc872b328fa",
+    "astrbot/core/platform/astr_message_event.py": "0de9266da8e2fa9d2b719ac8c8647e7203b21443b6716db6fec59155589ab7cb"
   }
 }

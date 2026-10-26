@@ -272,7 +272,7 @@ class AstrMessageEvent(abc.ABC):
     async def process_buffer(self, buffer: str, pattern: re.Pattern) -> str:
         """将消息缓冲区中的文本按指定正则表达式分割后发送至消息平台，作为不支持流式输出平台的Fallback。"""
         while True:
-            match = re.search(pattern, buffer)
+            match = self._find_splittable(buffer, pattern)
             if not match:
                 break
             matched_text = match.group().strip()
@@ -281,6 +281,26 @@ class AstrMessageEvent(abc.ABC):
                 await asyncio.sleep(1.5)  # 限速
             buffer = buffer[match.end() :]
         return buffer
+
+    @staticmethod
+    def _find_splittable(buffer: str, pattern: re.Pattern) -> re.Match[str] | None:
+        """Find the first sentence end that is not inside a fenced code block.
+
+        Splitting inside ``` breaks the formatting of both halves, and code
+        comments are exactly where Chinese sentence punctuation shows up. A
+        fence is opened and closed by the same token, so both ends of the
+        match must sit outside one: checking only the end lets a match start
+        inside a block, which would emit a fragment holding the closing fence
+        without the opening one. The pattern also happily swallows a leading
+        ``` as part of its "any non-punctuation" run, hence the two checks.
+        """
+        for match in pattern.finditer(buffer):
+            if buffer.count("```", 0, match.start()) % 2 == 1:
+                continue  # starts inside a block
+            if buffer.count("```", 0, match.end()) % 2 == 1:
+                continue  # ends inside a block
+            return match
+        return None
 
     async def send_streaming(
         self,
