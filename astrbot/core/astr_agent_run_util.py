@@ -101,6 +101,28 @@ def _build_tool_result_status_message(
     return status_msg
 
 
+async def _react_tool_signal(
+    event,
+    ids: list[str],
+) -> None:
+    """React to the triggering message as the tool-call signal.
+
+    Tries each id in order and stops at the first one the protocol accepts, so
+    an id the platform does not know about degrades instead of breaking.
+    """
+    if getattr(event, "get_message_type", None) is not None:
+        from astrbot.core.platform.message_type import MessageType
+
+        if event.get_message_type() != MessageType.GROUP_MESSAGE:
+            return  # QQ refuses reactions on private messages
+    for emoji_id in ids:
+        try:
+            await event.react(emoji_id)
+            return
+        except Exception as exc:  # noqa: BLE001 - try the next id
+            logger.debug(f"[tool-react] 表情 {emoji_id} 失败: {exc}")
+
+
 def _should_buffer_llm_result(
     buffer_intermediate_messages: bool,
     stream_to_general: bool,
@@ -134,6 +156,7 @@ async def run_agent(
     stream_to_general: bool = False,
     show_reasoning: bool = False,
     buffer_intermediate_messages: bool = False,
+    tool_react_ids: list[str] | None = None,
 ) -> AsyncGenerator[MessageChain | None, None]:
     """Keep proactive validity through delivery, including buffered results.
 
@@ -153,6 +176,7 @@ async def run_agent(
             stream_to_general,
             show_reasoning,
             buffer_intermediate_messages,
+            tool_react_ids,
         ):
             if not is_current(event):
                 agent_runner.request_stop()
@@ -172,6 +196,7 @@ async def _run_agent(
     stream_to_general: bool = False,
     show_reasoning: bool = False,
     buffer_intermediate_messages: bool = False,
+    tool_react_ids: list[str] | None = None,
 ) -> AsyncGenerator[MessageChain | None, None]:
     step_idx = 0
     astr_event = agent_runner.run_context.context.event
@@ -289,6 +314,11 @@ async def _run_agent(
 
                     if astr_event.get_platform_name() == "webchat":
                         await _send_current(astr_event, resp.data["chain"])
+                    elif tool_react_ids:
+                        # Same moment the "🔨 调用工具" line would appear: one
+                        # reaction replaces a line of text that quickly turns
+                        # into wallpaper.
+                        await _react_tool_signal(astr_event, tool_react_ids)
                     elif show_tool_use:
                         if show_tool_call_result and isinstance(tool_info, dict):
                             # Delay tool status notification until tool_call_result.

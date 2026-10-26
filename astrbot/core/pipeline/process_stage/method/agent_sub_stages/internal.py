@@ -105,6 +105,13 @@ class InternalAgentSubStage(Stage):
         )
         set_hook_timing_mode(self.hook_timing_mode)
         self.show_tool_use: bool = settings.get("show_tool_use_status", True)
+        # Comma-separated QQ emoji ids; when set, a reaction replaces the
+        # "🔨 调用工具" line at exactly the same moment.
+        self.tool_react_ids: list[str] = [
+            part.strip()
+            for part in str(settings.get("tool_call_react_ids") or "").split(",")
+            if part.strip().isdigit()
+        ]
         self.show_tool_call_result: bool = settings.get("show_tool_call_result", False)
         self.buffer_intermediate_messages: bool = settings.get(
             "buffer_intermediate_messages",
@@ -482,6 +489,7 @@ class InternalAgentSubStage(Stage):
                                     self.show_tool_call_result,
                                     show_reasoning=show_reasoning,
                                     buffer_intermediate_messages=self.buffer_intermediate_messages,
+                                    tool_react_ids=self.tool_react_ids,
                                 ),
                             ),
                         )
@@ -513,6 +521,7 @@ class InternalAgentSubStage(Stage):
                                     self.show_tool_call_result,
                                     show_reasoning=show_reasoning,
                                     buffer_intermediate_messages=self.buffer_intermediate_messages,
+                                    tool_react_ids=self.tool_react_ids,
                                 ),
                             ),
                         )
@@ -544,6 +553,7 @@ class InternalAgentSubStage(Stage):
                             stream_to_general,
                             show_reasoning=show_reasoning,
                             buffer_intermediate_messages=self.buffer_intermediate_messages,
+                            tool_react_ids=self.tool_react_ids,
                         ):
                             yield
 

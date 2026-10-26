@@ -29,6 +29,7 @@ from __future__ import annotations
 
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, filter
+from astrbot.api.platform import MessageType
 from astrbot.api.star import Context, Star
 
 #: Tools that are never worth a signal (internal bookkeeping).
@@ -62,6 +63,10 @@ class ToolReact(Star):
         if not self.config.get("enabled", False):
             return
         if event.get_platform_name() != "aiocqhttp":
+            return
+        # QQ rejects reactions on private messages ("emoji reactions are not
+        # supported on private messages"), so only group traffic is eligible.
+        if event.get_message_type() != MessageType.GROUP_MESSAGE:
             return
 
         name = getattr(tool, "name", "") or ""

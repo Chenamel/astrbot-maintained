@@ -23,6 +23,7 @@ import time
 
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, filter
+from astrbot.api.platform import MessageType
 from astrbot.api.star import Context, Star
 from astrbot.core.config.default import VERSION
 
@@ -109,6 +110,11 @@ class BotInfo(Star):
         if not is_admin:
             yield event.plain_result("这个只有管理员能用。")
             return
+        if event.get_message_type() != MessageType.GROUP_MESSAGE:
+            yield event.plain_result(
+                "表情回应只在群里有效（QQ 私聊不支持），去群里发 /reacttest 182 试试。"
+            )
+            return
         if not emoji_id.isdigit():
             yield event.plain_result(
                 "用法：/reacttest <表情ID>，例如 /reacttest 182，看看贴出来是哪个表情。"
@@ -125,6 +131,8 @@ class BotInfo(Star):
         if not self.config.get("react_enabled", False):
             return
         if event.get_platform_name() != "aiocqhttp":
+            return
+        if event.get_message_type() != MessageType.GROUP_MESSAGE:
             return
         picks = [eid for key, eid in REACT_CHOICES.items() if self.config.get(key)]
         if not picks:
