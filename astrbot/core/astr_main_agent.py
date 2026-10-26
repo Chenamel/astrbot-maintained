@@ -46,7 +46,10 @@ from astrbot.core.astr_main_agent_resources import (
 )
 from astrbot.core.code_delivery_policy import apply_execution_policy
 from astrbot.core.computer.booters.local import resolve_windows_shell
-from astrbot.core.config.agent_runner import DEFAULT_LIGHTWEIGHT_PROACTIVE_TOOLS
+from astrbot.core.config.agent_runner import (
+    DEFAULT_LIGHTWEIGHT_PROACTIVE_TOOLS,
+    HOOK_TIMING_MODE_DEFAULT,
+)
 from astrbot.core.conversation_mgr import Conversation
 from astrbot.core.db import BaseDatabase
 from astrbot.core.message.components import File, Image, Record, Reply, Video
@@ -221,9 +224,13 @@ class MainAgentBuildConfig:
     timezone: str | None = None
     max_quoted_fallback_images: int = 20
     """Maximum number of images injected from quoted-message fallback extraction."""
-    hook_timing_mode: str = "enhanced"
+    hook_timing_mode: str = HOOK_TIMING_MODE_DEFAULT
     """When to fire the agent-completion hook: ``enhanced`` (before the reply is
-    emitted) or ``legacy`` (upstream timing on paths that have a counterpart)."""
+    emitted) or ``legacy`` (upstream timing on paths that have a counterpart).
+
+    Defaults to the upstream-aligned mode so a caller that forgets to pass the
+    setting cannot silently opt into the fork-only timing.
+    """
 
 
 @dataclass(slots=True)

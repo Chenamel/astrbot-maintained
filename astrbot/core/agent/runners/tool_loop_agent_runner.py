@@ -1072,9 +1072,10 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                     logger.warning(
                         "skills_like tool re-query returned no tool calls; fallback to assistant response."
                     )
-                    # "enhanced" (default) fires the completion hook before the
-                    # reply is emitted; "legacy" defers it until right after the
-                    # llm_result yields, which is where upstream calls it.
+                    # "enhanced" fires the completion hook before the reply is
+                    # emitted; "legacy" (the default) defers it until right
+                    # after the llm_result yields, which is where upstream
+                    # calls it.
                     legacy_timing = self.hook_timing_mode == "legacy"
                     if not legacy_timing:
                         await self._complete_with_assistant_response(llm_resp)

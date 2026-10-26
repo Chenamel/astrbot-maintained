@@ -14,8 +14,8 @@ Degradation is explicit rather than silent:
 - quoting falls back to "no images found" (an empty list);
 - downloading fails loudly, because silently returning no image would corrupt
   the caller's context instead of surfacing the problem;
-- the hook timing query falls back to ``"enhanced"``, which is this fork's
-  default, so plugins can always compare against a known value.
+- the hook timing query falls back to :data:`HOOK_TIMING_LEGACY`, the
+  upstream-aligned default, so plugins can always compare against a known value.
 """
 
 from __future__ import annotations
@@ -41,8 +41,9 @@ _QUOTE_MODULE = "astrbot.core.utils.quoted_message_parser"
 _HOOK_TIMING_MODULE = "astrbot.core.config.agent_runner"
 
 #: Hook timing mode in which the agent-completion hook fires **before** the reply
-#: is emitted, so audit and rewrite plugins get control first. This is this
-#: fork's default and the value returned when the core side is unavailable.
+#: is emitted, so audit and rewrite plugins get control first. Opt-in: the fork
+#: defaults to :data:`HOOK_TIMING_LEGACY`, which is also what
+#: :func:`hook_timing_mode` returns when the core side is unavailable.
 HOOK_TIMING_ENHANCED: str = resolve(
     _HOOK_TIMING_MODULE, "HOOK_TIMING_MODE_ENHANCED", "enhanced"
 )
