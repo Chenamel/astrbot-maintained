@@ -22,5 +22,47 @@
         "hint": "给出「群聊接话、点歌、分段、记忆、看图」这类能力描述，不含插件名。",
         "type": "bool",
         "default": true
+    },
+    "react_enabled": {
+        "description": "被问身份时顺手贴个表情（仅 QQ）",
+        "hint": "开启后，回答“你是什么机器人”时会给你那条消息贴一个表情回应。其他平台（如微信、Discord）自动跳过。",
+        "type": "bool",
+        "default": false
+    },
+    "react_182": {
+        "description": "表情候选：笑哭（ID 182）",
+        "hint": "勾选的会随机挑一个贴。如果显示的不是这个表情，说明 ID 对不上，改成正确的数字即可。",
+        "type": "bool",
+        "default": false
+    },
+    "react_187": {
+        "description": "表情候选：赞（ID 187）",
+        "hint": "勾选的会随机挑一个贴。如果显示的不是这个表情，说明 ID 对不上，改成正确的数字即可。",
+        "type": "bool",
+        "default": false
+    },
+    "react_178": {
+        "description": "表情候选：大笑（ID 178）",
+        "hint": "勾选的会随机挑一个贴。如果显示的不是这个表情，说明 ID 对不上，改成正确的数字即可。",
+        "type": "bool",
+        "default": false
+    },
+    "react_179": {
+        "description": "表情候选：可爱（ID 179）",
+        "hint": "勾选的会随机挑一个贴。如果显示的不是这个表情，说明 ID 对不上，改成正确的数字即可。",
+        "type": "bool",
+        "default": false
+    },
+    "react_212": {
+        "description": "表情候选：偷笑（ID 212）",
+        "hint": "勾选的会随机挑一个贴。如果显示的不是这个表情，说明 ID 对不上，改成正确的数字即可。",
+        "type": "bool",
+        "default": false
+    },
+    "react_14": {
+        "description": "表情候选：微笑（ID 14）",
+        "hint": "勾选的会随机挑一个贴。如果显示的不是这个表情，说明 ID 对不上，改成正确的数字即可。",
+        "type": "bool",
+        "default": false
     }
 }

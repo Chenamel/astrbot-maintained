@@ -69,3 +69,43 @@ def test_tool_takes_no_arguments() -> None:
     """The signature must stay (self, event) -- no user-controlled parameters."""
     params = list(inspect.signature(BotInfo.get_bot_info).parameters)
     assert params == ["self", "event"]
+
+
+class _ReactEvent:
+    """Minimal event that records reactions instead of sending them."""
+
+    unified_msg_origin = "test:GroupMessage:1"
+    platform = "aiocqhttp"
+
+    def __init__(self) -> None:
+        self.reacted: list[str] = []
+
+    def get_platform_name(self) -> str:
+        return self.platform
+
+    async def react(self, emoji: str) -> None:
+        self.reacted.append(emoji)
+
+
+@pytest.mark.asyncio
+async def test_reaction_only_on_qq_and_only_when_configured() -> None:
+    event = _ReactEvent()
+    # Off by default.
+    await _make().get_bot_info(event)
+    assert event.reacted == []
+
+    # On, but no emoji selected.
+    await _make({"react_enabled": True}).get_bot_info(event)
+    assert event.reacted == []
+
+    # On with a selection.
+    await _make({"react_enabled": True, "react_182": True}).get_bot_info(event)
+    assert event.reacted == ["182"]
+
+
+@pytest.mark.asyncio
+async def test_reaction_skipped_on_other_platforms() -> None:
+    event = _ReactEvent()
+    event.platform = "discord"
+    await _make({"react_enabled": True, "react_187": True}).get_bot_info(event)
+    assert event.reacted == []

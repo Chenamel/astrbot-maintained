@@ -18,6 +18,7 @@ Security properties, in order of importance:
 
 from __future__ import annotations
 
+import random
 import time
 
 from astrbot.api import logger
@@ -30,6 +31,17 @@ from astrbot.core.config.default import VERSION
 _STARTED_AT = time.time()
 
 _UNAVAILABLE = "这个我就不细说了，反正就是个群友。"
+
+#: QQ system emoji ids, one switch each in the config page. Only used on the
+#: aiocqhttp platform; other platforms skip the reaction entirely.
+REACT_CHOICES: dict[str, str] = {
+    "react_182": "182",
+    "react_187": "187",
+    "react_178": "178",
+    "react_179": "179",
+    "react_212": "212",
+    "react_14": "14",
+}
 
 
 class BotInfo(Star):
@@ -84,4 +96,40 @@ class BotInfo(Star):
                 "会的事：群聊接话、点歌放歌、把长回复分几条发、记住聊过的事、看图说话"
             )
 
+        await self._maybe_react(event)
         return "\n".join(lines)
+
+    @filter.command("reacttest")
+    async def react_test(self, event: AstrMessageEvent, emoji_id: str = ""):
+        """管理员校准用：/reacttest 182 试出某个表情 ID 长什么样。"""
+        try:
+            is_admin = bool(event.is_admin())
+        except Exception:  # noqa: BLE001
+            is_admin = False
+        if not is_admin:
+            yield event.plain_result("这个只有管理员能用。")
+            return
+        if not emoji_id.isdigit():
+            yield event.plain_result(
+                "用法：/reacttest <表情ID>，例如 /reacttest 182，看看贴出来是哪个表情。"
+            )
+            return
+        try:
+            await event.react(emoji_id)
+            yield event.plain_result(f"已尝试贴表情 {emoji_id}，看这条消息上的回应。")
+        except Exception as exc:  # noqa: BLE001
+            yield event.plain_result(f"贴表情失败：{type(exc).__name__}")
+
+    async def _maybe_react(self, event: AstrMessageEvent) -> None:
+        """给提问的消息贴一个选中的 QQ 表情；其他平台直接跳过。"""
+        if not self.config.get("react_enabled", False):
+            return
+        if event.get_platform_name() != "aiocqhttp":
+            return
+        picks = [eid for key, eid in REACT_CHOICES.items() if self.config.get(key)]
+        if not picks:
+            return
+        try:
+            await event.react(random.choice(picks))
+        except Exception as exc:  # noqa: BLE001 - never break the answer
+            logger.debug(f"[bot-info] 贴表情失败: {exc}")

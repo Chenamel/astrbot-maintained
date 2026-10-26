@@ -33,6 +33,31 @@ class AiocqhttpMessageEvent(AstrMessageEvent):
         super().__init__(message_str, message_obj, platform_meta, session_id)
         self.bot = bot
 
+    async def react(self, emoji: str) -> None:
+        """给源消息贴一个 QQ 表情回应。
+
+        ``emoji`` 是 QQ 系统表情 ID（如 182=笑哭、187=赞、178=大笑）。
+        走 OneBot v11 扩展 API ``set_msg_emoji_like``，由协议端（SnowLuma 等）
+        实现；基类的默认实现会退化成「发一条只有表情的消息」，不是真回应。
+
+        Args:
+            emoji: QQ 系统表情的数字 ID。
+        """
+        message_id = getattr(self.message_obj, "message_id", None)
+        if not message_id:
+            logger.debug("[aiocqhttp] react 跳过：拿不到 message_id")
+            return
+        try:
+            await self.bot.api.call_action(
+                "set_msg_emoji_like",
+                message_id=message_id,
+                emoji_id=str(emoji),
+                emoji_type="1",
+                set=True,
+            )
+        except Exception as exc:  # noqa: BLE001 - a reaction must never break a reply
+            logger.debug(f"[aiocqhttp] react 失败: {exc}")
+
     @staticmethod
     async def _from_segment_to_dict(segment: BaseMessageComponent) -> dict:
         """修复部分字段"""
