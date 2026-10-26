@@ -111,3 +111,7 @@ maintained/.tmp/
 
 # WorkBuddy local state (never published)
 .workbuddy/
+
+# Internal project-map docs (structural audits, handoff notes, session logs).
+# Kept out of GitHub: they describe local deployment and per-file rationale.
+docs/local/
