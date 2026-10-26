@@ -278,6 +278,9 @@ DEFAULT_CONFIG = {
         },
     },
     "wake_prefix": ["/"],
+    # aiocqhttp only: seconds to wait before handing a turn to the model so
+    # consecutive messages arrive as one round. 0 disables aggregation.
+    "direct_turn_quiet_sec": 4,
     "log_level": "INFO",
     "log_file_enable": False,
     "log_file_path": "logs/astrbot.log",
@@ -3180,6 +3183,11 @@ CONFIG_METADATA_2 = {
             },
             "timezone": {
                 "type": "string",
+            },
+            "direct_turn_quiet_sec": {
+                "description": "QQ 消息聚合窗口",
+                "type": "float",
+                "hint": "仅 aiocqhttp 生效：收到消息后先等待这么多秒，把连续发来的几条合并成一个回合再交给模型。默认 4 秒；设为 0 关闭聚合，每条消息立即处理（与官方原版一致）。",
             },
             "callback_api_base": {
                 "type": "string",

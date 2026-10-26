@@ -105,16 +105,37 @@ class DirectTurnCoordinator:
         self.clock = clock
         self.quiet_sec = quiet_sec
         self.max_wait_sec = max_wait_sec
+        self.enabled = quiet_sec > 0
         self.turns = {}
         self.proactive = {}
+
+    def configure(self, quiet_sec: object) -> None:
+        """Apply the aggregation window from the running configuration.
+
+        Args:
+            quiet_sec: Seconds to wait after the last message of a turn. Zero
+                disables aggregation entirely, so each message is handled on
+                its own. Unknown or invalid values leave the window unchanged.
+        """
+        if isinstance(quiet_sec, bool) or not isinstance(quiet_sec, (int, float)):
+            return
+        if quiet_sec < 0:
+            return
+        self.quiet_sec = float(quiet_sec)
+        # A zero-second window must also stop observe() from tracking turns:
+        # otherwise the first message is released instantly while the next one
+        # still invalidates it, which is worse than not aggregating at all.
+        self.enabled = self.quiet_sec > 0
 
     def key(self, event):
         return event.unified_msg_origin, str(event.get_sender_id())
 
     def eligible(self, event):
-        return getattr(
-            event, "get_platform_name", lambda: ""
-        )() == "aiocqhttp" and bool(event.get_sender_id())
+        return (
+            self.enabled
+            and getattr(event, "get_platform_name", lambda: "")() == "aiocqhttp"
+            and bool(event.get_sender_id())
+        )
 
     def _invalidate(self, turn):
         if turn.owner is not None and not turn.sent:

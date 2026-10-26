@@ -23,7 +23,7 @@
     "astrbot/core/astr_main_agent_quote.py": "9f389aa9ce6994255350097eb61da7162566a451b7429f9df35561357008cdb6",
     "astrbot/core/code_delivery_policy.py": "5cc760e9ff5eba9ecc3ee9ce04c17bf0ec884994442b482bb0ab0fa012e76388",
     "astrbot/core/config/agent_runner.py": "d8cc360b16fe7b33149396d5ad5d190ce7aadd9cbb9d5bd00749523e2d4faad2",
-    "astrbot/core/config/default.py": "d8e8921ac05b7f53449c3301ded25f152e0552e475f46476908a4209f9c20221",
+    "astrbot/core/config/default.py": "2870c99150aaa81e97193ee04cdca1bd954235f486daeaa1e90c6f7aeb80fffd",
     "astrbot/core/cron/manager.py": "fe9bb7b4260d7ce44909b9cb06e772c34aebc6aa09f68659932b3bdf4cea4b03",
     "astrbot/core/pipeline/context_utils.py": "426ac085024dced768bd543903441ad6c69549ddd6e67d5acb93e3914585fc9d",
     "astrbot/core/pipeline/process_stage/follow_up.py": "9f2ca004fdfb2c6dd96bdabf476407204940c8a3244d4d87aba0ee8ac192c300",
@@ -32,7 +32,7 @@
     "astrbot/core/pipeline/process_stage/stage.py": "2a26f18d3eceef1f6768e0f1619182c69a63da3c1273633f82d36ed118a11b55",
     "astrbot/core/pipeline/respond/stage.py": "40565107607bb6aba6b79bfaf6f0e0ea5e8cc0f59034b0e34b5c4be346b80f66",
     "astrbot/core/pipeline/result_decorate/stage.py": "55014eb4dd5487d92f93ca5a84312f4f9039d693800fba25f5b4f132fb526489",
-    "astrbot/core/pipeline/scheduler.py": "d496ea168517357a41a357e13a08db75eecebbd9bf443f0f2bb4023723bfa304",
+    "astrbot/core/pipeline/scheduler.py": "ecd313b580fe0ab6650d9e8fcd1bf8768fe4705c27d490bd4c00b57c87eca52a",
     "astrbot/core/platform/sources/aiocqhttp/aiocqhttp_message_event.py": "cd96110aa765958dde70eb73f97ac146158527cbe2edc2ef52ff8ce70fb0946f",
     "astrbot/core/proactive_persona.py": "e28904debbaf854cce7a574ca48ed448b26d4d85a22cf82754bbd1ad0c4a8a1e",
     "astrbot/core/provider/entities.py": "4036a6b08e3869091606ec944ce810b0d050655975d1d61654e98e225484914b",
@@ -45,7 +45,7 @@
     "astrbot/core/tools/computer_tools/shell.py": "fbdc78a1c5c357e29a05d83653fe54cab99adc147e6f323cbb6c1b254b16085e",
     "astrbot/core/tools/computer_tools/util.py": "f72427444977446f955b964ac219c93588f3dfdad0fbf374f4962a68e25bb102",
     "astrbot/core/utils/control_tags.py": "e3d7358a9c1e7aba5a9186f71c9e89a9ea1d5176c4af2fbc3343c778235cf736",
-    "astrbot/core/utils/direct_turns.py": "4db50ced8adf8703feb86e049a16d89d219b0303706e5ad72e3b500e69d98353",
+    "astrbot/core/utils/direct_turns.py": "b33b274eb47ace43489adc321cbda3478967ff5bb954efced1233125bbbed236",
     "astrbot/dashboard/services/plugin_service.py": "3568f5a720f0c8f7490cc4a31d7cfcb68523b876e54e8d682a24dcc872b328fa",
     "astrbot/core/platform/astr_message_event.py": "0de9266da8e2fa9d2b719ac8c8647e7203b21443b6716db6fec59155589ab7cb"
   }

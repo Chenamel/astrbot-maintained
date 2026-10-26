@@ -88,6 +88,7 @@ class PipelineScheduler:
 
         """
         active_event_registry.register(event)
+        coordinator.configure(self.ctx.astrbot_config.get("direct_turn_quiet_sec"))
         coordinator.observe(event, self.ctx.astrbot_config.get("wake_prefix", []))
         try:
             await self._process_stages(event)
