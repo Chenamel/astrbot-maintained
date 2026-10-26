@@ -26,7 +26,7 @@
     "astrbot/core/config/default.py": "d8e8921ac05b7f53449c3301ded25f152e0552e475f46476908a4209f9c20221",
     "astrbot/core/cron/manager.py": "fe9bb7b4260d7ce44909b9cb06e772c34aebc6aa09f68659932b3bdf4cea4b03",
     "astrbot/core/pipeline/context_utils.py": "426ac085024dced768bd543903441ad6c69549ddd6e67d5acb93e3914585fc9d",
-    "astrbot/core/pipeline/process_stage/follow_up.py": "44e217698ff22f7ec52fc943e6c449dae7b022e3ce38ba03a75f9c74253bc3b8",
+    "astrbot/core/pipeline/process_stage/follow_up.py": "9f2ca004fdfb2c6dd96bdabf476407204940c8a3244d4d87aba0ee8ac192c300",
     "astrbot/core/pipeline/process_stage/method/agent_sub_stages/image_input.py": "8a94c377d6aa9283beaeb4afb6c71c8568a38abe48aed7e58c6ce6d996760a32",
     "astrbot/core/pipeline/process_stage/method/agent_sub_stages/internal.py": "b514c7864340349489675b9ae3faf6bf23c27c95f34043122e6a62f8bba7b965",
     "astrbot/core/pipeline/process_stage/stage.py": "2a26f18d3eceef1f6768e0f1619182c69a63da3c1273633f82d36ed118a11b55",

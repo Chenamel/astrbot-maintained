@@ -41,7 +41,10 @@ def register_active_runner(umo: str, runner: AgentRunner) -> None:
     _ACTIVE_AGENT_RUNNERS[umo] = runner
     runner_event = getattr(getattr(runner.run_context, "context", None), "event", None)
     if runner_event is not None:
-        if runner_event.get_extra("_enhance_active_reply_token"):
+        # Events arrive duck-typed: only real platform events are guaranteed to
+        # expose get_extra(), so probe before reading the proactive token.
+        get_extra = getattr(runner_event, "get_extra", None)
+        if callable(get_extra) and get_extra("_enhance_active_reply_token"):
             coordinator.proactive[umo] = (runner_event, runner.request_stop)
         active_event_registry.register_agent_stop_callback(
             runner_event,
