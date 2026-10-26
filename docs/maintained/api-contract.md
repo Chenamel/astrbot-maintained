@@ -92,7 +92,7 @@ def capabilities() -> dict[str, bool]: ...
   （见 `hook-timing-impact.md`）。
 
 插件用法：自检当前模式，遇 `legacy` 时自行走保守路径或提示用户，避免静默故障。
-该函数**不依赖 `_bridge` 能力键**，core 缺席/抛异常/返回非法值一律回落 `"enhanced"`。
+该函数**不依赖 `_bridge` 能力键**，core 缺席/抛异常/返回非法值一律回落 `"legacy"`。
 
 ### 3.0.3 `astrbot/api/embedding/` — 嵌入提供者
 

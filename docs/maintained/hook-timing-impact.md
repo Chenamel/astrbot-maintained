@@ -171,7 +171,7 @@
 **定时任务与后台任务唤醒的 agent 也收不到**，legacy 的逃生舱作用在这两类场景失效。
 
 处置：两处一并读取 misc 的 `tool_schema_mode` 与 `hook_timing_mode`，
-经 `normalize_hook_timing_mode` 归一化（非法值回落 `enhanced`）后传入 `MainAgentBuildConfig`。
+经 `normalize_hook_timing_mode` 归一化（非法值回落 `legacy`）后传入 `MainAgentBuildConfig`。
 
 | 字段 | 变更前 | 变更后 | 默认配置下的行为变化 |
 |---|---|---|---|
