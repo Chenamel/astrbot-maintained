@@ -4,9 +4,13 @@ Some tools do something visible on their own -- playing a song, sending lyrics -
 where a paragraph of "I have played it for you" adds nothing. This hook reacts
 to the triggering message instead, like a group member would.
 
+This is an *additional* way of acknowledging a finished action, not a
+replacement for the reply: the model still says whatever it would have said.
+The tool result is never rewritten, because suppressing the answer would
+interfere with normal behaviour.
+
 The emoji list is a fallback chain: try the first, and if the protocol layer
-rejects it, try the next. Only when every id fails does the answer stay a
-normal sentence.
+rejects it, try the next. When every id fails, nothing happens.
 
 Scope is deliberately narrow:
 
@@ -26,10 +30,6 @@ REACTABLE_TOOLS: dict[str, str] = {
     "play_song_by_name": "play_song_ids",
     "query_lyrics_by_name": "play_song_ids",
 }
-
-#: Replaces the tool result so the model does not narrate what the reaction
-#: already said.
-_QUIET_RESULT = "（已经用表情回应了，不用再用文字说这件事）"
 
 
 def _parse_ids(raw: str) -> list[str]:
@@ -72,16 +72,4 @@ class ToolReact(Star):
                 logger.debug(f"[tool-react] 表情 {emoji_id} 失败: {exc}")
                 continue
             logger.debug(f"[tool-react] {name} 完成，已贴表情 {emoji_id}")
-            if self.config.get("quiet_after_react", True):
-                self._quiet(tool_result)
             return
-
-    @staticmethod
-    def _quiet(tool_result) -> None:
-        """Replace the tool result so the model stays silent about it."""
-        try:
-            from mcp.types import TextContent
-
-            tool_result.content = [TextContent(type="text", text=_QUIET_RESULT)]
-        except Exception as exc:  # noqa: BLE001 - narration is a nice-to-have
-            logger.debug(f"[tool-react] 改写工具结果失败: {exc}")

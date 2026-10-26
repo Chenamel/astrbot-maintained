@@ -62,12 +62,23 @@ async def test_falls_back_when_first_id_rejected() -> None:
 
 
 @pytest.mark.asyncio
-async def test_all_ids_failing_leaves_result_alone() -> None:
+async def test_all_ids_failing_changes_nothing() -> None:
     event, result = _Event(fail_on={"182", "187"}), _Result()
     await _make({"enabled": True, "play_song_ids": "182,187"}).on_tool_respond(
         event, _Tool("play_song_by_name"), {}, result
     )
     assert event.reacted == []
+    assert result.content == ["original"]
+
+
+@pytest.mark.asyncio
+async def test_never_rewrites_tool_result() -> None:
+    """Reacting is additive: the normal reply must stay untouched."""
+    event, result = _Event(), _Result()
+    await _make({"enabled": True, "play_song_ids": "182"}).on_tool_respond(
+        event, _Tool("play_song_by_name"), {}, result
+    )
+    assert event.reacted == ["182"]
     assert result.content == ["original"]
 
 
