@@ -1,0 +1,4 @@
+name: tool_react
+desc: 内置：工具执行完用贴表情代替文字（比如点歌成功只贴个表情）。仅 QQ 平台。
+author: maintained-fork
+version: 0.1.0

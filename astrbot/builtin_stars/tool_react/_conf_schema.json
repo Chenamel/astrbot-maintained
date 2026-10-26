@@ -1,0 +1,20 @@
+{
+    "enabled": {
+        "description": "工具执行后用贴表情代替文字",
+        "hint": "开启后，点歌/查歌词这类工具执行成功时，会给触发消息贴一个表情，并让模型不必再复述。仅 QQ 平台生效。",
+        "type": "bool",
+        "default": false
+    },
+    "play_song_ids": {
+        "description": "点歌/歌词的表情（按顺序降级）",
+        "hint": "填 QQ 表情 ID，逗号分隔，例如 182,187。会按顺序尝试：第一个贴成功就停，失败自动换下一个。ID 可用 /reacttest 试出来。",
+        "type": "string",
+        "default": "182,187"
+    },
+    "quiet_after_react": {
+        "description": "贴成功后不让模型再复述",
+        "hint": "开启后，工具结果会被替换成“已用表情回应”，模型就不会再说“我给你点了歌”这种废话。关闭则表情和文字都有。",
+        "type": "bool",
+        "default": true
+    }
+}
