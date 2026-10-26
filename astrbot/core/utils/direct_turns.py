@@ -166,11 +166,15 @@ class DirectTurnCoordinator:
             if text.split()[0] in ("/new", "/reset"):
                 self.reset(event.unified_msg_origin)
             return
-        if not text and not any(
-            isinstance(c, Image) or isinstance(c, At) and str(c.qq) == self_id_of(event)
-            for c in event.get_messages()
-        ):
-            return
+        if not text:
+            # Resolve once: the comprehension below re-checked self_id_of() for
+            # every component of every text-less message.
+            self_id = self_id_of(event)
+            if not any(
+                isinstance(c, Image) or isinstance(c, At) and str(c.qq) == self_id
+                for c in event.get_messages()
+            ):
+                return
         active = self.proactive.get(event.unified_msg_origin)
         if active and active[0] is not event:
             active[0].set_extra("_turn_superseded", True)
