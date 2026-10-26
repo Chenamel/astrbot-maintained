@@ -1,0 +1,4 @@
+name: bot_info
+desc: 内置工具：回答"你是什么机器人/用什么模型"这类问题，只返回固定白名单字段，不读配置原文。
+author: maintained-fork
+version: 0.1.0

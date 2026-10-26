@@ -1,0 +1,20 @@
+{
+    "enabled": {
+        "description": "允许机器人介绍自己",
+        "hint": "开启后，群友问“你是什么机器人/用什么模型”时，模型可以调用内置工具拿到固定字段（版本、模型、插件数、运行时长）。工具不接受任何参数，无法读取配置原文，也不会返回密钥或路径。关闭后统一回一句含糊话术。",
+        "type": "bool",
+        "default": true
+    },
+    "include_plugins": {
+        "description": "介绍时提到插件数量",
+        "hint": "只给出数量，不列名字。关闭则完全不提插件。",
+        "type": "bool",
+        "default": true
+    },
+    "include_uptime": {
+        "description": "介绍时提到运行时长",
+        "hint": "给出“连续跑了多久”，让人感觉是活的。关闭则不提。",
+        "type": "bool",
+        "default": true
+    }
+}
