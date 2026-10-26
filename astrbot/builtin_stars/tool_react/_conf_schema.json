@@ -1,14 +1,20 @@
 {
     "enabled": {
-        "description": "工具执行后用贴表情代替文字",
-        "hint": "开启后，点歌/查歌词这类工具执行成功时，会给触发消息贴一个表情，并让模型不必再复述。仅 QQ 平台生效。",
+        "description": "用贴表情代替「🔨 调用工具」提示",
+        "hint": "开启后，任何工具被调用都会给触发消息贴一个表情，你就知道它真的用了工具，而不用忍受一行行提示刷屏。只影响可见提示，不影响工具本身和正常回复。仅 QQ 平台。",
         "type": "bool",
         "default": false
     },
-    "play_song_ids": {
-        "description": "点歌/歌词的表情（按顺序降级）",
-        "hint": "填 QQ 表情 ID，逗号分隔，例如 182,187。按顺序尝试：第一个贴成功就停，失败自动换下一个。表情只是附加回应，不会影响正常文字回复。",
+    "emoji_ids": {
+        "description": "表情（按优先级，前面的先试）",
+        "hint": "填 QQ 表情 ID，逗号分隔，例如 182,187。第一个贴成功就停，失败自动换下一个。可用 /reacttest 182 试出想要的表情。",
         "type": "string",
         "default": "182,187"
+    },
+    "only_tools": {
+        "description": "只对这些工具生效（留空=全部）",
+        "hint": "工具名逗号分隔，例如 web_search_tavily,play_song_by_name。留空表示任何工具被调用都贴。",
+        "type": "string",
+        "default": ""
     }
 }

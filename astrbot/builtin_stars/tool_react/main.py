@@ -1,4 +1,10 @@
-"""Built-in: express a finished tool action with a message reaction.
+"""Built-in: signal that a tool ran, using a reaction instead of a text line.
+
+AstrBot can print "🔨 调用工具: web_search" for every call. That proves the tool
+really ran, but a chatty agent turns it into wallpaper. This hook keeps the
+signal and drops the noise: it reacts to the triggering message instead.
+
+
 
 Some tools do something visible on their own -- playing a song, sending lyrics --
 where a paragraph of "I have played it for you" adds nothing. This hook reacts
@@ -25,11 +31,8 @@ from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star
 
-#: Tool name -> which configured id list applies to it.
-REACTABLE_TOOLS: dict[str, str] = {
-    "play_song_by_name": "play_song_ids",
-    "query_lyrics_by_name": "play_song_ids",
-}
+#: Tools that are never worth a signal (internal bookkeeping).
+EXCLUDED_TOOLS: frozenset[str] = frozenset()
 
 
 def _parse_ids(raw: str) -> list[str]:
@@ -37,6 +40,11 @@ def _parse_ids(raw: str) -> list[str]:
     return [
         part.strip() for part in str(raw or "").split(",") if part.strip().isdigit()
     ]
+
+
+def _parse_names(raw: str) -> set[str]:
+    """Turn ``"web_search, play_song_by_name"`` into a set of tool names."""
+    return {part.strip() for part in str(raw or "").split(",") if part.strip()}
 
 
 class ToolReact(Star):
@@ -57,11 +65,14 @@ class ToolReact(Star):
             return
 
         name = getattr(tool, "name", "") or ""
-        list_key = REACTABLE_TOOLS.get(name)
-        if not list_key:
+        if name in EXCLUDED_TOOLS:
             return
 
-        ids = _parse_ids(self.config.get(list_key) or "")
+        only = _parse_names(self.config.get("only_tools") or "")
+        if only and name not in only:
+            return
+
+        ids = _parse_ids(self.config.get("emoji_ids") or "")
         if not ids:
             return
 

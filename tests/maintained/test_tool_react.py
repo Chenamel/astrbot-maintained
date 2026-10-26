@@ -46,7 +46,7 @@ def test_parse_ids_ignores_junk() -> None:
 @pytest.mark.asyncio
 async def test_first_id_wins() -> None:
     event, result = _Event(), _Result()
-    await _make({"enabled": True, "play_song_ids": "182,187"}).on_tool_respond(
+    await _make({"enabled": True, "emoji_ids": "182,187"}).on_tool_respond(
         event, _Tool("play_song_by_name"), {}, result
     )
     assert event.reacted == ["182"]
@@ -55,7 +55,7 @@ async def test_first_id_wins() -> None:
 @pytest.mark.asyncio
 async def test_falls_back_when_first_id_rejected() -> None:
     event, result = _Event(fail_on={"182"}), _Result()
-    await _make({"enabled": True, "play_song_ids": "182,187"}).on_tool_respond(
+    await _make({"enabled": True, "emoji_ids": "182,187"}).on_tool_respond(
         event, _Tool("play_song_by_name"), {}, result
     )
     assert event.reacted == ["187"]
@@ -64,7 +64,7 @@ async def test_falls_back_when_first_id_rejected() -> None:
 @pytest.mark.asyncio
 async def test_all_ids_failing_changes_nothing() -> None:
     event, result = _Event(fail_on={"182", "187"}), _Result()
-    await _make({"enabled": True, "play_song_ids": "182,187"}).on_tool_respond(
+    await _make({"enabled": True, "emoji_ids": "182,187"}).on_tool_respond(
         event, _Tool("play_song_by_name"), {}, result
     )
     assert event.reacted == []
@@ -75,7 +75,7 @@ async def test_all_ids_failing_changes_nothing() -> None:
 async def test_never_rewrites_tool_result() -> None:
     """Reacting is additive: the normal reply must stay untouched."""
     event, result = _Event(), _Result()
-    await _make({"enabled": True, "play_song_ids": "182"}).on_tool_respond(
+    await _make({"enabled": True, "emoji_ids": "182"}).on_tool_respond(
         event, _Tool("play_song_by_name"), {}, result
     )
     assert event.reacted == ["182"]
@@ -83,19 +83,40 @@ async def test_never_rewrites_tool_result() -> None:
 
 
 @pytest.mark.asyncio
-async def test_ignores_unknown_tools_and_other_platforms() -> None:
+async def test_any_tool_reacts_by_default() -> None:
+    """The signal is about "a tool ran", so every tool counts by default."""
     event = _Event()
-    await _make({"enabled": True, "play_song_ids": "182"}).on_tool_respond(
-        event, _Tool("some_other_tool"), {}, _Result()
+    await _make({"enabled": True, "emoji_ids": "182"}).on_tool_respond(
+        event, _Tool("web_search_tavily"), {}, _Result()
+    )
+    assert event.reacted == ["182"]
+
+
+@pytest.mark.asyncio
+async def test_only_tools_narrows_the_scope() -> None:
+    allowed = _Event()
+    await _make(
+        {"enabled": True, "emoji_ids": "182", "only_tools": "play_song_by_name"}
+    ).on_tool_respond(allowed, _Tool("play_song_by_name"), {}, _Result())
+    assert allowed.reacted == ["182"]
+
+    blocked = _Event()
+    await _make(
+        {"enabled": True, "emoji_ids": "182", "only_tools": "play_song_by_name"}
+    ).on_tool_respond(blocked, _Tool("web_search_tavily"), {}, _Result())
+    assert blocked.reacted == []
+
+
+@pytest.mark.asyncio
+async def test_skipped_on_other_platforms() -> None:
+    class _Other(_Event):
+        platform = "telegram"
+
+    event = _Other()
+    await _make({"enabled": True, "emoji_ids": "182"}).on_tool_respond(
+        event, _Tool("play_song_by_name"), {}, _Result()
     )
     assert event.reacted == []
-
-    event2 = _Event()
-    event2.platform = "telegram"
-    await _make({"enabled": True, "play_song_ids": "182"}).on_tool_respond(
-        event2, _Tool("play_song_by_name"), {}, _Result()
-    )
-    assert event2.reacted == []
 
 
 @pytest.mark.asyncio
