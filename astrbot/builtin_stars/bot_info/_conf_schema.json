@@ -16,5 +16,11 @@
         "hint": "给出“连续跑了多久”，让人感觉是活的。关闭则不提。",
         "type": "bool",
         "default": true
+    },
+    "include_abilities": {
+        "description": "介绍时提到会做什么",
+        "hint": "给出「群聊接话、点歌、分段、记忆、看图」这类能力描述，不含插件名。",
+        "type": "bool",
+        "default": true
     }
 }

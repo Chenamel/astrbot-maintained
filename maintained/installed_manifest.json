@@ -11,7 +11,7 @@
     "astrbot/api/proactive/__init__.py": "b96e87863e2ddf957f3bffaed1e38ae52e2bd30cad870c4d91281363a7245af5",
     "astrbot/api/runtime/__init__.py": "eb6528b4629d2f040b6efc40c514eebd9c8c9c1f403d5a26fbb13709308e3bd6",
     "astrbot/api/turns/__init__.py": "26fe891ef89fe2414ec42350f27fc78ad5829d3195ab54008a5ed77db2aecedd",
-    "astrbot/builtin_stars/bot_info/main.py": "4b50a2224c14881a3b638049a2717410827fea91fc45db997f36b73eb90aa284",
+    "astrbot/builtin_stars/bot_info/main.py": "0a855b22da1fd4fa3061b360eeed07887f25aaac3a79e6f2194acaee4b7beb6b",
     "astrbot/core/agent/runners/tool_loop_agent_runner.py": "18db1f618f25d43bb2b5d1a37e403b50a3e364ee76d907a6f90fb1bea6f3d08a",
     "astrbot/core/agent/runners/tool_loop_support.py": "0da181bafcf5649577586dd59dd73720187ba371ef0e56db30e88b0ef0783c65",
     "astrbot/core/agent/tool.py": "d5c5c35467ade03dc920772db8848932cafdd4fd497ad9ea9bb7ebe66bbbb993",

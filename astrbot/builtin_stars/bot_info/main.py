@@ -41,11 +41,18 @@ class BotInfo(Star):
 
     @filter.llm_tool()
     async def get_bot_info(self, event: AstrMessageEvent) -> str:
-        """当群友问你是什么机器人、用什么模型、会些什么的时候，获取自身的基本信息。无需参数，返回固定字段。"""
+        """被问到「你是什么机器人」「用什么模型」「会些什么」时必须先调用本工具取准确信息，不要凭印象编。无需参数。"""
         if not self.config.get("enabled", True):
             return _UNAVAILABLE
 
-        facts: list[str] = [f"AstrBot {VERSION}"]
+        # Field list, not raw config. Each line is a fact the model can restate
+        # in its own words; the shape is deliberately plain text so the model
+        # does not echo JSON back at the group.
+        lines: list[str] = [
+            "名字：hesder",
+            "身份：跑在 AstrBot 上的群聊机器人。AstrBot 是一个开源的聊天机器人框架，"
+            "靠插件扩展能力，不是某个大厂产品",
+        ]
 
         try:
             provider = self.context.get_using_provider(event.unified_msg_origin)
@@ -54,21 +61,27 @@ class BotInfo(Star):
             logger.debug(f"[bot-info] 取模型失败: {exc}")
             model = ""
         if model:
-            facts.append(f"对话模型 {model}")
+            lines.append(f"对话模型：{model}")
+        lines.append(f"框架版本：AstrBot {VERSION}")
 
         if self.config.get("include_plugins", True):
             try:
                 from astrbot.core.star.star import star_map
 
-                facts.append(f"装了 {len(star_map)} 个插件")
+                lines.append(f"已装插件：{len(star_map)} 个")
             except Exception as exc:  # noqa: BLE001
                 logger.debug(f"[bot-info] 取插件数失败: {exc}")
 
         if self.config.get("include_uptime", True):
             minutes = int((time.time() - _STARTED_AT) / 60)
             if minutes >= 60:
-                facts.append(f"已经连续跑了 {minutes // 60} 小时")
+                lines.append(f"运行时长：已连续 {minutes // 60} 小时")
             else:
-                facts.append(f"已经连续跑了 {minutes} 分钟")
+                lines.append(f"运行时长：已连续 {minutes} 分钟")
 
-        return "；".join(facts)
+        if self.config.get("include_abilities", True):
+            lines.append(
+                "会的事：群聊接话、点歌放歌、把长回复分几条发、记住聊过的事、看图说话"
+            )
+
+        return "\n".join(lines)
