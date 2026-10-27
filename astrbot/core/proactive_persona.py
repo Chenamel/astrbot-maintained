@@ -105,7 +105,19 @@ async def generate_with_persona(
                 provider_id=chat_provider_id or provider.meta().id,
                 provider_model=provider.get_model(),
                 status="completed" if resp.role != "err" else "error",
-                stats=resp.stats.to_dict() if resp.stats else {},
+                # LLMResponse exposes TokenUsage as .usage; .stats does not
+                # exist, so the old lookup raised and this path went unrecorded.
+                stats=(
+                    {
+                        "token_usage": {
+                            "input_other": resp.usage.input_other,
+                            "input_cached": resp.usage.input_cached,
+                            "output": resp.usage.output,
+                        }
+                    }
+                    if resp.usage
+                    else {}
+                ),
                 agent_type="proactive_persona",
             )
         except Exception:  # noqa: BLE001

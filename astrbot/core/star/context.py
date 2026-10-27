@@ -225,7 +225,20 @@ class Context:
                     provider_id=chat_provider_id,
                     provider_model=prov.get_model(),
                     status="completed" if llm_resp.role != "err" else "error",
-                    stats=llm_resp.stats.to_dict() if llm_resp.stats else {},
+                    # LLMResponse carries its usage on .usage (a TokenUsage);
+                    # it has no .stats, so the old lookup raised on every call
+                    # and dropped this path from the dashboard totals.
+                    stats=(
+                        {
+                            "token_usage": {
+                                "input_other": llm_resp.usage.input_other,
+                                "input_cached": llm_resp.usage.input_cached,
+                                "output": llm_resp.usage.output,
+                            }
+                        }
+                        if llm_resp.usage
+                        else {}
+                    ),
                     agent_type="llm_generate",
                 )
             except Exception as e:  # noqa: BLE001 - stats must not break callers
