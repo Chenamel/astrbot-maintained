@@ -37,6 +37,7 @@ export class I18nLoader {
       
       // 功能模块
       { name: 'features/chat', path: 'features/chat.json' },
+      { name: 'features/calls', path: 'features/calls.json' },
       { name: 'features/extension', path: 'features/extension.json' },
       { name: 'features/conversation', path: 'features/conversation.json' },
       { name: 'features/session-management', path: 'features/session-management.json' },

@@ -27,6 +27,7 @@ import zhCNChart from './locales/zh-CN/features/chart.json';
 import zhCNDashboard from './locales/zh-CN/features/dashboard.json';
 import zhCNCron from './locales/zh-CN/features/cron.json';
 import zhCNStats from './locales/zh-CN/features/stats.json';
+import zhCNCalls from './locales/zh-CN/features/calls.json';
 import zhCNAlkaidIndex from './locales/zh-CN/features/alkaid/index.json';
 import zhCNAlkaidKnowledgeBase from './locales/zh-CN/features/alkaid/knowledge-base.json';
 import zhCNAlkaidMemory from './locales/zh-CN/features/alkaid/memory.json';
@@ -68,6 +69,7 @@ import enUSChart from './locales/en-US/features/chart.json';
 import enUSDashboard from './locales/en-US/features/dashboard.json';
 import enUSCron from './locales/en-US/features/cron.json';
 import enUSStats from './locales/en-US/features/stats.json';
+import enUSCalls from './locales/en-US/features/calls.json';
 import enUSAlkaidIndex from './locales/en-US/features/alkaid/index.json';
 import enUSAlkaidKnowledgeBase from './locales/en-US/features/alkaid/knowledge-base.json';
 import enUSAlkaidMemory from './locales/en-US/features/alkaid/memory.json';
@@ -109,6 +111,7 @@ import ruRUChart from './locales/ru-RU/features/chart.json';
 import ruRUDashboard from './locales/ru-RU/features/dashboard.json';
 import ruRUCron from './locales/ru-RU/features/cron.json';
 import ruRUStats from './locales/ru-RU/features/stats.json';
+import ruRUCalls from './locales/ru-RU/features/calls.json';
 import ruRUAlkaidIndex from './locales/ru-RU/features/alkaid/index.json';
 import ruRUAlkaidKnowledgeBase from './locales/ru-RU/features/alkaid/knowledge-base.json';
 import ruRUAlkaidMemory from './locales/ru-RU/features/alkaid/memory.json';
@@ -150,6 +153,7 @@ import jaJPChart from './locales/ja-JP/features/chart.json';
 import jaJPDashboard from './locales/ja-JP/features/dashboard.json';
 import jaJPCron from './locales/ja-JP/features/cron.json';
 import jaJPStats from './locales/ja-JP/features/stats.json';
+import jaJPCalls from './locales/ja-JP/features/calls.json';
 import jaJPAlkaidIndex from './locales/ja-JP/features/alkaid/index.json';
 import jaJPAlkaidKnowledgeBase from './locales/ja-JP/features/alkaid/knowledge-base.json';
 import jaJPAlkaidMemory from './locales/ja-JP/features/alkaid/memory.json';
@@ -188,6 +192,7 @@ export const translations = {
       'config-metadata': zhCNConfigMetadata,
       console: zhCNConsole,
       trace: zhCNTrace,
+      calls: zhCNCalls,
       about: zhCNAbout,
       settings: zhCNSettings,
       auth: zhCNAuth,
@@ -237,6 +242,7 @@ export const translations = {
       'config-metadata': enUSConfigMetadata,
       console: enUSConsole,
       trace: enUSTrace,
+      calls: enUSCalls,
       about: enUSAbout,
       settings: enUSSettings,
       auth: enUSAuth,
@@ -286,6 +292,7 @@ export const translations = {
       'config-metadata': ruRUConfigMetadata,
       console: ruRUConsole,
       trace: ruRUTrace,
+      calls: ruRUCalls,
       about: ruRUAbout,
       settings: ruRUSettings,
       auth: ruRUAuth,
@@ -335,6 +342,7 @@ export const translations = {
       'config-metadata': jaJPConfigMetadata,
       console: jaJPConsole,
       trace: jaJPTrace,
+      calls: jaJPCalls,
       about: jaJPAbout,
       settings: jaJPSettings,
       auth: jaJPAuth,
