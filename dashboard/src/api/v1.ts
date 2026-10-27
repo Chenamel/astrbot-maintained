@@ -1791,6 +1791,24 @@ export const statsApi = {
       }),
     );
   },
+  /**
+   * One row per persisted LLM call, newest first, filterable, with a summary
+   * block aggregated over the same filters (billing-gateway-style call log).
+   */
+  providerCalls(params?: {
+    start?: string;
+    end?: string;
+    provider_model?: string;
+    agent_type?: string;
+    umo?: string;
+    status?: string;
+    page?: number;
+    page_size?: number;
+  }) {
+    return typed<any>(
+      apiV1Client.get('/stats/provider-calls', { params }),
+    );
+  },
   version() {
     return withLegacyFallback<VersionData>(openApiV1.getVersion(), () =>
       httpClient.get<ApiEnvelope<VersionData>>('/api/stat/version'),

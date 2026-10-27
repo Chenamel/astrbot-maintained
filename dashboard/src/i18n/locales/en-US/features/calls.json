@@ -1,0 +1,9 @@
+{
+  "quick": { "today": "Today", "yesterday": "Yesterday", "3d": "3 days", "7d": "7 days", "30d": "30 days", "month": "This month", "all": "All" },
+  "filters": { "model": "Model", "source": "Source type", "status": "Status", "search": "Search", "reset": "Reset" },
+  "summary": { "calls": "Calls", "input": "Input Tokens", "cached": "Cached Tokens", "output": "Output Tokens", "total": "Total Tokens", "successRate": "Success rate" },
+  "table": { "time": "Time", "source": "Source", "session": "Session", "model": "Model", "input": "Input", "cached": "Cached", "output": "Output", "total": "Total", "duration": "Duration", "ttft": "TTFT", "status": "Status", "empty": "No call records match the current filters" },
+  "source": { "all": "All", "internal": "Core agent", "llmGenerate": "Plugin direct", "proactivePersona": "Proactive" },
+  "pager": { "total": "{n} records", "prev": "Prev", "next": "Next" },
+  "detail": { "title": "Call detail", "time": "Time", "source": "Source", "session": "Session", "model": "Model", "provider": "Provider", "input": "Input Tokens", "cached": "Cached Tokens", "output": "Output Tokens", "total": "Total Tokens", "duration": "Duration", "ttft": "TTFT", "id": "Record ID", "close": "Close" }
+}

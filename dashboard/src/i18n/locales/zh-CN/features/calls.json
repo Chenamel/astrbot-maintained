@@ -1,0 +1,67 @@
+{
+  "quick": {
+    "today": "今天",
+    "yesterday": "昨天",
+    "3d": "近3天",
+    "7d": "近7天",
+    "30d": "近30天",
+    "month": "本月",
+    "all": "全部"
+  },
+  "filters": {
+    "model": "模型",
+    "source": "来源类型",
+    "status": "状态",
+    "search": "查询",
+    "reset": "重置"
+  },
+  "summary": {
+    "calls": "调用次数",
+    "input": "输入 Tokens",
+    "cached": "缓存 Tokens",
+    "output": "输出 Tokens",
+    "total": "合计 Tokens",
+    "successRate": "成功率"
+  },
+  "table": {
+    "time": "时间",
+    "source": "来源",
+    "session": "会话",
+    "model": "模型",
+    "input": "输入",
+    "cached": "缓存",
+    "output": "输出",
+    "total": "合计",
+    "duration": "耗时",
+    "ttft": "首字",
+    "status": "状态",
+    "empty": "当前筛选条件下没有调用记录"
+  },
+  "source": {
+    "all": "全部",
+    "internal": "主对话",
+    "llmGenerate": "插件直调",
+    "proactivePersona": "主动回复"
+  },
+  "pager": {
+    "total": "共 {n} 条",
+    "prev": "上一页",
+    "next": "下一页"
+  },
+  "detail": {
+    "title": "调用详情",
+    "time": "时间",
+    "source": "来源",
+    "session": "会话",
+    "model": "模型",
+    "provider": "提供商",
+    "input": "输入 Tokens",
+    "cached": "缓存 Tokens",
+    "output": "输出 Tokens",
+    "total": "合计 Tokens",
+    "duration": "耗时",
+    "ttft": "首字延迟",
+    "id": "记录 ID",
+    "close": "关闭"
+  }
+}

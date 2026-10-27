@@ -1,0 +1,9 @@
+{
+  "quick": { "today": "今日", "yesterday": "昨日", "3d": "3日間", "7d": "7日間", "30d": "30日間", "month": "今月", "all": "全期間" },
+  "filters": { "model": "モデル", "source": "ソース種別", "status": "ステータス", "search": "検索", "reset": "リセット" },
+  "summary": { "calls": "呼び出し数", "input": "入力 Tokens", "cached": "キャッシュ Tokens", "output": "出力 Tokens", "total": "合計 Tokens", "successRate": "成功率" },
+  "table": { "time": "時刻", "source": "ソース", "session": "セッション", "model": "モデル", "input": "入力", "cached": "キャッシュ", "output": "出力", "total": "合計", "duration": "所要時間", "ttft": "初字", "status": "状態", "empty": "条件に一致する呼び出し記録がありません" },
+  "source": { "all": "すべて", "internal": "本体対話", "llmGenerate": "プラグイン直接", "proactivePersona": "プロアクティブ" },
+  "pager": { "total": "全 {n} 件", "prev": "前へ", "next": "次へ" },
+  "detail": { "title": "呼び出し詳細", "time": "時刻", "source": "ソース", "session": "セッション", "model": "モデル", "provider": "プロバイダー", "input": "入力 Tokens", "cached": "キャッシュ Tokens", "output": "出力 Tokens", "total": "合計 Tokens", "duration": "所要時間", "ttft": "初字遅延", "id": "レコード ID", "close": "閉じる" }
+}

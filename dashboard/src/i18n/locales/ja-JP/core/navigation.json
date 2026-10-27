@@ -8,6 +8,7 @@
   "data": "データとログ",
   "dataTabs": {
     "statistics": "統計",
+    "calls": "呼び出し明細",
     "conversations": "会話",
     "logs": "ログ",
     "trace": "トレース"

@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 import {
   ChartNoAxesColumnIncreasing,
+  ListChecks,
   Logs,
   MessageSquareText,
   Waypoints,
@@ -18,6 +19,12 @@ const tabs = computed(() => [
     label: t("core.navigation.dataTabs.statistics"),
     routeName: "Stats",
     icon: ChartNoAxesColumnIncreasing,
+  },
+  {
+    value: "calls",
+    label: t("core.navigation.dataTabs.calls"),
+    routeName: "ProviderCalls",
+    icon: ListChecks,
   },
   {
     value: "conversations",

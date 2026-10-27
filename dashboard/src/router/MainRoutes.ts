@@ -175,6 +175,12 @@ const MainRoutes = {
           meta: { dataTab: 'statistics' }
         },
         {
+          name: 'ProviderCalls',
+          path: 'provider-calls',
+          component: () => import('@/views/stats/ProviderCallsPage.vue'),
+          meta: { dataTab: 'calls' }
+        },
+        {
           name: 'Conversation',
           path: 'conversations',
           component: () => import('@/views/conversation/ConversationWorkspacePage.vue'),
