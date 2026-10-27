@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, Query, Request
 
 from astrbot.dashboard.async_utils import run_maybe_async
@@ -64,6 +66,60 @@ async def get_provider_token_stats(
     service: StatService = Depends(get_service),
 ):
     return await _run(service.get_provider_token_stats(days))
+
+
+def _parse_aware_datetime(value: str | None, name: str):
+    """Parse an ISO-8601 query parameter into an aware UTC datetime.
+
+    Args:
+        value: Raw query value; ``None``/empty means "no bound".
+        name: Parameter name used in error messages.
+
+    Returns:
+        The parsed datetime converted to UTC, or ``None`` when absent.
+
+    Raises:
+        ApiError: When the value is present but not valid ISO-8601.
+    """
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError as exc:
+        raise ApiError(f"{name} must be an ISO-8601 datetime") from exc
+    if parsed.tzinfo is None:
+        # Naive input is interpreted in the dashboard's local timezone so the
+        # UI can send plain "2026-10-27T00:00:00" strings.
+        parsed = parsed.astimezone()
+    return parsed.astimezone(timezone.utc)
+
+
+@router.get("/stats/provider-calls")
+async def get_provider_call_details(
+    start: str | None = Query(default=None),
+    end: str | None = Query(default=None),
+    provider_model: str | None = Query(default=None),
+    agent_type: str | None = Query(default=None),
+    umo: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=200),
+    _auth: AuthContext = Depends(require_system_scope),
+    service: StatService = Depends(get_service),
+):
+    """Return one record per persisted LLM call with filters and a summary."""
+    return await _run(
+        service.list_provider_calls(
+            start=_parse_aware_datetime(start, "start"),
+            end=_parse_aware_datetime(end, "end"),
+            provider_model=provider_model or None,
+            agent_type=agent_type or None,
+            umo=umo or None,
+            status=status or None,
+            page=page,
+            page_size=page_size,
+        )
+    )
 
 
 @router.get("/stats/version")

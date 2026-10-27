@@ -13,6 +13,7 @@ from pathlib import Path
 
 import aiohttp
 import psutil
+from sqlalchemy import case
 from sqlmodel import col, func, select
 
 from astrbot.core import DEMO_MODE, logger
@@ -321,7 +322,9 @@ class StatService:
                 result = await session.execute(
                     select(ProviderStat)
                     .where(
-                        ProviderStat.agent_type == "internal",
+                        # No agent_type filter: the overview must count every
+                        # recorded source (core agent, plugin direct calls,
+                        # proactive persona), not just internal agent turns.
                         ProviderStat.created_at >= query_start_utc,
                     )
                     .order_by(col(ProviderStat.created_at).asc())
@@ -504,6 +507,160 @@ class StatService:
         except Exception as exc:
             logger.error(traceback.format_exc())
             raise StatServiceError(f"Error: {exc!s}") from exc
+
+    async def list_provider_calls(
+        self,
+        *,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        provider_model: str | None = None,
+        agent_type: str | None = None,
+        umo: str | None = None,
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> dict:
+        """List persisted LLM call records page by page, newest first.
+
+        Mirrors the usage-log page of billing gateways (one-api / new-api):
+        one row per call, filterable, with a summary block computed over the
+        same filters so the UI totals always match the visible rows' scope.
+
+        Args:
+            start: Inclusive lower bound on ``created_at`` (aware datetime).
+            end: Exclusive upper bound on ``created_at`` (aware datetime).
+            provider_model: Exact model-name match when given.
+            agent_type: Exact agent-type match when given.
+            umo: Exact unified-msg-origin match when given.
+            status: Exact status match when given.
+            page: 1-based page index.
+            page_size: Rows per page; clamped into ``[1, 200]``.
+
+        Returns:
+            ``items`` (serialized rows), ``total``, ``page``, ``page_size`` and
+            a ``summary`` block aggregated over the same filter conditions.
+        """
+        try:
+            page = max(1, page)
+            page_size = min(max(1, page_size), 200)
+
+            conditions = []
+            if start is not None:
+                conditions.append(ProviderStat.created_at >= start)
+            if end is not None:
+                conditions.append(ProviderStat.created_at < end)
+            if provider_model:
+                conditions.append(ProviderStat.provider_model == provider_model)
+            if agent_type:
+                conditions.append(ProviderStat.agent_type == agent_type)
+            if umo:
+                conditions.append(ProviderStat.umo == umo)
+            if status:
+                conditions.append(ProviderStat.status == status)
+
+            async with self.db_helper.get_db() as session:
+                total = (
+                    await session.execute(
+                        select(func.count())
+                        .select_from(ProviderStat)
+                        .where(*conditions)
+                    )
+                ).scalar_one()
+                result = await session.execute(
+                    select(ProviderStat)
+                    .where(*conditions)
+                    .order_by(
+                        col(ProviderStat.created_at).desc(),
+                        col(ProviderStat.id).desc(),
+                    )
+                    .offset((page - 1) * page_size)
+                    .limit(page_size)
+                )
+                records = result.scalars().all()
+                summary_row = (
+                    await session.execute(
+                        select(
+                            func.coalesce(func.sum(ProviderStat.token_input_other), 0),
+                            func.coalesce(func.sum(ProviderStat.token_input_cached), 0),
+                            func.coalesce(func.sum(ProviderStat.token_output), 0),
+                            func.coalesce(
+                                func.sum(
+                                    case(
+                                        (col(ProviderStat.status) != "error", 1),
+                                        else_=0,
+                                    )
+                                ),
+                                0,
+                            ),
+                        ).where(*conditions)
+                    )
+                ).one()
+
+            local_tz = datetime.now().astimezone().tzinfo or timezone.utc
+            items = [
+                self._serialize_provider_call(record, local_tz) for record in records
+            ]
+            input_other = int(summary_row[0])
+            input_cached = int(summary_row[1])
+            token_output = int(summary_row[2])
+            success_calls = int(summary_row[3])
+            return {
+                "items": items,
+                "total": int(total),
+                "page": page,
+                "page_size": page_size,
+                "summary": {
+                    "total_calls": int(total),
+                    "token_input_other": input_other,
+                    "token_input_cached": input_cached,
+                    "token_output": token_output,
+                    "total_tokens": input_other + input_cached + token_output,
+                    "success_rate": success_calls / total if total else 0,
+                },
+            }
+        except Exception as exc:
+            logger.error(traceback.format_exc())
+            raise StatServiceError(f"Error: {exc!s}") from exc
+
+    def _serialize_provider_call(self, record: ProviderStat, local_tz) -> dict:
+        """Convert one ProviderStat row into the call-detail response shape.
+
+        Args:
+            record: The raw ORM row.
+            local_tz: Timezone the dashboard runs in; timestamps are converted
+                into it because ``created_at`` is stored as UTC.
+
+        Returns:
+            A JSON-ready dict covering identity, timing and token splits.
+        """
+        created_at_local = self._ensure_aware_utc(record.created_at).astimezone(
+            local_tz
+        )
+        duration_ms = None
+        if record.end_time > record.start_time > 0:
+            duration_ms = round((record.end_time - record.start_time) * 1000)
+        ttft_ms = None
+        if record.time_to_first_token > 0:
+            ttft_ms = round(record.time_to_first_token * 1000)
+        return {
+            "id": record.id,
+            "created_at": created_at_local.isoformat(timespec="seconds"),
+            "agent_type": record.agent_type or "unknown",
+            "umo": record.umo,
+            "provider_id": record.provider_id,
+            "provider_model": record.provider_model,
+            "status": record.status,
+            "token_input_other": record.token_input_other,
+            "token_input_cached": record.token_input_cached,
+            "token_output": record.token_output,
+            "total_tokens": (
+                record.token_input_other
+                + record.token_input_cached
+                + record.token_output
+            ),
+            "duration_ms": duration_ms,
+            "ttft_ms": ttft_ms,
+        }
 
     async def test_ghproxy_connection(self, proxy_url: str | None) -> dict:
         try:
