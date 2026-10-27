@@ -11,6 +11,8 @@ interface CallItem {
   created_at: string;
   agent_type: string;
   umo: string | null;
+  umo_display?: string | null;
+  platform_type?: string | null;
   provider_id: string | null;
   provider_model: string | null;
   status: string;
@@ -35,7 +37,8 @@ const loading = ref(false);
 const items = ref<CallItem[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 50;
+const pageSize = ref(50);
+const jumpPage = ref<number | null>(null);
 const summary = ref<CallSummary>({
   total_calls: 0,
   token_input_other: 0,
@@ -107,7 +110,7 @@ async function load() {
   try {
     const params: Record<string, unknown> = {
       page: page.value,
-      page_size: pageSize,
+      page_size: pageSize.value,
     };
     if (startDate.value) {
       params.start = `${startDate.value}T00:00:00`;
@@ -145,6 +148,20 @@ function search() {
   load();
 }
 
+function changeSize(size: number) {
+  pageSize.value = size;
+  search();
+}
+
+function jumpTo() {
+  const target = jumpPage.value;
+  if (target === null) return;
+  const clamped = Math.min(Math.max(1, Math.floor(target)), totalPages.value);
+  page.value = clamped;
+  jumpPage.value = clamped;
+  load();
+}
+
 function reset() {
   modelFilter.value = "";
   agentFilter.value = "";
@@ -161,7 +178,9 @@ function gotoPage(delta: number) {
   load();
 }
 
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)));
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(total.value / pageSize.value)),
+);
 
 const agentLabel = (type: string): string => {
   const option = agentTypeOptions.find((o) => o.value === type);
@@ -171,6 +190,7 @@ const agentLabel = (type: string): string => {
 const fmtNumber = (n: number): string => n.toLocaleString();
 const fmtMs = (ms: number | null): string =>
   ms === null ? "—" : `${(ms / 1000).toFixed(ms < 10000 ? 2 : 1)}s`;
+const statusText = (status: string): string => tm(`status.${status}`);
 const statusColor = (status: string): string =>
   status === "error" ? "error" : status === "aborted" ? "warning" : "success";
 
@@ -233,8 +253,16 @@ onMounted(() => {
           <v-btn color="primary" density="comfortable" :loading="loading" @click="search">
             {{ tm('filters.search') }}
           </v-btn>
-          <v-btn variant="text" density="comfortable" :icon="RotateCcw" @click="reset" />
-          <v-btn variant="text" density="comfortable" :icon="RefreshCw" @click="load" />
+          <v-tooltip :text="tm('toolbar.reset')" location="top">
+            <template #activator="{ props: tip }">
+              <v-btn v-bind="tip" variant="text" density="comfortable" :icon="RotateCcw" @click="reset" />
+            </template>
+          </v-tooltip>
+          <v-tooltip :text="tm('toolbar.refresh')" location="top">
+            <template #activator="{ props: tip }">
+              <v-btn v-bind="tip" variant="text" density="comfortable" :icon="RefreshCw" @click="load" />
+            </template>
+          </v-tooltip>
         </div>
       </div>
     </section>
@@ -293,7 +321,7 @@ onMounted(() => {
             >
               <td class="mono">{{ item.created_at.replace('T', ' ') }}</td>
               <td><span class="type-chip">{{ agentLabel(item.agent_type) }}</span></td>
-              <td class="session-cell">{{ item.umo || '—' }}</td>
+              <td class="session-cell" :title="item.umo || ''">{{ item.umo_display || item.umo || '—' }}</td>
               <td class="model-cell">{{ item.provider_model || '—' }}</td>
               <td class="num">{{ fmtNumber(item.token_input_other) }}</td>
               <td class="num muted">{{ fmtNumber(item.token_input_cached) }}</td>
@@ -303,7 +331,7 @@ onMounted(() => {
               <td class="num">{{ fmtMs(item.ttft_ms) }}</td>
               <td>
                 <v-chip :color="statusColor(item.status)" size="x-small" label>
-                  {{ item.status }}
+                  {{ statusText(item.status) }}
                 </v-chip>
               </td>
             </tr>
@@ -317,6 +345,31 @@ onMounted(() => {
         <span class="pager-info">
           {{ tm('pager.total', { n: fmtNumber(total) }) }}
         </span>
+        <v-select
+          :model-value="pageSize"
+          :items="[25, 50, 100, 200]"
+          :label="tm('pager.size')"
+          density="compact"
+          hide-details
+          variant="outlined"
+          style="max-width: 110px"
+          @update:model-value="changeSize"
+        />
+        <v-text-field
+          v-model="jumpPage"
+          type="number"
+          min="1"
+          :max="totalPages"
+          :label="tm('pager.jump')"
+          density="compact"
+          hide-details
+          variant="outlined"
+          style="max-width: 110px"
+          @keyup.enter="jumpTo"
+        />
+        <v-btn variant="tonal" size="small" :disabled="loading" @click="jumpTo">
+          {{ tm('pager.go') }}
+        </v-btn>
         <v-btn
           variant="tonal"
           size="small"
@@ -342,7 +395,7 @@ onMounted(() => {
         <v-card-title class="d-flex align-center ga-2">
           {{ tm('detail.title') }}
           <v-chip :color="statusColor(detailItem.status)" size="x-small" label>
-            {{ detailItem.status }}
+            {{ statusText(detailItem.status) }}
           </v-chip>
         </v-card-title>
         <v-card-text>
@@ -350,7 +403,8 @@ onMounted(() => {
             <template v-for="row in [
                 ['time', detailItem.created_at.replace('T', ' ')],
                 ['source', agentLabel(detailItem.agent_type)],
-                ['session', detailItem.umo || '—'],
+                ['session', detailItem.umo_display || detailItem.umo || '—'],
+                ['rawUmo', detailItem.umo || '—'],
                 ['model', detailItem.provider_model || '—'],
                 ['provider', detailItem.provider_id || '—'],
                 ['input', fmtNumber(detailItem.token_input_other)],
