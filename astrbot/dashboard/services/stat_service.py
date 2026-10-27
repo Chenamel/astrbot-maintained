@@ -597,9 +597,33 @@ class StatService:
                 ).one()
 
             local_tz = datetime.now().astimezone().tzinfo or timezone.utc
-            items = [
-                self._serialize_provider_call(record, local_tz) for record in records
-            ]
+            # Resolve session aliases once for the page's rows so the UI can
+            # show a readable group name instead of a raw umo (same mechanism
+            # as the provider-tokens overview).
+            umo_set = sorted({record.umo for record in records if record.umo})
+            alias_map = build_umo_alias_map(
+                await self.db_helper.get_umo_aliases(umo_set)
+            )
+            platform_type_by_id = {}
+            for platform_config in self.config.get("platform", []):
+                platform_id = platform_config.get("id")
+                platform_type = platform_config.get("type")
+                if platform_id and platform_type:
+                    platform_type_by_id[str(platform_id)] = str(platform_type)
+            items = []
+            for record in records:
+                item = self._serialize_provider_call(record, local_tz)
+                umo = item["umo"] or ""
+                if umo:
+                    alias_info = serialize_umo_alias(alias_map.get(umo), umo)
+                    item["umo_display"] = alias_info["display_name"]
+                    item["platform_type"] = platform_type_by_id.get(
+                        umo.split(":", 1)[0], umo.split(":", 1)[0]
+                    )
+                else:
+                    item["umo_display"] = None
+                    item["platform_type"] = None
+                items.append(item)
             input_other = int(summary_row[0])
             input_cached = int(summary_row[1])
             token_output = int(summary_row[2])
