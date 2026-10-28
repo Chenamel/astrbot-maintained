@@ -14,7 +14,8 @@
     "status": "Status",
     "session": "Session",
     "search": "Search",
-    "reset": "Reset"
+    "reset": "Reset",
+    "plugin": "Plugin"
   },
   "summary": {
     "calls": "Calls",
@@ -76,6 +77,7 @@
     "ttft": "TTFT",
     "id": "Record ID",
     "rawUmo": "Raw session ID",
-    "close": "Close"
+    "close": "Close",
+    "caller": "Calling plugin"
   }
 }

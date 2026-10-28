@@ -10,6 +10,7 @@ interface CallItem {
   id: number;
   created_at: string;
   agent_type: string;
+  caller?: string | null;
   umo: string | null;
   umo_display?: string | null;
   platform_type?: string | null;
@@ -63,6 +64,8 @@ const endDate = ref("");
 const modelFilter = ref("");
 const sessionFilter = ref("");
 const agentFilter = ref("");
+const callerFilter = ref("");
+const callerItems = ref<string[]>([]);
 const statusFilter = ref("");
 
 const detailOpen = ref(false);
@@ -135,6 +138,9 @@ async function load() {
     if (agentFilter.value) {
       params.agent_type = agentFilter.value;
     }
+    if (callerFilter.value) {
+      params.caller = callerFilter.value;
+    }
     if (statusFilter.value) {
       params.status = statusFilter.value;
     }
@@ -145,8 +151,10 @@ async function load() {
     summary.value = payload.summary ?? summary.value;
     const known = new Set(modelItems.value);
     const knownSessions = new Set(sessionItems.value);
+    const knownCallers = new Set(callerItems.value);
     for (const item of items.value) {
       if (item.provider_model) known.add(item.provider_model);
+      if (item.caller) knownCallers.add(item.caller);
       if (item.umo) {
         const label = item.umo_display || item.umo;
         knownSessions.add(label);
@@ -154,6 +162,7 @@ async function load() {
       }
     }
     modelItems.value = [...known].sort();
+    callerItems.value = [...knownCallers].sort();
     sessionItems.value = [...knownSessions].sort();
   } finally {
     loading.value = false;
@@ -183,6 +192,7 @@ function reset() {
   modelFilter.value = "";
   sessionFilter.value = "";
   agentFilter.value = "";
+  callerFilter.value = "";
   statusFilter.value = "";
   quickRange.value = "7d";
   applyQuickRange("7d");
@@ -262,6 +272,17 @@ onMounted(() => {
             v-model="agentFilter"
             :items="agentTypeOptions.map((o) => ({ title: tm(`source.${o.label}`), value: o.value }))"
             :label="tm('filters.source')"
+            density="compact"
+            hide-details
+            clearable
+            variant="outlined"
+            class="filter-field"
+          />
+          <v-combobox
+            v-if="agentFilter === 'llm_generate'"
+            v-model="callerFilter"
+            :items="callerItems"
+            :label="tm('filters.plugin')"
             density="compact"
             hide-details
             clearable
@@ -350,7 +371,9 @@ onMounted(() => {
               @click="openDetail(item)"
             >
               <td class="mono">{{ item.created_at.replace('T', ' ') }}</td>
-              <td><span class="type-chip">{{ agentLabel(item.agent_type) }}</span></td>
+              <td>
+                <span class="type-chip">{{ item.caller || agentLabel(item.agent_type) }}</span>
+              </td>
               <td class="session-cell" :title="item.umo || ''">{{ item.umo_display || item.umo || '—' }}</td>
               <td class="model-cell">{{ item.provider_model || '—' }}</td>
               <td class="num">{{ fmtNumber(item.token_input_other) }}</td>
@@ -433,6 +456,7 @@ onMounted(() => {
             <template v-for="row in [
                 ['time', detailItem.created_at.replace('T', ' ')],
                 ['source', agentLabel(detailItem.agent_type)],
+                ['caller', detailItem.caller || '—'],
                 ['session', detailItem.umo_display || detailItem.umo || '—'],
                 ['rawUmo', detailItem.umo || '—'],
                 ['model', detailItem.provider_model || '—'],

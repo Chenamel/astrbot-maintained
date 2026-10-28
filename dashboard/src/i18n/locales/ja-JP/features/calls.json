@@ -14,7 +14,8 @@
     "status": "ステータス",
     "session": "セッション",
     "search": "検索",
-    "reset": "リセット"
+    "reset": "リセット",
+    "plugin": "プラグイン"
   },
   "summary": {
     "calls": "呼び出し数",
@@ -76,6 +77,7 @@
     "ttft": "初字遅延",
     "id": "レコード ID",
     "rawUmo": "元セッション ID",
-    "close": "閉じる"
+    "close": "閉じる",
+    "caller": "呼び出し元プラグイン"
   }
 }

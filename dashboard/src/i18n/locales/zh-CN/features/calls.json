@@ -14,7 +14,8 @@
     "status": "状态",
     "session": "会话",
     "search": "查询",
-    "reset": "重置"
+    "reset": "重置",
+    "plugin": "插件"
   },
   "summary": {
     "calls": "调用次数",
@@ -76,6 +77,7 @@
     "ttft": "首字延迟",
     "id": "记录 ID",
     "rawUmo": "原始会话 ID",
-    "close": "关闭"
+    "close": "关闭",
+    "caller": "调用插件"
   }
 }
