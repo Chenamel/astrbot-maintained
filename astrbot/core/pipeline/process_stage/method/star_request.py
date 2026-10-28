@@ -7,6 +7,11 @@ from typing import Any
 from astrbot.core import logger
 from astrbot.core.message.message_event_result import MessageEventResult
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+from astrbot.core.plugin_attribution import (
+    plugin_of_module,
+    reset_current_plugin,
+    set_current_plugin,
+)
 from astrbot.core.star.star import star_map
 from astrbot.core.star.star_handler import EventType, StarHandlerMetadata
 
@@ -45,9 +50,15 @@ class StarRequestSubStage(Stage):
                 continue
             logger.debug(f"plugin -> {md.name} - {handler.handler_name}")
             try:
-                wrapper = call_handler(event, handler.handler, **params)
-                async for ret in wrapper:
-                    yield ret
+                token = set_current_plugin(
+                    plugin_of_module(handler.handler_module_path)
+                )
+                try:
+                    wrapper = call_handler(event, handler.handler, **params)
+                    async for ret in wrapper:
+                        yield ret
+                finally:
+                    reset_current_plugin(token)
                 if event.is_stopped():
                     break
                 event.clear_result()  # 清除上一个 handler 的结果

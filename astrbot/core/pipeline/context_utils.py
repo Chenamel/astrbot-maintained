@@ -15,6 +15,10 @@ from astrbot.core.star.star import star_map
 from astrbot.core.star.star_handler import EventType, star_handlers_registry
 from astrbot.core.utils.direct_turns import is_current
 
+#: Diagnostic latch: log the first successful attribution once per process,
+#: so a silent failure is distinguishable from "the entry point never ran".
+_attribution_logged = False
+
 
 async def call_handler(
     event: AstrMessageEvent,
@@ -36,7 +40,12 @@ async def call_handler(
         AsyncGenerator[None, None]: 异步生成器，用于在管道中传递控制流
 
     """
-    token = set_current_plugin(plugin_of_module(getattr(handler, "__module__", "")))
+    global _attribution_logged
+    plugin = plugin_of_module(getattr(handler, "__module__", ""))
+    token = set_current_plugin(plugin)
+    if plugin and not _attribution_logged:
+        _attribution_logged = True
+        logger.info(f"[plugin-attribution] handler marked: {plugin}")
     try:
         ready_to_call = None  # 一个协程或者异步生成器
 
