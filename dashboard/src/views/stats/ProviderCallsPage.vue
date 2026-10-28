@@ -61,6 +61,7 @@ const quickRange = ref("7d");
 const startDate = ref("");
 const endDate = ref("");
 const modelFilter = ref("");
+const sessionFilter = ref("");
 const agentFilter = ref("");
 const statusFilter = ref("");
 
@@ -72,6 +73,9 @@ function openDetail(item: CallItem) {
   detailOpen.value = true;
 }
 const modelItems = ref<string[]>([]);
+const sessionItems = ref<string[]>([]);
+// display name -> raw umo, so a picked alias still filters by umo.
+const sessionLookup = ref<Record<string, string>>({});
 
 function isoDate(d: Date): string {
   const y = d.getFullYear();
@@ -84,19 +88,21 @@ function applyQuickRange(range: string) {
   const now = new Date();
   const today = isoDate(now);
   if (range === "today") {
-    startDate.value = today;
-    endDate.value = today;
+    startDate.value = `${today}T00:00`;
+    endDate.value = `${today}T23:59`;
   } else if (range === "yesterday") {
-    const y = new Date(now.getTime() - 86400000);
-    startDate.value = isoDate(y);
-    endDate.value = isoDate(y);
+    const y = isoDate(new Date(now.getTime() - 86400000));
+    startDate.value = `${y}T00:00`;
+    endDate.value = `${y}T23:59`;
   } else if (range === "3d" || range === "7d" || range === "30d") {
     const days = range === "3d" ? 3 : range === "7d" ? 7 : 30;
-    startDate.value = isoDate(new Date(now.getTime() - (days - 1) * 86400000));
-    endDate.value = today;
+    const from = isoDate(new Date(now.getTime() - (days - 1) * 86400000));
+    startDate.value = `${from}T00:00`;
+    endDate.value = `${today}T23:59`;
   } else if (range === "month") {
-    startDate.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-    endDate.value = today;
+    const first = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    startDate.value = `${first}T00:00`;
+    endDate.value = `${today}T23:59`;
   } else {
     startDate.value = "";
     endDate.value = "";
@@ -112,15 +118,19 @@ async function load() {
       page: page.value,
       page_size: pageSize.value,
     };
+    // datetime-local already carries the hour, so the range is hourly-grained.
     if (startDate.value) {
-      params.start = `${startDate.value}T00:00:00`;
+      params.start = startDate.value;
     }
     if (endDate.value) {
-      const end = new Date(`${endDate.value}T23:59:59`);
-      params.end = `${endDate.value}T${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}:${String(end.getSeconds()).padStart(2, "0")}`;
+      params.end = endDate.value;
     }
     if (modelFilter.value.trim()) {
       params.provider_model = modelFilter.value.trim();
+    }
+    const session = typeof sessionFilter.value === "string" ? sessionFilter.value.trim() : "";
+    if (session) {
+      params.umo = sessionLookup.value[session] || session;
     }
     if (agentFilter.value) {
       params.agent_type = agentFilter.value;
@@ -134,10 +144,17 @@ async function load() {
     total.value = payload.total ?? 0;
     summary.value = payload.summary ?? summary.value;
     const known = new Set(modelItems.value);
+    const knownSessions = new Set(sessionItems.value);
     for (const item of items.value) {
       if (item.provider_model) known.add(item.provider_model);
+      if (item.umo) {
+        const label = item.umo_display || item.umo;
+        knownSessions.add(label);
+        sessionLookup.value[label] = item.umo;
+      }
     }
     modelItems.value = [...known].sort();
+    sessionItems.value = [...knownSessions].sort();
   } finally {
     loading.value = false;
   }
@@ -164,6 +181,7 @@ function jumpTo() {
 
 function reset() {
   modelFilter.value = "";
+  sessionFilter.value = "";
   agentFilter.value = "";
   statusFilter.value = "";
   quickRange.value = "7d";
@@ -217,13 +235,23 @@ onMounted(() => {
           </button>
         </div>
         <div class="filter-fields">
-          <input v-model="startDate" type="date" class="date-input" aria-label="start" />
+          <input v-model="startDate" type="datetime-local" class="date-input" aria-label="start" />
           <span class="date-sep">→</span>
-          <input v-model="endDate" type="date" class="date-input" aria-label="end" />
+          <input v-model="endDate" type="datetime-local" class="date-input" aria-label="end" />
           <v-combobox
             v-model="modelFilter"
             :items="modelItems"
             :label="tm('filters.model')"
+            density="compact"
+            hide-details
+            clearable
+            variant="outlined"
+            class="filter-field"
+          />
+          <v-combobox
+            v-model="sessionFilter"
+            :items="sessionItems"
+            :label="tm('filters.session')"
             density="compact"
             hide-details
             clearable
@@ -242,7 +270,7 @@ onMounted(() => {
           />
           <v-select
             v-model="statusFilter"
-            :items="statusOptions"
+            :items="statusOptions.map((s) => ({ title: statusText(s), value: s }))"
             :label="tm('filters.status')"
             density="compact"
             hide-details
