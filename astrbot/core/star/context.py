@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from asyncio import Queue
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any, Protocol
@@ -203,6 +204,7 @@ class Context:
         prov = await self.provider_manager.get_provider_by_id(chat_provider_id)
         if not prov or not isinstance(prov, Provider):
             raise ProviderNotFoundError(f"Provider {chat_provider_id} not found")
+        start_time = time.time()
         llm_resp = await prov.text_chat(
             prompt=prompt,
             image_urls=image_urls,
@@ -212,6 +214,7 @@ class Context:
             system_prompt=system_prompt,
             **kwargs,
         )
+        end_time = time.time()
         # The agent-runner path already persists usage stats; this direct path
         # did not, which is why dashboard usage looked incomplete. Opt-in via
         # umo so callers without a session context stay untouched.
@@ -234,10 +237,17 @@ class Context:
                                 "input_other": llm_resp.usage.input_other,
                                 "input_cached": llm_resp.usage.input_cached,
                                 "output": llm_resp.usage.output,
-                            }
+                            },
+                            # Without these the call log showed "-" for duration
+                            # on every plugin-driven call.
+                            "start_time": start_time,
+                            "end_time": end_time,
                         }
                         if llm_resp.usage
-                        else {}
+                        else {
+                            "start_time": start_time,
+                            "end_time": end_time,
+                        }
                     ),
                     agent_type="llm_generate",
                 )

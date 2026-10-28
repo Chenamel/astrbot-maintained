@@ -15,6 +15,7 @@ nothing runs unless a plugin asks for it, so no existing behaviour changes.
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import Any
 
 from astrbot import logger
@@ -93,7 +94,9 @@ async def generate_with_persona(
     )
 
     async def _with_stats():
+        start_time = time.time()
         resp = await coro
+        end_time = time.time()
         # Mirror the agent-runner usage stats so dashboard totals cover this
         # path too; a stats failure must never break the reply.
         try:
@@ -113,10 +116,15 @@ async def generate_with_persona(
                             "input_other": resp.usage.input_other,
                             "input_cached": resp.usage.input_cached,
                             "output": resp.usage.output,
-                        }
+                        },
+                        "start_time": start_time,
+                        "end_time": end_time,
                     }
                     if resp.usage
-                    else {}
+                    else {
+                        "start_time": start_time,
+                        "end_time": end_time,
+                    }
                 ),
                 agent_type="proactive_persona",
             )

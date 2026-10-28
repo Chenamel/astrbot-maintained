@@ -83,10 +83,26 @@ async def test_usage_is_persisted(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_missing_usage_persists_empty_stats(monkeypatch):
+async def test_missing_usage_still_records_timing(monkeypatch):
+    """A response without usage has no tokens, but the call still took time.
+
+    The call log used to show "-" for duration on every plugin-driven call
+    because only token usage was persisted.
+    """
     ctx, db = _context(monkeypatch, _response(usage=None))
     await ctx.llm_generate(umo="umo", chat_provider_id="p", prompt="hi")
-    assert db.calls[0]["stats"] == {}
+    stats = db.calls[0]["stats"]
+    assert "token_usage" not in stats
+    assert 0 < stats["start_time"] <= stats["end_time"]
+
+
+@pytest.mark.asyncio
+async def test_timing_is_recorded_alongside_usage(monkeypatch):
+    ctx, db = _context(monkeypatch, _response(TokenUsage(11, 7, 5)))
+    await ctx.llm_generate(umo="umo", chat_provider_id="p", prompt="hi")
+    stats = db.calls[0]["stats"]
+    assert stats["token_usage"] == {"input_other": 11, "input_cached": 7, "output": 5}
+    assert 0 < stats["start_time"] <= stats["end_time"]
 
 
 @pytest.mark.asyncio
