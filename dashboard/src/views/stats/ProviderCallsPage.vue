@@ -278,19 +278,21 @@ onMounted(() => {
             variant="outlined"
             class="filter-field"
           />
-          <v-btn color="primary" density="comfortable" :loading="loading" @click="search">
-            {{ tm('filters.search') }}
-          </v-btn>
-          <v-tooltip :text="tm('toolbar.reset')" location="top">
-            <template #activator="{ props: tip }">
-              <v-btn v-bind="tip" variant="text" density="comfortable" :icon="RotateCcw" @click="reset" />
-            </template>
-          </v-tooltip>
-          <v-tooltip :text="tm('toolbar.refresh')" location="top">
-            <template #activator="{ props: tip }">
-              <v-btn v-bind="tip" variant="text" density="comfortable" :icon="RefreshCw" @click="load" />
-            </template>
-          </v-tooltip>
+          <div class="filter-actions">
+            <v-btn color="primary" density="comfortable" :loading="loading" @click="search">
+              {{ tm('filters.search') }}
+            </v-btn>
+            <v-tooltip :text="tm('toolbar.reset')" location="top">
+              <template #activator="{ props: tip }">
+                <v-btn v-bind="tip" variant="text" density="comfortable" :icon="RotateCcw" @click="reset" />
+              </template>
+            </v-tooltip>
+            <v-tooltip :text="tm('toolbar.refresh')" location="top">
+              <template #activator="{ props: tip }">
+                <v-btn v-bind="tip" variant="text" density="comfortable" :icon="RefreshCw" @click="load" />
+              </template>
+            </v-tooltip>
+          </div>
         </div>
       </div>
     </section>
@@ -504,13 +506,22 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+/* Keeps the action buttons together on one line even when the filters wrap. */
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .filter-field {
-  min-width: 150px;
-  max-width: 200px;
-  flex: 1 1 150px;
+  min-width: 130px;
+  max-width: 190px;
+  flex: 1 1 130px;
 }
 
 .date-input {
@@ -518,8 +529,10 @@ onMounted(() => {
   border-radius: 8px;
   background: transparent;
   color: rgb(var(--v-theme-on-surface));
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: 6px 8px;
+  font-size: 12px;
+  flex: 0 1 190px;
+  min-width: 170px;
 }
 
 .date-sep {
