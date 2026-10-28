@@ -12,6 +12,7 @@
     "model": "モデル",
     "source": "ソース種別",
     "status": "ステータス",
+    "session": "セッション",
     "search": "検索",
     "reset": "リセット"
   },
@@ -43,14 +44,6 @@
     "llmGenerate": "プラグイン直接",
     "proactivePersona": "プロアクティブ"
   },
-  "pager": {
-    "size": "表示件数",
-    "jump": "ページへ移動",
-    "go": "移動"
-  },
-  "detail": {
-    "rawUmo": "元セッション ID"
-  },
   "status": {
     "completed": "完了",
     "error": "失敗",
@@ -59,5 +52,30 @@
   "toolbar": {
     "refresh": "現在の結果を更新",
     "reset": "フィルタをリセット"
+  },
+  "pager": {
+    "total": "全 {n} 件",
+    "prev": "前へ",
+    "next": "次へ",
+    "size": "表示件数",
+    "jump": "ページへ移動",
+    "go": "移動"
+  },
+  "detail": {
+    "title": "呼び出し詳細",
+    "time": "時刻",
+    "source": "ソース",
+    "session": "セッション",
+    "model": "モデル",
+    "provider": "プロバイダー",
+    "input": "入力 Tokens",
+    "cached": "キャッシュ Tokens",
+    "output": "出力 Tokens",
+    "total": "合計 Tokens",
+    "duration": "所要時間",
+    "ttft": "初字遅延",
+    "id": "レコード ID",
+    "rawUmo": "元セッション ID",
+    "close": "閉じる"
   }
 }

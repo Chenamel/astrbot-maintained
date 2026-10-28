@@ -12,6 +12,7 @@
     "model": "Model",
     "source": "Source type",
     "status": "Status",
+    "session": "Session",
     "search": "Search",
     "reset": "Reset"
   },
@@ -43,14 +44,6 @@
     "llmGenerate": "Plugin direct",
     "proactivePersona": "Proactive"
   },
-  "pager": {
-    "size": "Rows per page",
-    "jump": "Jump to page",
-    "go": "Go"
-  },
-  "detail": {
-    "rawUmo": "Raw session ID"
-  },
   "status": {
     "completed": "Completed",
     "error": "Failed",
@@ -59,5 +52,30 @@
   "toolbar": {
     "refresh": "Refresh current results",
     "reset": "Reset filters"
+  },
+  "pager": {
+    "total": "{n} records",
+    "prev": "Prev",
+    "next": "Next",
+    "size": "Rows per page",
+    "jump": "Jump to page",
+    "go": "Go"
+  },
+  "detail": {
+    "title": "Call detail",
+    "time": "Time",
+    "source": "Source",
+    "session": "Session",
+    "model": "Model",
+    "provider": "Provider",
+    "input": "Input Tokens",
+    "cached": "Cached Tokens",
+    "output": "Output Tokens",
+    "total": "Total Tokens",
+    "duration": "Duration",
+    "ttft": "TTFT",
+    "id": "Record ID",
+    "rawUmo": "Raw session ID",
+    "close": "Close"
   }
 }
