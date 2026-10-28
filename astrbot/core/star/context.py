@@ -24,7 +24,11 @@ from astrbot.core.platform import Platform
 from astrbot.core.platform.astr_message_event import AstrMessageEvent, MessageSesion
 from astrbot.core.platform.message_type import MessageType
 from astrbot.core.platform_message_history_mgr import PlatformMessageHistoryManager
-from astrbot.core.plugin_attribution import PLUGIN_MODULE_PREFIX, current_plugin
+from astrbot.core.plugin_attribution import (
+    PLUGIN_MODULE_PREFIX,
+    current_plugin,
+    plugins_for_provider,
+)
 from astrbot.core.provider.entities import LLMResponse, ProviderRequest, ProviderType
 from astrbot.core.provider.func_tool_manager import FunctionTool, FunctionToolManager
 from astrbot.core.provider.manager import ProviderManager
@@ -220,6 +224,11 @@ class Context:
                     plugin_name = module_name.split(".", 1)[0]
                     break
                 frame = frame.f_back
+        if not plugin_name:
+            # Last resort: whichever plugins configured this provider for their
+            # own calls. Covers dispatchers that never run the marking hook, and
+            # keeps every owner when several plugins share one provider.
+            plugin_name = "|".join(plugins_for_provider(chat_provider_id or "")[:3])
         start_time = time.time()
         llm_resp = await prov.text_chat(
             prompt=prompt,

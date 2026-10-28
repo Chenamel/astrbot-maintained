@@ -15,6 +15,7 @@ import pytest
 import astrbot.core.star.context as context_module
 from astrbot.core.plugin_attribution import (
     plugin_of_module,
+    plugins_for_provider,
     reset_current_plugin,
     set_current_plugin,
 )
@@ -177,3 +178,7 @@ def test_plugin_of_module_only_accepts_plugin_packages():
     )
     assert plugin_of_module("astrbot.core.star.context") == ""
     assert plugin_of_module("") == ""
+
+
+def test_plugins_for_provider_is_empty_without_an_id():
+    assert plugins_for_provider("") == ()

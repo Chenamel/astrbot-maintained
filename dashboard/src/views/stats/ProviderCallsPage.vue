@@ -218,6 +218,8 @@ const agentLabel = (type: string): string => {
 const fmtNumber = (n: number): string => n.toLocaleString();
 const fmtMs = (ms: number | null): string =>
   ms === null ? "—" : `${(ms / 1000).toFixed(ms < 10000 ? 2 : 1)}s`;
+const callerLabel = (caller?: string | null): string =>
+  caller ? caller.split("|").join(" / ") : "";
 const statusText = (status: string): string => tm(`status.${status}`);
 const statusColor = (status: string): string =>
   status === "error" ? "error" : status === "aborted" ? "warning" : "success";
@@ -372,7 +374,7 @@ onMounted(() => {
             >
               <td class="mono">{{ item.created_at.replace('T', ' ') }}</td>
               <td>
-                <span class="type-chip">{{ item.caller || agentLabel(item.agent_type) }}</span>
+                <span class="type-chip">{{ callerLabel(item.caller) || agentLabel(item.agent_type) }}</span>
               </td>
               <td class="session-cell" :title="item.umo || ''">{{ item.umo_display || item.umo || '—' }}</td>
               <td class="model-cell">{{ item.provider_model || '—' }}</td>
@@ -456,7 +458,7 @@ onMounted(() => {
             <template v-for="row in [
                 ['time', detailItem.created_at.replace('T', ' ')],
                 ['source', agentLabel(detailItem.agent_type)],
-                ['caller', detailItem.caller || '—'],
+                ['caller', callerLabel(detailItem.caller) || '—'],
                 ['session', detailItem.umo_display || detailItem.umo || '—'],
                 ['rawUmo', detailItem.umo || '—'],
                 ['model', detailItem.provider_model || '—'],

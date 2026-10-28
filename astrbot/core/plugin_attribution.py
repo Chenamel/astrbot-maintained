@@ -11,6 +11,12 @@ plugin and the call site reads it back.
 from __future__ import annotations
 
 import contextvars
+import json
+import time
+from collections import defaultdict
+from pathlib import Path
+
+from astrbot.core.utils.astrbot_path import get_astrbot_config_path
 
 PLUGIN_MODULE_PREFIX = "astrbot_plugin_"
 
@@ -60,3 +66,84 @@ def reset_current_plugin(token: contextvars.Token) -> None:
 def current_plugin() -> str:
     """Return the plugin currently being served, or "" when unknown."""
     return _current_plugin.get()
+
+
+_CONFIG_TTL_SECONDS = 60.0
+_provider_map_cache: tuple[float, dict[str, tuple[str, ...]]] = (0.0, {})
+
+
+def _iter_provider_ids(node: object) -> list[str]:
+    """Collect provider ids referenced by a parsed plugin config.
+
+    Args:
+        node: Any JSON value from a plugin config file.
+
+    Returns:
+        Values of keys that look like ``*provider_id``/``*provider`` and hold a
+        non-empty string, in document order.
+    """
+    found: list[str] = []
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if isinstance(value, str) and value and "provider" in key.lower():
+                found.append(value)
+            else:
+                found.extend(_iter_provider_ids(value))
+    elif isinstance(node, list):
+        for item in node:
+            found.extend(_iter_provider_ids(item))
+    return found
+
+
+def _provider_plugin_map() -> dict[str, tuple[str, ...]]:
+    """Map each configured provider id to the plugins that reference it.
+
+    Reading the plugin configs sidesteps the whole dispatch question: a plugin
+    that names a provider for its own calls is exactly the plugin making them,
+    no matter how the call reaches the core.
+
+    Returns:
+        Provider id -> sorted plugin names. Kept for a short time because this
+        runs on the LLM call path and the files rarely change.
+    """
+    global _provider_map_cache
+    now = time.monotonic()
+    if now - _provider_map_cache[0] < _CONFIG_TTL_SECONDS:
+        return _provider_map_cache[1]
+
+    mapping: defaultdict[str, set[str]] = defaultdict(set)
+    try:
+        for path in Path(get_astrbot_config_path()).glob("*_config.json"):
+            plugin = path.name[: -len("_config.json")]
+            if not plugin.startswith(PLUGIN_MODULE_PREFIX):
+                continue
+            try:
+                data = json.loads(path.read_text(encoding="utf-8-sig"))
+            except (OSError, ValueError):
+                continue
+            for provider_id in _iter_provider_ids(data):
+                mapping[provider_id].add(plugin)
+    except OSError:
+        pass
+
+    resolved = {key: tuple(sorted(value)) for key, value in mapping.items()}
+    _provider_map_cache = (now, resolved)
+    return resolved
+
+
+def plugins_for_provider(provider_id: str) -> tuple[str, ...]:
+    """Return the plugins that configured ``provider_id`` for their own calls.
+
+    Two plugins sharing one provider cannot be told apart from configuration
+    alone, so every owner is returned and the caller decides how to present an
+    ambiguity instead of silently picking one.
+
+    Args:
+        provider_id: Provider id passed to the LLM call.
+
+    Returns:
+        Sorted plugin names, empty when the id is not claimed by any plugin.
+    """
+    if not provider_id:
+        return ()
+    return _provider_plugin_map().get(provider_id) or ()
