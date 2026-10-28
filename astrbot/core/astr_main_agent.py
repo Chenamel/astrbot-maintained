@@ -617,6 +617,34 @@ def _apply_lightweight_proactive_tools(
     req.func_tool = safe_tools if safe_tools.tools else None
 
 
+#: Platforms that render messages as plain text: markdown arrives as literal
+#: symbols and reads worse than no formatting at all.
+_PLAIN_TEXT_PLATFORMS = frozenset({"aiocqhttp", "qqofficial"})
+
+_PLAIN_TEXT_OUTPUT_PROMPT = (
+    "\n# Output Format\n\n"
+    "This chat is on a plain-text platform (QQ), where markdown is not rendered "
+    "and arrives as literal symbols. Write plain sentences: no headings, no bold "
+    "or italic, no bullet or numbered lists, no tables, no horizontal rules, and "
+    "no inline code ticks for emphasis. Fenced code blocks are the one exception "
+    "-- they are preserved intact and are expected when actually handing over "
+    "code.\n"
+)
+
+
+def _plain_text_output_prompt(event: AstrMessageEvent) -> str:
+    """Return output-format guidance for plain-text platforms.
+
+    Args:
+        event: The message event whose platform decides the format rules.
+
+    Returns:
+        The guidance block, or an empty string on platforms that render markdown.
+    """
+    platform = (event.get_platform_name() or "").lower()
+    return _PLAIN_TEXT_OUTPUT_PROMPT if platform in _PLAIN_TEXT_PLATFORMS else ""
+
+
 async def _ensure_persona_and_skills(
     req: ProviderRequest,
     cfg: dict,
@@ -629,6 +657,8 @@ async def _ensure_persona_and_skills(
 
     if event.get_extra("enable_inline_genui"):
         req.system_prompt += CHATUI_INLINE_GENUI_SYSTEM_PROMPT
+
+    req.system_prompt += _plain_text_output_prompt(event)
 
     if not req.conversation:
         return
