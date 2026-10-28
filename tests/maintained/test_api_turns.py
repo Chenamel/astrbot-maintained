@@ -52,12 +52,13 @@ def test_merged_text_reads_extra():
 
 
 def test_merged_image_urls_reads_and_filters_extra():
-    assert turns.merged_image_urls(
-        _event(_direct_turn_image_urls=["u1", "u2"])
-    ) == ["u1", "u2"]
-    assert turns.merged_image_urls(
-        _event(_direct_turn_image_urls=["u1", 2, None])
-    ) == ["u1"]
+    assert turns.merged_image_urls(_event(_direct_turn_image_urls=["u1", "u2"])) == [
+        "u1",
+        "u2",
+    ]
+    assert turns.merged_image_urls(_event(_direct_turn_image_urls=["u1", 2, None])) == [
+        "u1"
+    ]
     assert turns.merged_image_urls(_event(_direct_turn_image_urls="u1")) == []
     assert turns.merged_image_urls(_event()) == []
 

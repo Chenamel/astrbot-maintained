@@ -160,3 +160,38 @@ async def test_empty_result_keeps_zeroed_summary(temp_db):
     assert result["items"] == []
     assert result["summary"]["total_tokens"] == 0
     assert result["summary"]["success_rate"] == 0
+
+
+@pytest.mark.asyncio
+async def test_agent_type_filter_also_matches_attributed_rows(temp_db):
+    """The coarse source filter keeps matching once rows carry a plugin suffix."""
+    await _seed(temp_db, agent_type="llm_generate")
+    await _seed(temp_db, agent_type="llm_generate:astrbot_plugin_foo")
+    await _seed(temp_db, agent_type="internal")
+
+    result = await _make_service(temp_db).list_provider_calls(agent_type="llm_generate")
+
+    assert result["total"] == 2
+    assert all(i["agent_type"].startswith("llm_generate") for i in result["items"])
+
+
+@pytest.mark.asyncio
+async def test_caller_filter_narrows_within_an_agent_type(temp_db):
+    await _seed(temp_db, agent_type="llm_generate:astrbot_plugin_foo")
+    await _seed(temp_db, agent_type="llm_generate:astrbot_plugin_bar")
+
+    result = await _make_service(temp_db).list_provider_calls(
+        caller="astrbot_plugin_foo"
+    )
+
+    assert result["total"] == 1
+    assert result["items"][0]["caller"] == "astrbot_plugin_foo"
+
+
+@pytest.mark.asyncio
+async def test_unattributed_rows_expose_no_caller(temp_db):
+    await _seed(temp_db, agent_type="internal")
+
+    item = (await _make_service(temp_db).list_provider_calls())["items"][0]
+
+    assert item["caller"] is None

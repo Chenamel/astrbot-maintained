@@ -130,7 +130,9 @@ def test_capabilities_report_covers_contract():
 
 def test_resolve_returns_default_for_unknown_symbol():
     sentinel = object()
-    resolved = bridge.resolve("astrbot.core.utils.direct_turns", "_missing_name", sentinel)
+    resolved = bridge.resolve(
+        "astrbot.core.utils.direct_turns", "_missing_name", sentinel
+    )
     assert resolved is sentinel
 
 

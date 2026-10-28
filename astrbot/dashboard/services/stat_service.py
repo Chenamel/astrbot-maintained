@@ -13,7 +13,7 @@ from pathlib import Path
 
 import aiohttp
 import psutil
-from sqlalchemy import case
+from sqlalchemy import case, or_
 from sqlmodel import col, func, select
 
 from astrbot.core import DEMO_MODE, logger
@@ -515,6 +515,7 @@ class StatService:
         end: datetime | None = None,
         provider_model: str | None = None,
         agent_type: str | None = None,
+        caller: str | None = None,
         umo: str | None = None,
         status: str | None = None,
         page: int = 1,
@@ -530,7 +531,9 @@ class StatService:
             start: Inclusive lower bound on ``created_at`` (aware datetime).
             end: Exclusive upper bound on ``created_at`` (aware datetime).
             provider_model: Exact model-name match when given.
-            agent_type: Exact agent-type match when given.
+            agent_type: Agent-type match; also matches the ``<type>:<plugin>``
+                form so the coarse source filter keeps working unchanged.
+            caller: Plugin name match, narrowing within an agent type.
             umo: Exact unified-msg-origin match when given.
             status: Exact status match when given.
             page: 1-based page index.
@@ -552,7 +555,16 @@ class StatService:
             if provider_model:
                 conditions.append(ProviderStat.provider_model == provider_model)
             if agent_type:
-                conditions.append(ProviderStat.agent_type == agent_type)
+                # llm_generate rows carry "<type>:<plugin>", so match the exact
+                # value and the attributed form alike.
+                conditions.append(
+                    or_(
+                        ProviderStat.agent_type == agent_type,
+                        col(ProviderStat.agent_type).like(f"{agent_type}:%"),
+                    )
+                )
+            if caller:
+                conditions.append(col(ProviderStat.agent_type).like(f"%:{caller}"))
             if umo:
                 conditions.append(ProviderStat.umo == umo)
             if status:
@@ -666,10 +678,13 @@ class StatService:
         ttft_ms = None
         if record.time_to_first_token > 0:
             ttft_ms = round(record.time_to_first_token * 1000)
+        agent_type_value = record.agent_type or "unknown"
+        caller = agent_type_value.split(":", 1)[1] if ":" in agent_type_value else None
         return {
             "id": record.id,
             "created_at": created_at_local.isoformat(timespec="seconds"),
-            "agent_type": record.agent_type or "unknown",
+            "agent_type": agent_type_value,
+            "caller": caller,
             "umo": record.umo,
             "provider_id": record.provider_id,
             "provider_model": record.provider_model,

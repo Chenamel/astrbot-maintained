@@ -276,9 +276,7 @@ def test_core_has_no_plugin_directory_names():
     """
     hits = []
     for path in (REPO_ROOT / "astrbot" / "core").rglob("*.py"):
-        for lineno, line in enumerate(
-            path.read_text(encoding="utf-8").splitlines(), 1
-        ):
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             for match in PLUGIN_DIR_NAME.finditer(line):
                 hits.append(f"{path.relative_to(REPO_ROOT)}:{lineno}: {match.group()}")
     assert hits == []

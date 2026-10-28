@@ -124,9 +124,7 @@ def test_non_admin_sender_is_always_denied():
     """Execution stays closed without a configured administrator sender."""
     assert _outcome("运行这个脚本", sender_id="999") == "deny"
     assert _outcome("运行这个脚本", sender_id="") == "deny"
-    assert (
-        execution_denial(FakeEvent("运行这个脚本"), {"admins_id": []}) is not None
-    )
+    assert execution_denial(FakeEvent("运行这个脚本"), {"admins_id": []}) is not None
 
 
 #: Genuine model refusals that must stop the code repair flow (T8-14).
@@ -220,9 +218,7 @@ def test_explicit_refusals_are_detected(text: str):
     assert SAFETY_REFUSAL_PATTERN.search(text)
 
 
-@pytest.mark.parametrize(
-    "text", ["这里介绍如何防御恶意软件", "print('hello world')"]
-)
+@pytest.mark.parametrize("text", ["这里介绍如何防御恶意软件", "print('hello world')"])
 def test_ordinary_content_is_not_a_refusal(text: str):
     """Normal answers are not treated as refusals.
 
@@ -346,7 +342,11 @@ def test_unlabelled_block_is_currently_missed_when_a_language_is_requested(
     Args:
         language: The requested canonical language.
     """
-    body = "#include <iostream>\nint main(){}" if language == "cpp" else "def foo():\n    pass"
+    body = (
+        "#include <iostream>\nint main(){}"
+        if language == "cpp"
+        else "def foo():\n    pass"
+    )
     assert not has_code_delivery(f"```\n{body}\n```", language)
     # Without a requested language the same block is accepted.
     assert has_code_delivery(f"```\n{body}\n```", "")

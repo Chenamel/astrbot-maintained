@@ -18,7 +18,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from astrbot.core import astr_main_agent, astr_main_agent_proactive, astr_main_agent_quote
+from astrbot.core import (
+    astr_main_agent,
+    astr_main_agent_proactive,
+    astr_main_agent_quote,
+)
 from astrbot.core.agent.message import TextPart
 from astrbot.core.message.components import Plain, Reply
 from astrbot.core.provider.entities import ProviderRequest

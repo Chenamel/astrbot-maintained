@@ -176,11 +176,14 @@ def test_preview_keeps_short_content_untouched():
     """Content inside the preview budget is returned verbatim."""
     runner = _RunnerStub(preview_limit=100)
 
-    assert tool_loop_support.truncate_tool_result_preview(
-        runner,
-        "short result",
-        tool_call_id="call_1",
-    ) == "short result"
+    assert (
+        tool_loop_support.truncate_tool_result_preview(
+            runner,
+            "short result",
+            tool_call_id="call_1",
+        )
+        == "short result"
+    )
 
 
 def test_preview_halves_until_it_fits():
@@ -194,9 +197,12 @@ def test_preview_halves_until_it_fits():
     )
 
     assert len(preview) < 400
-    assert runner._tool_result_token_counter.count_tokens(
-        [type("M", (), {"content": preview})()]
-    ) <= 10
+    assert (
+        runner._tool_result_token_counter.count_tokens(
+            [type("M", (), {"content": preview})()]
+        )
+        <= 10
+    )
 
 
 def test_preview_returns_empty_content_unchanged():
@@ -336,7 +342,10 @@ def test_streak_treats_missing_arguments_as_empty():
 
 def test_guidance_is_empty_below_the_first_threshold():
     """A first occurrence never gets an escalation notice."""
-    assert tool_loop_support.build_repeated_tool_call_guidance(_NoticeRunner(), "t", 1) == ""
+    assert (
+        tool_loop_support.build_repeated_tool_call_guidance(_NoticeRunner(), "t", 1)
+        == ""
+    )
 
 
 def test_guidance_uses_the_l1_template():
@@ -374,7 +383,8 @@ async def test_iter_tool_executor_results_yields_every_result():
     runner = _AbortRunner()
 
     assert [
-        value async for value in tool_loop_support.iter_tool_executor_results(
+        value
+        async for value in tool_loop_support.iter_tool_executor_results(
             runner,
             executor(),
         )
@@ -458,7 +468,10 @@ def test_streak_treats_missing_arguments_as_empty():
 
 def test_guidance_is_empty_below_the_first_threshold():
     """A first occurrence never gets an escalation notice."""
-    assert tool_loop_support.build_repeated_tool_call_guidance(_NoticeRunner(), "t", 1) == ""
+    assert (
+        tool_loop_support.build_repeated_tool_call_guidance(_NoticeRunner(), "t", 1)
+        == ""
+    )
 
 
 def test_guidance_uses_the_l1_template():
@@ -496,7 +509,8 @@ async def test_iter_tool_executor_results_yields_every_result():
     runner = _AbortRunner()
 
     assert [
-        value async for value in tool_loop_support.iter_tool_executor_results(
+        value
+        async for value in tool_loop_support.iter_tool_executor_results(
             runner,
             executor(),
         )

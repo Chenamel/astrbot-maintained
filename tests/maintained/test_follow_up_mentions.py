@@ -125,8 +125,8 @@ def test_shared_predicate_matches_both_legacy_copies():
     for components in cases:
         event = _Event(components)
         assert direct_turns.mentions_other(event) == _legacy_follow_up_predicate(event)
-        assert (
-            direct_turns.mentions_other(event) == _legacy_direct_turns_predicate(event)
+        assert direct_turns.mentions_other(event) == _legacy_direct_turns_predicate(
+            event
         )
 
 

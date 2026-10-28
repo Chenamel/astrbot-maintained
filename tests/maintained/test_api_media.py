@@ -6,7 +6,11 @@ import astrbot.api.media as media
 
 
 def _request(**kwargs):
-    base = {"image_urls": [], "extra_user_content_parts": [], "image_input_unavailable": None}
+    base = {
+        "image_urls": [],
+        "extra_user_content_parts": [],
+        "image_input_unavailable": None,
+    }
     base.update(kwargs)
     return SimpleNamespace(**base)
 
@@ -39,7 +43,9 @@ def test_has_visual_input_from_urls():
 
 
 def test_has_visual_input_from_parts():
-    request = _request(extra_user_content_parts=[{"type": "image_url", "image_url": {}}])
+    request = _request(
+        extra_user_content_parts=[{"type": "image_url", "image_url": {}}]
+    )
     assert media.has_visual_input(request)
 
 
@@ -51,7 +57,9 @@ def test_has_visual_input_from_text_only_parts():
 def test_has_image_caption_from_object_and_dict():
     obj = SimpleNamespace(text=f"prefix {media.IMAGE_CAPTION_MARKER} suffix")
     assert media.has_image_caption([obj])
-    assert media.has_image_caption([{"type": "text", "text": media.IMAGE_CAPTION_MARKER}])
+    assert media.has_image_caption(
+        [{"type": "text", "text": media.IMAGE_CAPTION_MARKER}]
+    )
     assert not media.has_image_caption([SimpleNamespace(text="plain")])
     assert not media.has_image_caption([])
     assert not media.has_image_caption(None)
@@ -63,7 +71,9 @@ def test_image_input_available_prefers_explicit_flag():
 
 
 def test_image_input_available_falls_back_to_visual_input():
-    assert media.image_input_available(_request(image_urls=["https://example.com/a.png"]))
+    assert media.image_input_available(
+        _request(image_urls=["https://example.com/a.png"])
+    )
     assert not media.image_input_available(_request())
 
 

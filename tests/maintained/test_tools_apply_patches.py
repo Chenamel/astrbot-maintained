@@ -37,7 +37,10 @@ def test_verify_source_accepts_matching_tree(tmp_path):
     files = {"astrbot/core/a.py": "A"}
     source = tmp_path / "source"
     _write(source / "astrbot/core/a.py", "A")
-    assert apply_patches.verify_source(source, {k: _sha(v) for k, v in files.items()}) == []
+    assert (
+        apply_patches.verify_source(source, {k: _sha(v) for k, v in files.items()})
+        == []
+    )
 
 
 def test_verify_source_reports_broken_sources(tmp_path):
@@ -71,7 +74,9 @@ def test_build_plan_classifies_each_entry(tmp_path):
 def test_backup_files_records_pre_state(tmp_path):
     instance = _instance(tmp_path, {"astrbot/core/changed.py": "OLD"})
     core = instance / "core"
-    change = apply_patches.Change("astrbot/core/changed.py", apply_patches.ACTION_UPDATE)
+    change = apply_patches.Change(
+        "astrbot/core/changed.py", apply_patches.ACTION_UPDATE
+    )
 
     backup_dir, records = apply_patches.backup_files([change], core, instance)
 
@@ -188,7 +193,9 @@ def test_main_aborts_when_source_is_tampered(tmp_path, capsys):
 
 def test_main_returns_two_on_bad_instance(tmp_path, capsys):
     manifest = _manifest(tmp_path, {"astrbot/core/a.py": "NEW"})
-    code = apply_patches.main(["--instance", str(tmp_path / "missing"), "--manifest", str(manifest)])
+    code = apply_patches.main(
+        ["--instance", str(tmp_path / "missing"), "--manifest", str(manifest)]
+    )
     assert code == 2
     assert "error:" in capsys.readouterr().err
 
@@ -201,17 +208,20 @@ def test_apply_makes_check_drift_clean(tmp_path):
     for name, content in files.items():
         _write(source / name, content)
 
-    assert apply_patches.main(
-        [
-            "--instance",
-            str(instance),
-            "--manifest",
-            str(manifest),
-            "--source",
-            str(source),
-            "--apply",
-        ]
-    ) == 0
+    assert (
+        apply_patches.main(
+            [
+                "--instance",
+                str(instance),
+                "--manifest",
+                str(manifest),
+                "--source",
+                str(source),
+                "--apply",
+            ]
+        )
+        == 0
+    )
 
     expected = check_drift.load_manifest(manifest)
     assert check_drift.compare(instance / "core", expected).consistent

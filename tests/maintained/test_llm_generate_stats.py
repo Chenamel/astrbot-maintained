@@ -6,6 +6,7 @@ call raised inside the try block, so the whole direct-LLM path was dropped from
 provider_stats (662 warnings in a single day) and never showed up in the totals.
 """
 
+import types
 from types import SimpleNamespace
 
 import pytest
@@ -117,3 +118,28 @@ async def test_no_umo_skips_persistence(monkeypatch):
     ctx, db = _context(monkeypatch, _response(TokenUsage(1, 0, 0)))
     await ctx.llm_generate(chat_provider_id="p", prompt="hi")
     assert db.calls == []
+
+
+@pytest.mark.asyncio
+async def test_calling_plugin_is_attributed(monkeypatch):
+    """A call from a plugin package is recorded as llm_generate:<plugin>.
+
+    Community plugins never announce themselves, so the core reads the stack.
+    """
+    mod = types.ModuleType("astrbot_plugin_testplug")
+    exec(  # noqa: S102 - building a caller frame with a plugin module name
+        "async def call(ctx):\n"
+        "    return await ctx.llm_generate(umo='umo', chat_provider_id='p')\n",
+        mod.__dict__,
+    )
+    ctx, db = _context(monkeypatch, _response(TokenUsage(1, 0, 1)))
+    await mod.call(ctx)
+    assert db.calls[0]["agent_type"] == "llm_generate:astrbot_plugin_testplug"
+
+
+@pytest.mark.asyncio
+async def test_non_plugin_caller_stays_unattributed(monkeypatch):
+    """Anything that is not a plugin package keeps the plain agent type."""
+    ctx, db = _context(monkeypatch, _response(TokenUsage(1, 0, 1)))
+    await ctx.llm_generate(umo="umo", chat_provider_id="p")
+    assert db.calls[0]["agent_type"] == "llm_generate"

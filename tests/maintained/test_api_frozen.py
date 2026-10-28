@@ -60,4 +60,6 @@ def test_allow_list_entries_all_exist_and_are_additions():
     for path in sorted(ALLOWED_ADDITIONS):
         assert (REPO_ROOT / path).is_file(), f"allow-listed file is missing: {path}"
         if _git("rev-parse", "--verify", BASELINE).returncode == 0:
-            assert path in changed, f"allow-listed file is not a baseline addition: {path}"
+            assert path in changed, (
+                f"allow-listed file is not a baseline addition: {path}"
+            )

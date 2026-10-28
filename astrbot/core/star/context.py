@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 import time
 from asyncio import Queue
 from collections.abc import Awaitable, Callable
@@ -204,6 +205,20 @@ class Context:
         prov = await self.provider_manager.get_provider_by_id(chat_provider_id)
         if not prov or not isinstance(prov, Provider):
             raise ProviderNotFoundError(f"Provider {chat_provider_id} not found")
+
+        # Community plugins follow the upstream API and never announce
+        # themselves, so the core has to look: walk the stack and take the first
+        # frame that belongs to a plugin package. Anything else (core internals,
+        # the event loop, a plain script) is left unattributed on purpose --
+        # guessing wrong would be worse than not knowing.
+        plugin_name = ""
+        frame = sys._getframe(0)
+        while frame is not None:
+            module_name = frame.f_globals.get("__name__", "") or ""
+            if module_name.startswith("astrbot_plugin_"):
+                plugin_name = module_name.split(".", 1)[0]
+                break
+            frame = frame.f_back
         start_time = time.time()
         llm_resp = await prov.text_chat(
             prompt=prompt,
@@ -249,7 +264,11 @@ class Context:
                             "end_time": end_time,
                         }
                     ),
-                    agent_type="llm_generate",
+                    # Kept in agent_type instead of a new column: no schema
+                    # migration, and no upstream db module to diverge from.
+                    agent_type=(
+                        f"llm_generate:{plugin_name}" if plugin_name else "llm_generate"
+                    ),
                 )
             except Exception as e:  # noqa: BLE001 - stats must not break callers
                 logger.warning("Persist llm_generate stats failed: %s", e)

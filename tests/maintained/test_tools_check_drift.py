@@ -49,7 +49,11 @@ def test_load_manifest_rejects_missing_file(tmp_path):
 
 
 def test_compare_reports_ok_mismatch_and_missing(tmp_path):
-    files = {"astrbot/core/a.py": "A", "astrbot/core/b.py": "B", "astrbot/api/c.py": "C"}
+    files = {
+        "astrbot/core/a.py": "A",
+        "astrbot/core/b.py": "B",
+        "astrbot/api/c.py": "C",
+    }
     manifest = _make_manifest(tmp_path, files)
     expected = check_drift.load_manifest(manifest)
 
