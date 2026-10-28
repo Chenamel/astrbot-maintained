@@ -6,12 +6,18 @@ call raised inside the try block, so the whole direct-LLM path was dropped from
 provider_stats (662 warnings in a single day) and never showed up in the totals.
 """
 
+import asyncio
 import types
 from types import SimpleNamespace
 
 import pytest
 
 import astrbot.core.star.context as context_module
+from astrbot.core.plugin_attribution import (
+    plugin_of_module,
+    reset_current_plugin,
+    set_current_plugin,
+)
 from astrbot.core.provider.entities import LLMResponse, TokenUsage
 from astrbot.core.star.context import Context
 
@@ -143,3 +149,31 @@ async def test_non_plugin_caller_stays_unattributed(monkeypatch):
     ctx, db = _context(monkeypatch, _response(TokenUsage(1, 0, 1)))
     await ctx.llm_generate(umo="umo", chat_provider_id="p")
     assert db.calls[0]["agent_type"] == "llm_generate"
+
+
+@pytest.mark.asyncio
+async def test_attribution_survives_a_task_hop(monkeypatch):
+    """asyncio.wait_for severs the stack, so the context marker must carry it.
+
+    Plugins routinely wrap judge calls in wait_for, which schedules the
+    coroutine as its own task -- the very case that made stack-only detection
+    attribute nothing at all.
+    """
+    ctx, db = _context(monkeypatch, _response(TokenUsage(1, 0, 1)))
+    token = set_current_plugin("astrbot_plugin_wrapped")
+    try:
+        await asyncio.wait_for(
+            ctx.llm_generate(umo="umo", chat_provider_id="p"), timeout=5
+        )
+    finally:
+        reset_current_plugin(token)
+    assert db.calls[0]["agent_type"] == "llm_generate:astrbot_plugin_wrapped"
+
+
+def test_plugin_of_module_only_accepts_plugin_packages():
+    assert (
+        plugin_of_module("astrbot_plugin_livingmemory.main")
+        == "astrbot_plugin_livingmemory"
+    )
+    assert plugin_of_module("astrbot.core.star.context") == ""
+    assert plugin_of_module("") == ""

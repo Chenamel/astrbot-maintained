@@ -24,6 +24,7 @@ from astrbot.core.platform import Platform
 from astrbot.core.platform.astr_message_event import AstrMessageEvent, MessageSesion
 from astrbot.core.platform.message_type import MessageType
 from astrbot.core.platform_message_history_mgr import PlatformMessageHistoryManager
+from astrbot.core.plugin_attribution import PLUGIN_MODULE_PREFIX, current_plugin
 from astrbot.core.provider.entities import LLMResponse, ProviderRequest, ProviderType
 from astrbot.core.provider.func_tool_manager import FunctionTool, FunctionToolManager
 from astrbot.core.provider.manager import ProviderManager
@@ -207,18 +208,18 @@ class Context:
             raise ProviderNotFoundError(f"Provider {chat_provider_id} not found")
 
         # Community plugins follow the upstream API and never announce
-        # themselves, so the core has to look: walk the stack and take the first
-        # frame that belongs to a plugin package. Anything else (core internals,
-        # the event loop, a plain script) is left unattributed on purpose --
-        # guessing wrong would be worse than not knowing.
-        plugin_name = ""
-        frame = sys._getframe(0)
-        while frame is not None:
-            module_name = frame.f_globals.get("__name__", "") or ""
-            if module_name.startswith("astrbot_plugin_"):
-                plugin_name = module_name.split(".", 1)[0]
-                break
-            frame = frame.f_back
+        # themselves. The dispatcher marks the plugin on the context, which
+        # survives the task hop that asyncio.wait_for creates -- the stack does
+        # not, hence the fallback for paths that bypass the dispatcher.
+        plugin_name = current_plugin()
+        if not plugin_name:
+            frame = sys._getframe(0)
+            while frame is not None:
+                module_name = frame.f_globals.get("__name__", "") or ""
+                if module_name.startswith(PLUGIN_MODULE_PREFIX):
+                    plugin_name = module_name.split(".", 1)[0]
+                    break
+                frame = frame.f_back
         start_time = time.time()
         llm_resp = await prov.text_chat(
             prompt=prompt,

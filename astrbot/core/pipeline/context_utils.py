@@ -6,6 +6,11 @@ import typing as T
 from astrbot import logger
 from astrbot.core.message.message_event_result import CommandResult, MessageEventResult
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+from astrbot.core.plugin_attribution import (
+    plugin_of_module,
+    reset_current_plugin,
+    set_current_plugin,
+)
 from astrbot.core.star.star import star_map
 from astrbot.core.star.star_handler import EventType, star_handlers_registry
 from astrbot.core.utils.direct_turns import is_current
@@ -31,50 +36,54 @@ async def call_handler(
         AsyncGenerator[None, None]: 异步生成器，用于在管道中传递控制流
 
     """
-    ready_to_call = None  # 一个协程或者异步生成器
-
-    trace_ = None
-
+    token = set_current_plugin(plugin_of_module(getattr(handler, "__module__", "")))
     try:
-        ready_to_call = handler(event, *args, **kwargs)
-    except TypeError:
-        logger.error(
-            "Plugin Handler arguments do not match its definition.",
-            exc_info=True,
-        )
+        ready_to_call = None  # 一个协程或者异步生成器
 
-    if not ready_to_call:
-        return
+        trace_ = None
 
-    if inspect.isasyncgen(ready_to_call):
-        _has_yielded = False
         try:
-            async for ret in ready_to_call:
-                # 这里逐步执行异步生成器, 对于每个 yield 返回的 ret, 执行下面的代码
-                # 返回值只能是 MessageEventResult 或者 None（无返回值）
-                _has_yielded = True
-                if isinstance(ret, MessageEventResult | CommandResult):
-                    # 如果返回值是 MessageEventResult, 设置结果并继续
-                    event.set_result(ret)
+            ready_to_call = handler(event, *args, **kwargs)
+        except TypeError:
+            logger.error(
+                "Plugin Handler arguments do not match its definition.",
+                exc_info=True,
+            )
+
+        if not ready_to_call:
+            return
+
+        if inspect.isasyncgen(ready_to_call):
+            _has_yielded = False
+            try:
+                async for ret in ready_to_call:
+                    # 这里逐步执行异步生成器, 对于每个 yield 返回的 ret, 执行下面的代码
+                    # 返回值只能是 MessageEventResult 或者 None（无返回值）
+                    _has_yielded = True
+                    if isinstance(ret, MessageEventResult | CommandResult):
+                        # 如果返回值是 MessageEventResult, 设置结果并继续
+                        event.set_result(ret)
+                        yield
+                    else:
+                        # 如果返回值是 None, 则不设置结果并继续
+                        # 继续执行后续阶段
+                        yield ret
+                if not _has_yielded:
+                    # 如果这个异步生成器没有执行到 yield 分支
                     yield
-                else:
-                    # 如果返回值是 None, 则不设置结果并继续
-                    # 继续执行后续阶段
-                    yield ret
-            if not _has_yielded:
-                # 如果这个异步生成器没有执行到 yield 分支
+            except Exception as e:
+                logger.error(f"Previous Error: {trace_}")
+                raise e
+        elif inspect.iscoroutine(ready_to_call):
+            # 如果只是一个协程, 直接执行
+            ret = await ready_to_call
+            if isinstance(ret, MessageEventResult | CommandResult):
+                event.set_result(ret)
                 yield
-        except Exception as e:
-            logger.error(f"Previous Error: {trace_}")
-            raise e
-    elif inspect.iscoroutine(ready_to_call):
-        # 如果只是一个协程, 直接执行
-        ret = await ready_to_call
-        if isinstance(ret, MessageEventResult | CommandResult):
-            event.set_result(ret)
-            yield
-        else:
-            yield ret
+            else:
+                yield ret
+    finally:
+        reset_current_plugin(token)
 
 
 async def call_event_hook(
