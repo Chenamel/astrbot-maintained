@@ -36,7 +36,7 @@
     "astrbot/core/platform/sources/aiocqhttp/aiocqhttp_message_event.py": "cd96110aa765958dde70eb73f97ac146158527cbe2edc2ef52ff8ce70fb0946f",
     "astrbot/core/proactive_persona.py": "261d933948b43999e730a9640f9de252396e1744d9a7ea7998abb19850b9b3d4",
     "astrbot/core/provider/entities.py": "4036a6b08e3869091606ec944ce810b0d050655975d1d61654e98e225484914b",
-    "astrbot/core/provider/sources/openai_source.py": "502967d1a4f056c927f94db5e4a99389ce4eb5496b710338d83564793a969205",
+    "astrbot/core/provider/sources/openai_source.py": "a9852dc3f82d177b07bcf81bf27eca313554f146a1deb55b43d50520fa833c65",
     "astrbot/core/star/context.py": "ca6448dd3940fd20936376809c6f3eeae371295bf62b7fabb5ae61d8851f4b36",
     "astrbot/core/star/maintenance.py": "9dfde79480d9eb89959b995216717c76f832b63d2cb993bcf08c70a623ffcbdf",
     "astrbot/core/star/star_manager.py": "0bb21c777574e0e34fa57791f80ef318a5a0736ac35ac9246482325383e597eb",
@@ -51,6 +51,7 @@
     "astrbot/dashboard/services/stat_service.py": "c87677b3599a4b1a67caf2b72251408600b71a36d88edd3c56a1edec2dd791c3",
     "astrbot/dashboard/api/stats.py": "8b0faae073ec57e848ca258c9dd17d6f74c84974c267e9f81863d8987f9cb52a",
     "astrbot/core/plugin_attribution.py": "97a115f3be9a1d16326e6216eee6314021a421381483cea0d29d7b9f5627e387",
-    "astrbot/core/pipeline/process_stage/method/star_request.py": "b69f43b454d0b4257b714518d4a9f6662872266f9b0c8dab732bb965829878b2"
+    "astrbot/core/pipeline/process_stage/method/star_request.py": "b69f43b454d0b4257b714518d4a9f6662872266f9b0c8dab732bb965829878b2",
+    "astrbot/core/provider/sources/openai_responses_source.py": "dd126d55a85b644efef3079bc50c4776b2b9bc6331fb2bb3128dfc9ddd7282e6"
   }
 }

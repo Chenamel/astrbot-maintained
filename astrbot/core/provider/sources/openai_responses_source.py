@@ -292,6 +292,13 @@ class ProviderOpenAIResponses(ProviderOpenAIOfficial):
         if system_prompt:
             payloads["instructions"] = system_prompt
 
+        # Additive: a single call may carry extra API fields without touching
+        # the provider config. ``extra_body`` is merged last so a caller can
+        # override defaults (e.g. disable thinking) for this request only.
+        call_extra_body = kwargs.pop("extra_body", None)
+        if isinstance(call_extra_body, dict):
+            payloads.update(call_extra_body)
+
         return payloads, context_query
 
     async def _query(
