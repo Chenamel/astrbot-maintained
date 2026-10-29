@@ -15,6 +15,7 @@ nothing runs unless a plugin asks for it, so no existing behaviour changes.
 from __future__ import annotations
 
 import asyncio
+import copy
 import time
 from typing import Any
 
@@ -82,6 +83,29 @@ async def generate_with_persona(
         image_urls=list(image_urls or []),
         session_id=getattr(event, "unified_msg_origin", "") or "",
     )
+    # The persona chain lives in core, not in this module: the normal agent path
+    # applies it from a conversation context, which a one-shot call has none of.
+    # Without this the bot answered proactive messages with no persona at all --
+    # the configured 1.3k-character description only reached @-mentions.
+    try:
+        persona_manager = getattr(context, "persona_manager", None)
+        if persona_manager is not None:
+            _, persona, _, _ = await persona_manager.resolve_selected_persona(
+                umo=getattr(event, "unified_msg_origin", "") or "",
+                conversation_persona_id=None,
+                platform_name=getattr(event, "get_platform_name", lambda: "")() or "",
+            )
+            if persona:
+                if persona_prompt := persona.get("prompt"):
+                    req.system_prompt += (
+                        f"\n# Persona Instructions\n\n{persona_prompt}\n"
+                    )
+                begin_dialogs = persona.get("_begin_dialogs_processed") or []
+                if begin_dialogs:
+                    req.contexts[:0] = copy.deepcopy(begin_dialogs)
+    except Exception as exc:  # noqa: BLE001 - a missing persona must not block
+        logger.warning("proactive persona injection skipped: %s", exc)
+
     # Plugins mutate req here: persona, memory, group context.
     if await call_event_hook(event, EventType.OnLLMRequestEvent, req):
         return None
