@@ -11,6 +11,7 @@ class:
 """
 
 import asyncio
+import re
 from asyncio import Queue
 
 from astrbot.core import logger
@@ -22,6 +23,9 @@ from .platform import AstrMessageEvent
 NEWLINE_MARK = "⏎"
 """Visible stand-in for a newline inside a logged message."""
 
+_CONTROL_CHAR_RE = re.compile(r"[\x00-\x1f\x7f]")
+"""Other invisible characters: they break a log line just as a newline does."""
+
 
 def _collapse_newlines(text: str) -> str:
     """Render newlines as a visible mark so one message stays one log line.
@@ -30,14 +34,19 @@ def _collapse_newlines(text: str) -> str:
         text: Message outline as produced by the event.
 
     Returns:
-        The same text with every newline replaced by ``NEWLINE_MARK``. Only the
-        log copy is touched; the event keeps its original text.
+        The same text with every newline replaced by ``NEWLINE_MARK`` and other
+        control characters dropped. Only the log copy is touched; the event
+        keeps its original text.
     """
-    return (
+    collapsed = (
         text.replace("\r\n", NEWLINE_MARK)
         .replace("\n", NEWLINE_MARK)
         .replace("\r", NEWLINE_MARK)
     )
+    # Newlines are marked so the shape stays readable; the remaining control
+    # characters carry nothing a human can read, and they split a log line just
+    # as a newline does.
+    return _CONTROL_CHAR_RE.sub("", collapsed)
 
 
 class EventBus:

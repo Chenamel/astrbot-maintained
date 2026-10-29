@@ -35,3 +35,16 @@ def test_mark_is_visible_but_not_a_control_character(mark):
     """It must survive a terminal and be obvious to a human reader."""
     assert mark.isprintable()
     assert mark not in ("\n", "\r")
+
+
+def test_control_characters_are_dropped():
+    """They split a log line exactly like a newline, but carry no meaning."""
+    messy = "签到" + chr(6) + chr(18) + chr(4) + "tefh" + chr(5) + chr(3) + "打卡"
+
+    assert _collapse_newlines(messy) == "签到tefh打卡"
+
+
+def test_newline_and_control_characters_together():
+    text = "第一行" + chr(10) + "第二行" + chr(7) + "第三行"
+
+    assert _collapse_newlines(text) == f"第一行{NEWLINE_MARK}第二行第三行"
