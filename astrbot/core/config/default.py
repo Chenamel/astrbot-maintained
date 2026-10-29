@@ -282,6 +282,7 @@ DEFAULT_CONFIG = {
     # consecutive messages arrive as one round. 0 disables aggregation.
     "direct_turn_quiet_sec": 4,
     "log_level": "INFO",
+    "log_escape_message_newlines": True,
     "log_file_enable": False,
     "log_file_path": "logs/astrbot.log",
     "log_file_max_mb": 20,
@@ -3200,6 +3201,16 @@ CONFIG_METADATA_2 = {
             "log_level": {
                 "type": "string",
                 "options": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+            },
+            "log_escape_message_newlines": {
+                "type": "bool",
+                "description": "日志中转义消息换行",
+                "hint": (
+                    "群消息里带换行时，日志会跟着断成多行，很难读。"
+                    "开启（默认）会把换行显示为 ⏎，一条消息一行；"
+                    "关闭则保持原样，取决于消息内容。"
+                    "只影响日志显示，不影响插件收到的消息内容。"
+                ),
             },
             "dashboard.ssl.enable": {"type": "bool"},
             "dashboard.trust_proxy_headers": {"type": "bool"},

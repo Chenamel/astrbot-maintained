@@ -22,7 +22,7 @@ MANIFEST_PATH = REPO_ROOT / "maintained" / "installed_manifest.json"
 #: Number of protected files. Adding or removing entries requires updating this
 #: pin in the same commit -- that is the point of the pin.
 #: 52 = 51 + openai_responses_source (per-call extra_body).
-EXPECTED_ENTRY_COUNT = 52
+EXPECTED_ENTRY_COUNT = 53
 
 
 def _manifest() -> dict:

@@ -19,6 +19,26 @@ from astrbot.core.pipeline.scheduler import PipelineScheduler
 
 from .platform import AstrMessageEvent
 
+NEWLINE_MARK = "⏎"
+"""Visible stand-in for a newline inside a logged message."""
+
+
+def _collapse_newlines(text: str) -> str:
+    """Render newlines as a visible mark so one message stays one log line.
+
+    Args:
+        text: Message outline as produced by the event.
+
+    Returns:
+        The same text with every newline replaced by ``NEWLINE_MARK``. Only the
+        log copy is touched; the event keeps its original text.
+    """
+    return (
+        text.replace("\r\n", NEWLINE_MARK)
+        .replace("\n", NEWLINE_MARK)
+        .replace("\r", NEWLINE_MARK)
+    )
+
 
 class EventBus:
     """用于处理事件的分发和处理"""
@@ -62,6 +82,19 @@ class EventBus:
         if exc is not None:
             logger.error("Pipeline task failed.", exc_info=exc)
 
+    def _escape_message_newlines(self) -> bool:
+        """Whether message newlines should be collapsed before logging.
+
+        Returns:
+            The configured value, defaulting to True so a config written before
+            this option existed still gets the readable behaviour.
+        """
+        try:
+            conf = self.astrbot_config_mgr.default_conf
+            return bool(conf.get("log_escape_message_newlines", True))
+        except Exception:  # noqa: BLE001 - logging must never break dispatch
+            return True
+
     def _print_event(self, event: AstrMessageEvent, conf_name: str) -> None:
         """用于记录事件信息
 
@@ -69,15 +102,19 @@ class EventBus:
             event (AstrMessageEvent): 事件对象
 
         """
+        # 换行转义只影响日志副本，event 里的文本保持原样（插件读到的仍是原文）。
+        outline = event.get_message_outline()
+        if self._escape_message_newlines():
+            outline = _collapse_newlines(outline)
         # 如果有发送者名称: [平台名] 发送者名称/发送者ID: 消息概要
         if event.get_sender_name():
             logger.info(
-                f"[{conf_name}] [{event.get_platform_id()}({event.get_platform_name()})] {event.get_sender_name()}/{event.get_sender_id()}: {event.get_message_outline()}",
+                f"[{conf_name}] [{event.get_platform_id()}({event.get_platform_name()})] {event.get_sender_name()}/{event.get_sender_id()}: {outline}",
                 extra={"category": "user_chat"},
             )
         # 没有发送者名称: [平台名] 发送者ID: 消息概要
         else:
             logger.info(
-                f"[{conf_name}] [{event.get_platform_id()}({event.get_platform_name()})] {event.get_sender_id()}: {event.get_message_outline()}",
+                f"[{conf_name}] [{event.get_platform_id()}({event.get_platform_name()})] {event.get_sender_id()}: {outline}",
                 extra={"category": "user_chat"},
             )

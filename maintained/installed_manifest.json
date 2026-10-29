@@ -23,7 +23,7 @@
     "astrbot/core/astr_main_agent_quote.py": "9f389aa9ce6994255350097eb61da7162566a451b7429f9df35561357008cdb6",
     "astrbot/core/code_delivery_policy.py": "5cc760e9ff5eba9ecc3ee9ce04c17bf0ec884994442b482bb0ab0fa012e76388",
     "astrbot/core/config/agent_runner.py": "d8cc360b16fe7b33149396d5ad5d190ce7aadd9cbb9d5bd00749523e2d4faad2",
-    "astrbot/core/config/default.py": "2870c99150aaa81e97193ee04cdca1bd954235f486daeaa1e90c6f7aeb80fffd",
+    "astrbot/core/config/default.py": "2627c5e5956ec91c2852506b27b449bca702fd210ca5ee9cb5f2f9b0b6d416d7",
     "astrbot/core/cron/manager.py": "fe9bb7b4260d7ce44909b9cb06e772c34aebc6aa09f68659932b3bdf4cea4b03",
     "astrbot/core/pipeline/context_utils.py": "fd19f0bf27e603202e48d1496c4cb8190aceaecbe82c7dd4bb4b358411621138",
     "astrbot/core/pipeline/process_stage/follow_up.py": "9f2ca004fdfb2c6dd96bdabf476407204940c8a3244d4d87aba0ee8ac192c300",
@@ -52,6 +52,7 @@
     "astrbot/dashboard/api/stats.py": "8b0faae073ec57e848ca258c9dd17d6f74c84974c267e9f81863d8987f9cb52a",
     "astrbot/core/plugin_attribution.py": "97a115f3be9a1d16326e6216eee6314021a421381483cea0d29d7b9f5627e387",
     "astrbot/core/pipeline/process_stage/method/star_request.py": "b69f43b454d0b4257b714518d4a9f6662872266f9b0c8dab732bb965829878b2",
-    "astrbot/core/provider/sources/openai_responses_source.py": "dd126d55a85b644efef3079bc50c4776b2b9bc6331fb2bb3128dfc9ddd7282e6"
+    "astrbot/core/provider/sources/openai_responses_source.py": "dd126d55a85b644efef3079bc50c4776b2b9bc6331fb2bb3128dfc9ddd7282e6",
+    "astrbot/core/event_bus.py": "c1df3267a46de1e209c674a5b4a0316104a32f632cb9a7acb7b16f3c8ca848fc"
   }
 }
