@@ -8,6 +8,7 @@ from astrbot.core import logger
 from astrbot.core.message.message_event_result import MessageEventResult
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.plugin_attribution import (
+    plugin_of_handler,
     plugin_of_module,
     reset_current_plugin,
     set_current_plugin,
@@ -50,8 +51,12 @@ class StarRequestSubStage(Stage):
                 continue
             logger.debug(f"plugin -> {md.name} - {handler.handler_name}")
             try:
+                # Module names cannot identify a plugin ("main" for all of
+                # them); the handler's source file can. The module-name lookup
+                # stays as a fallback for unusual layouts.
                 token = set_current_plugin(
-                    plugin_of_module(handler.handler_module_path)
+                    plugin_of_handler(handler.handler)
+                    or plugin_of_module(handler.handler_module_path)
                 )
                 try:
                     wrapper = call_handler(event, handler.handler, **params)
