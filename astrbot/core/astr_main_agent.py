@@ -127,7 +127,6 @@ from astrbot.core.utils.astrbot_path import (
     get_astrbot_workspaces_path,
 )
 from astrbot.core.utils.file_extract import extract_file_moonshotai
-from astrbot.core.utils.forward_expand import expand_forward_text
 from astrbot.core.utils.llm_metadata import LLM_METADATAS
 from astrbot.core.utils.media_utils import is_file_uri, is_recoverable_image_error
 from astrbot.core.utils.quoted_message_parser import (
@@ -989,14 +988,6 @@ async def _decorate_llm_request(
     ).get("provider_settings", {})
 
     _apply_prompt_prefix(req, cfg)
-
-    # A merged forward exists only as an id on the component -- the archive keeps
-    # a placeholder, so this event is the only chance to read what was forwarded.
-    forwarded_text = await expand_forward_text(event)
-    if forwarded_text:
-        req.extra_user_content_parts.append(
-            TextPart(text=f"[Forwarded conversation]\n{forwarded_text}")
-        )
 
     main_provider_supports_image = provider is not None and _provider_supports_modality(
         provider, "image"
