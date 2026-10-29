@@ -11,6 +11,7 @@ plugin and the call site reads it back.
 from __future__ import annotations
 
 import contextvars
+import functools
 import json
 import time
 from collections import defaultdict
@@ -78,7 +79,14 @@ def plugin_of_handler(handler: object) -> str:
         The plugin directory name, or "" when the handler exposes no
         ``__file__`` or was not loaded from a ``plugins`` directory.
     """
-    handler_globals = getattr(handler, "__globals__", None)
+    # The framework registers bound methods as functools.partial(method, self),
+    # and a partial carries no __globals__ of its own.
+    inner = handler
+    while isinstance(inner, functools.partial):
+        inner = inner.func
+    # A bound method carries no __globals__ either; unwrap it to the function.
+    inner = getattr(inner, "__func__", inner)
+    handler_globals = getattr(inner, "__globals__", None)
     if not isinstance(handler_globals, dict):
         return ""
     file_path = handler_globals.get("__file__")

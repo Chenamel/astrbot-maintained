@@ -6,6 +6,8 @@ The source file path has no such ambiguity, and it also works for plugins whose
 directory lacks the ``astrbot_plugin_`` prefix (``meme_manager`` is one).
 """
 
+import functools
+
 import pytest
 
 from astrbot.core.plugin_attribution import plugin_of_handler
@@ -77,3 +79,29 @@ def test_non_string_file_value_is_ignored():
     exec("def handler(): pass", namespace)  # noqa: S102 - controlled input
 
     assert plugin_of_handler(namespace["handler"]) == ""
+
+
+def test_wrapped_handlers_still_resolve():
+    """The framework registers bound methods wrapped in functools.partial.
+
+    A partial has no ``__globals__`` and neither does a bound method, so both
+    layers have to be unwrapped. An earlier version only handled a bare
+    function -- which is not what the framework ever passes -- and resolved
+    everything to "".
+    """
+    namespace = {"__file__": r"C:/inst/core/data/plugins/astrbot_plugin_x/main.py"}
+    exec(
+        "class P:" + chr(10) + "    def on_group_message(self): pass" + chr(10),
+        namespace,
+    )
+    cls = namespace["P"]
+
+    assert plugin_of_handler(cls().on_group_message) == "astrbot_plugin_x"
+    assert (
+        plugin_of_handler(functools.partial(cls().on_group_message))
+        == "astrbot_plugin_x"
+    )
+    assert (
+        plugin_of_handler(functools.partial(functools.partial(cls().on_group_message)))
+        == "astrbot_plugin_x"
+    )
