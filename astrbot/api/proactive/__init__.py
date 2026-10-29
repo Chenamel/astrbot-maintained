@@ -19,6 +19,7 @@ from __future__ import annotations
 from typing import Any
 
 from astrbot.api._bridge import resolve
+from astrbot.core import logger
 
 __all__ = [
     "available",
@@ -26,6 +27,7 @@ __all__ = [
     "is_lightweight_proactive",
     "persona_available",
     "proactive_switch_is_disabled",
+    "record_bot_message",
 ]
 
 _MODULE = "astrbot.core.astr_main_agent"
@@ -117,3 +119,55 @@ async def generate_with_persona(
         chat_provider_id=chat_provider_id,
         timeout=timeout,
     )
+
+
+async def record_bot_message(context: Any, event: Any, text: str) -> bool:
+    """Record a message the bot just sent into the platform history.
+
+    Args:
+        context: Unused for now; kept so this matches its sibling helpers.
+        event: The event whose conversation the message belongs to.
+        text: What the bot sent, already stripped of control tags.
+
+    Returns:
+        True when the row was written, False when recording was skipped.
+
+    Notes:
+        History is what later turns reason over. A bot that reads the group's
+        lines but not its own replies loses track of what it already said, so a
+        proactive reply has to be written back the same way an answered message
+        is. ``sender_id`` is the literal ``"bot"`` -- the history readers
+        already key on it to tell our own lines apart.
+    """
+    del context
+    if not text:
+        return False
+    try:
+        from astrbot.core import db_helper
+    except Exception:  # noqa: BLE001 - recording is best effort
+        return False
+
+    platform_id = ""
+    getter = getattr(event, "get_platform_id", None)
+    if callable(getter):
+        platform_id = getter() or ""
+    umo = getattr(event, "unified_msg_origin", "") or ""
+    if not platform_id or not umo:
+        return False
+
+    # Same key the history reader computes, or the row would be written under
+    # one conversation and looked up under another.
+    _, _, tail = umo.partition(":")
+    user_id = f"{platform_id}:{tail}" if tail else umo
+    try:
+        await db_helper.insert_platform_message_history(
+            platform_id=platform_id,
+            user_id=user_id,
+            content={"type": "bot", "message": [{"type": "plain", "text": text}]},
+            sender_id="bot",
+            sender_name="bot",
+        )
+        return True
+    except Exception as exc:  # noqa: BLE001 - a failed record must not break the send
+        logger.warning("record_bot_message failed: %s", exc)
+        return False
