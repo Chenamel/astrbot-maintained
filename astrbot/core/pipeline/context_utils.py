@@ -7,6 +7,7 @@ from astrbot import logger
 from astrbot.core.message.message_event_result import CommandResult, MessageEventResult
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.plugin_attribution import (
+    plugin_of_handler,
     plugin_of_module,
     reset_current_plugin,
     set_current_plugin,
@@ -41,7 +42,11 @@ async def call_handler(
 
     """
     global _attribution_logged
-    plugin = plugin_of_module(getattr(handler, "__module__", ""))
+    # File path first: every plugin's entry module is named "main", so the
+    # module name alone cannot tell two plugins apart.
+    plugin = plugin_of_handler(handler) or plugin_of_module(
+        getattr(handler, "__module__", "")
+    )
     token = set_current_plugin(plugin)
     if plugin and not _attribution_logged:
         _attribution_logged = True

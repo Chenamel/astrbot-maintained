@@ -63,6 +63,36 @@ def reset_current_plugin(token: contextvars.Token) -> None:
     _current_plugin.reset(token)
 
 
+def plugin_of_handler(handler: object) -> str:
+    """Resolve which plugin a handler belongs to, from the file it lives in.
+
+    Module names cannot answer this: every plugin's entry module is literally
+    named ``main``, so ``handler.__module__`` is the same string for all of
+    them. The source file path is not ambiguous, and it does not care whether
+    the plugin directory carries the ``astrbot_plugin_`` prefix.
+
+    Args:
+        handler: The handler callable registered by a plugin.
+
+    Returns:
+        The plugin directory name, or "" when the handler exposes no
+        ``__file__`` or was not loaded from a ``plugins`` directory.
+    """
+    handler_globals = getattr(handler, "__globals__", None)
+    if not isinstance(handler_globals, dict):
+        return ""
+    file_path = handler_globals.get("__file__")
+    if not isinstance(file_path, str) or not file_path:
+        return ""
+    parts = Path(file_path).parts
+    # Walk backwards: a path may contain an earlier "plugins" segment that is
+    # not the plugin root (e.g. a checkout directory named plugins).
+    for index in range(len(parts) - 1, -1, -1):
+        if parts[index] == "plugins":
+            return parts[index + 1] if index + 1 < len(parts) else ""
+    return ""
+
+
 def current_plugin() -> str:
     """Return the plugin currently being served, or "" when unknown."""
     return _current_plugin.get()
