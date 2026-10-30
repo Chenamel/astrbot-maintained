@@ -6,6 +6,8 @@ has to use the same conversation key the reader computes, or the row lands in
 one conversation and is looked up in another.
 """
 
+import json
+
 import pytest
 
 from astrbot.api import proactive
@@ -107,3 +109,81 @@ async def test_empty_user_text_is_skipped(monkeypatch):
 
     assert await proactive.record_user_message(None, _UserEvent(), "") is False
     assert stub.calls == []
+
+
+class _Row:
+    """One row the way the dedup read hands it back."""
+
+    sender_id = "3231558257"
+
+    def __init__(self, text: str) -> None:
+        self.content = json.dumps(
+            {"type": "user", "message": [{"type": "plain", "text": text}]}
+        )
+
+
+class _DedupDbStub:
+    """Answers the dedup read with a copy core already wrote."""
+
+    def __init__(self, stored: str) -> None:
+        self.stored = stored
+        self.calls = []
+
+    async def get_platform_message_history(self, **kwargs):
+        return [_Row(self.stored)]
+
+    async def insert_platform_message_history(self, **kwargs):
+        self.calls.append(kwargs)
+
+
+async def test_a_line_core_already_wrote_counts_as_success(monkeypatch):
+    """History holding the line is the outcome the caller asked for."""
+    stub = _DedupDbStub("公司这玩意儿不像存护体系的")
+    monkeypatch.setattr("astrbot.core.db_helper", stub, raising=False)
+
+    ok = await proactive.record_user_message(
+        None, _UserEvent(), "公司这玩意儿不像存护体系的"
+    )
+
+    assert ok is True
+    assert stub.calls == []
+
+
+async def test_a_different_line_is_still_written(monkeypatch):
+    """The dedup check must not swallow every message from that sender."""
+    stub = _DedupDbStub("上一条")
+    monkeypatch.setattr("astrbot.core.db_helper", stub, raising=False)
+
+    ok = await proactive.record_user_message(None, _UserEvent(), "另一条")
+
+    assert ok is True
+    assert len(stub.calls) == 1
+    assert stub.calls[0]["content"]["message"][0]["text"] == "另一条"
+
+
+async def test_dedup_never_blocks_a_write(monkeypatch):
+    """A broken dedup read must not stop the row from being written."""
+
+    class _ReadBoom(_DbStub):
+        async def get_platform_message_history(self, **kwargs):
+            raise RuntimeError("read failed")
+
+    stub = _ReadBoom()
+    monkeypatch.setattr("astrbot.core.db_helper", stub, raising=False)
+
+    ok = await proactive.record_user_message(None, _UserEvent(), "还是要写进去")
+
+    assert ok is True
+    assert len(stub.calls) == 1
+
+
+async def test_a_failed_user_write_is_reported(monkeypatch):
+    """Contrast with the cases above: only this one deserves a warning."""
+
+    class _WriteBoom(_DbStub):
+        async def insert_platform_message_history(self, **kwargs):
+            raise RuntimeError("db is down")
+
+    monkeypatch.setattr("astrbot.core.db_helper", _WriteBoom(), raising=False)
+
+    assert await proactive.record_user_message(None, _UserEvent(), "一句") is False
