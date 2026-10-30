@@ -68,3 +68,42 @@ async def test_a_failed_write_is_not_fatal(monkeypatch):
     monkeypatch.setattr("astrbot.core.db_helper", _Boom(), raising=False)
 
     assert await proactive.record_bot_message(None, _Event(), "一句话") is False
+
+
+class _UserEvent:
+    """Carries the sender fields a user message has."""
+
+    unified_msg_origin = "default:GroupMessage:1039252505"
+
+    def get_platform_id(self):
+        return "default"
+
+    def get_sender_id(self):
+        return "3231558257"
+
+    def get_sender_name(self):
+        return "镜花水月"
+
+
+async def test_user_message_records_sender(monkeypatch):
+    stub = _DbStub()
+    monkeypatch.setattr("astrbot.core.db_helper", stub, raising=False)
+
+    ok = await proactive.record_user_message(
+        None, _UserEvent(), "公司这玩意儿不像存护体系的"
+    )
+
+    assert ok is True
+    row = stub.calls[0]
+    assert row["sender_id"] == "3231558257"
+    assert row["sender_name"] == "镜花水月"
+    assert row["content"]["type"] == "user"
+    assert row["user_id"] == "default:GroupMessage:1039252505"
+
+
+async def test_empty_user_text_is_skipped(monkeypatch):
+    stub = _DbStub()
+    monkeypatch.setattr("astrbot.core.db_helper", stub, raising=False)
+
+    assert await proactive.record_user_message(None, _UserEvent(), "") is False
+    assert stub.calls == []

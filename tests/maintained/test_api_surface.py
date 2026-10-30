@@ -53,6 +53,7 @@ EXPECTED_ALL = {
         "persona_available",
         "proactive_switch_is_disabled",
         "record_bot_message",
+        "record_user_message",
     },
     "content": {
         "ImageURLPart",
