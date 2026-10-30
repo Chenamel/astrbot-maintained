@@ -8,7 +8,7 @@
     "astrbot/api/embedding/__init__.py": "c1593a28c6541584b63e2d1ae822f7a83f1c6ed11140203086ab6a612574f889",
     "astrbot/api/media/__init__.py": "18eb28314aefa6b5595d118d42d5081890c90ab4d984aa723405e88b49fb07b9",
     "astrbot/api/permissions/__init__.py": "16f82d72e9c797b528de6f77213786b394e54193421baf5ada9819ed8769c090",
-    "astrbot/api/proactive/__init__.py": "bd3d8912496f9ee7b385bdeb9e6b4f4bd27ff348e9e63fbd56f8a23715904996",
+    "astrbot/api/proactive/__init__.py": "122dc72e7a95d6c32dff0cf30ae20100b3a502277a879ac66614e20ad2081a70",
     "astrbot/api/runtime/__init__.py": "ac3177995693f415371624ca1955ea0aafb57f763309882a40c118b05486b93d",
     "astrbot/api/turns/__init__.py": "26fe891ef89fe2414ec42350f27fc78ad5829d3195ab54008a5ed77db2aecedd",
     "astrbot/builtin_stars/bot_info/main.py": "c400dcbf9964029bedb29df5610cdfb84d6e613f27c1181bccd30a9ac1239474",

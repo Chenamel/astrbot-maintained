@@ -16,6 +16,7 @@ through the persona chain.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from astrbot.api._bridge import resolve
@@ -28,6 +29,7 @@ __all__ = [
     "persona_available",
     "proactive_switch_is_disabled",
     "record_bot_message",
+    "record_user_message",
 ]
 
 _MODULE = "astrbot.core.astr_main_agent"
@@ -170,4 +172,102 @@ async def record_bot_message(context: Any, event: Any, text: str) -> bool:
         return True
     except Exception as exc:  # noqa: BLE001 - a failed record must not break the send
         logger.warning("record_bot_message failed: %s", exc)
+        return False
+
+
+async def record_user_message(
+    context: Any, event: Any, text: str, max_messages: int = 700
+) -> bool:
+    """Record an incoming group message into the platform history.
+
+    Args:
+        context: Unused for now; kept so this matches its sibling helpers.
+        event: The event being recorded.
+        text: The message text, already cleaned.
+        max_messages: Rows kept per conversation before the oldest are dropped.
+
+    Returns:
+        True when the row was written, False when recording was skipped.
+
+    Notes:
+        Core writes user history from a handler with the *lowest* priority, so
+        any plugin that stops the event earlier skips it entirely -- and a
+        judgement then reasons over a history that stopped hours ago. Writing
+        from the plugin side keeps the record complete regardless of what other
+        plugins do to the event.
+    """
+    del context
+    if not text:
+        return False
+    try:
+        from astrbot.core import db_helper
+    except Exception:  # noqa: BLE001 - recording is best effort
+        return False
+
+    platform_id = ""
+    getter = getattr(event, "get_platform_id", None)
+    if callable(getter):
+        platform_id = getter() or ""
+    umo = getattr(event, "unified_msg_origin", "") or ""
+    if not platform_id or not umo:
+        return False
+
+    _, _, tail = umo.partition(":")
+    user_id = f"{platform_id}:{tail}" if tail else umo
+    sender_id = ""
+    sender_getter = getattr(event, "get_sender_id", None)
+    if callable(sender_getter):
+        sender_id = sender_getter() or ""
+    sender_name = ""
+    name_getter = getattr(event, "get_sender_name", None)
+    if callable(name_getter):
+        sender_name = name_getter() or ""
+    # Core writes group history too, but only when no plugin stopped the event
+    # first, so it races us. Checking the last few rows costs one indexed read
+    # and keeps a single copy -- writing twice would halve how much history fits
+    # in the retention window.
+    try:
+        recent = await db_helper.get_platform_message_history(
+            platform_id=platform_id,
+            user_id=user_id,
+            page=1,
+            page_size=4,
+        )
+        wanted = text[:40]
+        for row in recent or []:
+            if str(getattr(row, "sender_id", "") or "") != (sender_id or ""):
+                continue
+            # content is JSON with escaped characters, so compare the decoded
+            # text -- a plain substring test would never match Chinese.
+            raw = getattr(row, "content", "")
+            if isinstance(raw, str):
+                try:
+                    raw = json.loads(raw)
+                except ValueError:
+                    continue
+            parts = raw.get("message") if isinstance(raw, dict) else None
+            if not isinstance(parts, list):
+                continue
+            stored = "".join(
+                str(part.get("text", ""))
+                for part in parts
+                if isinstance(part, dict) and part.get("type") == "plain"
+            )
+            if stored[:40] == wanted:
+                return False
+    except Exception:  # noqa: BLE001 - dedup is an optimisation, not a gate
+        pass
+
+    try:
+        await db_helper.insert_platform_message_history(
+            platform_id=platform_id,
+            user_id=user_id,
+            content={"type": "user", "message": [{"type": "plain", "text": text}]},
+            sender_id=sender_id or None,
+            sender_name=sender_name or None,
+            max_messages=max_messages,
+        )
+        return True
+    except Exception as exc:  # noqa: BLE001 - a failed record must not break flow
+        logger.warning("record_user_message failed: %s", exc)
         return False
