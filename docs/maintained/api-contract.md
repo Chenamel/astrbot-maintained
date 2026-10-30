@@ -197,6 +197,20 @@ def capabilities() -> dict[str, bool]: ...
 | `is_lightweight_proactive(event) -> bool` | 函数 | 该请求是否被判定为轻量主动场景 | **`False`**（fail-closed：宁可走完整路径，也不误入轻量路径） |
 | `persona_available() -> bool` | 函数 | 人格感知生成是否就位 | `False` |
 | `generate_with_persona(context, event, prompt, ...) -> LLMResponse \| None` | 协程 | 生成**带人格**的话：先过 `on_llm_request` 钩子，再调 provider | **`None`**（fail-closed：拿不到人格就不生成，由插件自行降级） |
+| `record_bot_message(context, event, text) -> bool` | 协程 | 把机器人刚说的话写回历史（`sender_id="bot"`）。**成功/幂等为 `True`，跳过或写失败为 `False`** | `False` |
+| `record_user_message(context, event, text, max_messages=700) -> bool` | 协程 | 把收到的群消息写回历史。**返回值回答的是"历史里现在有这条了吗"，不是"这次新增了一行吗"** —— core 可能在插件之前已经写过，`True` 因此包含"已存在" | `False` |
+
+#### `record_*` 的返回值为什么要按"结果"而不是"动作"定义
+
+core 自己也写群历史（`persist_group_message`），只是优先级最低，一旦别的插件
+`stop_event()` 就跳过。于是插件调用 `record_user_message` 时，这条消息**可能已经存在**。
+
+初版把"已存在"当成失败返回 `False`，插件据此打出 5000+ 条 `历史写入失败` WARN，
+真实的写入错误与"已经写过了"混在同一条日志里 —— 排查时给人"全线崩了"的错误印象，
+而实际数据一条没丢（2026-10-31 审计实录）。
+
+返回值的语义因此定为**结果判定**：历史上这一刻有没有这条记录。
+调用方拿到 `False` 就意味着"确实该担心"，不需要再分辨是哪种跳过。
 
 #### 为什么需要 `generate_with_persona`
 
