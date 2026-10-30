@@ -187,14 +187,19 @@ async def record_user_message(
         max_messages: Rows kept per conversation before the oldest are dropped.
 
     Returns:
-        True when the row was written, False when recording was skipped.
+        True when the conversation now holds this line -- either because we
+        wrote it or because core had already recorded it. False means nothing
+        landed and the caller is right to worry.
 
     Notes:
-        Core writes user history from a handler with the *lowest* priority, so
-        any plugin that stops the event earlier skips it entirely -- and a
+        The return value answers "is it in history now", not "did I write it".
+        Core records group history too, from a handler with the *lowest*
+        priority, so any plugin that stops the event earlier skips it -- and a
         judgement then reasons over a history that stopped hours ago. Writing
         from the plugin side keeps the record complete regardless of what other
-        plugins do to the event.
+        plugins do to the event. Reporting the resulting duplicate as a failure
+        buried real write errors under thousands of bogus warnings, so hitting
+        the duplicate check is reported the same as writing the row.
     """
     del context
     if not text:
@@ -254,7 +259,10 @@ async def record_user_message(
                 if isinstance(part, dict) and part.get("type") == "plain"
             )
             if stored[:40] == wanted:
-                return False
+                logger.debug(
+                    "record_user_message: core already recorded %r", wanted[:20]
+                )
+                return True
     except Exception:  # noqa: BLE001 - dedup is an optimisation, not a gate
         pass
 
