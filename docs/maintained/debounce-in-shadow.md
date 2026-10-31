@@ -1,7 +1,8 @@
 # 把防抖收进影子插件 — 设计与交接
 
-> 状态：**设计已定，代码未动**。本文件是给下一个会话的施工图 + 避坑清单。
+> 状态：**P2（静默窗口）与 P3（抗掐断重试）已实现并部署在插件侧**（插件仓 v0.3.10）。
 > 决策人：负责人（2026-10-31 23:35）。定调：**不图省事，做对**。
+> 2026-11-01 补：离线实测结论见 §9，**未动 core**。
 
 ## 1. 要解决的其实是三件事
 
@@ -133,6 +134,14 @@ core（`D:/asbot_core_for_fork`）：
 
 判据要能区分真假：`已发送` 少了也可能是"生成阶段弃权/拒绝"（正常），不是被掐。
 
+**判据要按这个修正（2026-11-01）**：`REPLY == 已发送` **永远达不到**，合法弃权必然存在。
+`_generate_persona` 的 7 条失败路径里，只有"被钩子掐断"是**一行日志都没有**的
+（`resp is None → raw_text 空 → 直接 return`，插件 `main.py` 的 raw_text 判空处）；
+其余 6 条都有 `生成阶段拒绝` / `生成阶段弃权` / `人格生成超时` / `人格生成失败`。
+⇒ 真正的及格线是：**`REPLY − 已发送 − 生成阶段拒绝/弃权 == 0`**。
+实测样本（debounce 关闭后 2h09m）：REPLY 4 / 已发送 2 / 拒绝 1 / **被掐 1**（21:37:17，
+debounce `stopped event propagation` 后 4 ms 记录 REPLY，无任何生成日志）。
+
 ## 7. 当前环境状态（2026-10-31 23:35）
 
 - 电脑已重启，AstrBot **由 launcher 自动拉起**（PID 20976，6185/6199 在听）——不再是后台任务托管，好事。
@@ -180,3 +189,55 @@ core（`D:/asbot_core_for_fork`）：
 
 请先汇报你读到的状态和打算怎么验证「重试会不会再次被掐」，等我确认再动手。
 ```
+
+> §8 是 2026-10-31 交给下一个会话的提示词，已执行完毕，保留作历史。
+
+## 9. ★ 离线验证结果（2026-11-01）：**未动 core**
+
+### 9.1 怎么验的
+
+不碰实例配置、不重启、不改第三方源码：用实例 venv 的 python 真实
+`import` 第三方 `DebouncePlugin`（`object.__new__` 绕过 `__init__`，手填状态，
+`classifier` 换成固定分数的假分类器），**真跑 `on_llm_request`**，模拟
+「掐断 → `continue_event()` → 重试 → 再来一条真实 @ 消息」。脚本（不入仓）：
+`D:/tmp_verify/verify_debounce_retry.py`。
+
+### 9.2 三个答案
+
+| 问题 | 结果 |
+|---|---|
+| ① 重试会不会再被掐 | **不会**（`attempt2 stopped=False`） |
+| ② `req.prompt` 会不会被劫持 | **会**：变成 `原文 原文`；若中间插了别人说话变成 `原文 别人的话 原文` |
+| ③ 会不会污染下次真实回复 | **会**，而且**与是否被掐无关** |
+
+① 的机理：`classifier_backend` 是 `onnx`，重试时 `should_merge` 因
+`waiting_sessions` 为真，`buffer.add()` 把同一条消息**再加一遍**变成 2 条，
+命中 debounce `main.py:438` 的 `len(buffer.messages) > 1 and backend != "jev"`
+→ 合并直发、不再 `stop_event()`。**若用户把后端换成 `jev`，这条不成立，重试会被再掐。**
+
+③ 的机理：请求一旦通过就 `pending_llm_sessions.add(session_id)`，而我们的路径
+（`generate_with_persona`）**从不派发 `on_llm_response`** ⇒ 该集合永不清理 ⇒
+该群下一条真实 @ 消息被 `on_waiting_llm_request:351` 标 `discard_next_response`
+→ `on_llm_response:565` 把**正常回复清成空串**。场景 B（第一次就 pass、根本没被掐）
+同样复现 ⇒ **这是"外部 debounce 开着"的固有代价，不是 P3 引入的**。
+
+### 9.3 因此怎么定的
+
+- 按负责人预设判据（"会不会再次掐断"）→ **不会** ⇒ **不动 core**，不加
+  `dispatch_llm_request_hook` 参数，不动台账、不补 core 测试、不 `apply_patches`。
+- ② 用**纯插件手法**化解：重试那一次把措辞指令**同时放进 `system_prompt`**——
+  debounce 只改 `req.prompt`，`system_prompt` 是它不动的槽位，人格也在里面。
+- ③ 不在本次修：它只在外部 debounce 开启时发生，而外部 debounce 当前是关的。
+  **这条是已知债务**：将来若要重开外部 debounce，必须先解决它（正解是让主动回复
+  不派发 `on_llm_request`，即 §3.2 的降级参数；或让该路径补派发 `on_llm_response`）。
+
+### 9.4 落地位置（插件仓 v0.3.10）
+
+- `_resolve_debounce()`：解析 `debounce` 段，返回 `(enabled, quiet_sec, retry_when_cancelled)`
+- `_await_quiet(event, judged_at)`：静默窗口，返回"判定期间群里是否又有人说话"；
+  仅 `debounce.enabled` 为真时生效，等待上限 4×`quiet_sec`
+- `on_group_message`：判定后若群里又有人说话，重读历史并用同一套编号重建上下文
+  （`_context_lines()`，避免两处编号漂移导致 `quote_n` 指错消息）
+- `_persona_call()` + `_generate_persona` 里的重试：仅当
+  `resp is None and event.is_stopped() and not was_stopped` 才重试一次
+- 测试 `tests/test_debounce.py`（16 项）：插件 **88 passed**（原基线 72）
