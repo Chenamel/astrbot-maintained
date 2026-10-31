@@ -50,7 +50,7 @@
     "astrbot/core/platform/astr_message_event.py": "0de9266da8e2fa9d2b719ac8c8647e7203b21443b6716db6fec59155589ab7cb",
     "astrbot/dashboard/services/stat_service.py": "c87677b3599a4b1a67caf2b72251408600b71a36d88edd3c56a1edec2dd791c3",
     "astrbot/dashboard/api/stats.py": "8b0faae073ec57e848ca258c9dd17d6f74c84974c267e9f81863d8987f9cb52a",
-    "astrbot/core/plugin_attribution.py": "c2c4bf78a04a47e08deeaa9b733167f79fbf4b5e3d5f0bb7286215216d98bd7e",
+    "astrbot/core/plugin_attribution.py": "a05a465a4e8dce1b16b8b7796b80a009e56b7fcc1542b7ea1a77eccd2c7e0f67",
     "astrbot/core/pipeline/process_stage/method/star_request.py": "1d79bba56aac516bd3664f6d758160f9484ea987600479cf7025de31eec783b4",
     "astrbot/core/provider/sources/openai_responses_source.py": "dd126d55a85b644efef3079bc50c4776b2b9bc6331fb2bb3128dfc9ddd7282e6",
     "astrbot/core/event_bus.py": "aec4138ce94bf93ef8c7b6d1880a8a503b372510380fe80562928a1ac1238d00"

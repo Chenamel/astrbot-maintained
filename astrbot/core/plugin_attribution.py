@@ -60,8 +60,20 @@ def reset_current_plugin(token: contextvars.Token) -> None:
 
     Args:
         token: Token returned by :func:`set_current_plugin`.
+
+    Notes:
+        A generator closed by ``aclose()`` is unwound on a task that did not
+        create the token, and ``ContextVar.reset`` refuses a token from another
+        context with ``ValueError``. That happens whenever a plugin's handler is
+        cancelled mid-flight -- a debounce, a timeout -- and letting it raise
+        would replace the real reason for the cancellation with a stack about
+        bookkeeping. Restoring is best effort: this context simply has no
+        earlier value to go back to.
     """
-    _current_plugin.reset(token)
+    try:
+        _current_plugin.reset(token)
+    except ValueError:
+        pass
 
 
 def plugin_of_handler(handler: object) -> str:
