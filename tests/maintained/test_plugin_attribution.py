@@ -6,11 +6,17 @@ The source file path has no such ambiguity, and it also works for plugins whose
 directory lacks the ``astrbot_plugin_`` prefix (``meme_manager`` is one).
 """
 
+import contextvars
 import functools
 
 import pytest
 
-from astrbot.core.plugin_attribution import plugin_of_handler
+from astrbot.core.plugin_attribution import (
+    current_plugin,
+    plugin_of_handler,
+    reset_current_plugin,
+    set_current_plugin,
+)
 
 
 def _handler_from(file_path: str):
@@ -105,3 +111,23 @@ def test_wrapped_handlers_still_resolve():
         plugin_of_handler(functools.partial(functools.partial(cls().on_group_message)))
         == "astrbot_plugin_x"
     )
+
+
+def test_restoring_a_token_from_another_context_is_not_fatal():
+    """A cancelled handler must not turn into a bookkeeping stack trace.
+
+    When a plugin's handler is cancelled -- a debounce stops the event, a wait
+    times out -- asyncio unwinds the generator on a task that did not create
+    the token, and ``ContextVar.reset`` refuses it with ``ValueError``. Seen in
+    production as ``ValueError: <Token ...> was created in a different
+    Context``, once for every debounced proactive reply.
+    """
+    token = set_current_plugin("astrbot_plugin_proactive_shadow")
+
+    # Running inside a copied context is what a cancelled task ends up with.
+    contextvars.copy_context().run(lambda: reset_current_plugin(token))
+
+    # The original context is untouched and still attributes correctly.
+    assert current_plugin() == "astrbot_plugin_proactive_shadow"
+    reset_current_plugin(token)
+    assert current_plugin() == ""
