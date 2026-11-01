@@ -46,13 +46,32 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
-INSTANCE = Path(
-    os.environ.get(
-        "PROACTIVE_INSTANCE",
-        r"C:/Users/philia093/.astrbot_launcher/instances/"
-        r"83ca721d-26d2-4dd0-9932-ef9299d8829d",
-    )
-)
+
+def _find_instance() -> Path:
+    """Locate the AstrBot instance this harness should replay from.
+
+    ``PROACTIVE_INSTANCE`` wins. Otherwise look for the only launcher-managed
+    instance that actually has a database, so the harness works on a fresh
+    machine without editing this file -- and so the default carries no personal
+    path. Returning a nonexistent path is fine: ``main`` turns that into the
+    "point me at your instance" message.
+    """
+    configured = os.environ.get("PROACTIVE_INSTANCE", "").strip()
+    if configured:
+        return Path(configured).expanduser()
+    launcher = Path.home() / ".astrbot_launcher" / "instances"
+    try:
+        candidates = [
+            path
+            for path in launcher.iterdir()
+            if (path / "core/data/data_v4.db").is_file()
+        ]
+    except OSError:
+        candidates = []
+    return candidates[0] if len(candidates) == 1 else Path(".")
+
+
+INSTANCE = _find_instance()
 PLUGIN_DIR = INSTANCE / "core/data/plugins/astrbot_plugin_proactive_shadow"
 CMD_CONFIG = INSTANCE / "core/data/cmd_config.json"
 DB_PATH = INSTANCE / "core/data/data_v4.db"
