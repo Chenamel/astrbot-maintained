@@ -264,9 +264,15 @@ thinking*** —— 注释描述的正是代码看不见的那部分。**意图�
 **修复**：取样点移到判定请求发出之前，参数改名 `judged_at` → `snapshot_at`，
 语义变成「判定所依据的那份快照的时刻」。
 
-**测试**：`tests/test_debounce.py` 新增
-`test_quiet_window_sees_a_message_that_arrived_while_thinking`，
-复现「消息在调用期间到达、且早于等待」的生产形状。插件 **101 passed**（原 100）。
+**测试**：`tests/test_debounce.py` 新增两条，各管一半：
+- `test_quiet_window_sees_a_message_that_arrived_while_thinking` —— 行为：
+  消息在调用期间到达、且早于等待，窗口必须报告「动过了」。
+- `test_the_snapshot_is_taken_before_the_judgement_request` —— 结构：用 `ast`
+  解析 `on_group_message`，断言 `snapshot_at` 的赋值行在 `llm_generate` 调用行之前。
+  行为测试是**显式传入**时间戳的，调用点改回原位它们照样绿，只有这条能拦住回退
+  （已验证：把旧代码的标识符替换成 `snapshot_at` 后，这条断言会失败）。
+
+插件 **102 passed**（原 100）。`ruff check` / `format --check` 均干净。
 
 **修好之后要重新观察**，不能沿用旧结论：窗口会真的开始等待（上限 4×`quiet_sec`，
 默认 6 秒），需要看两条日志的计数是否从 0 变成非 0，以及回复延迟的实际增量。
