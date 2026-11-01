@@ -225,3 +225,32 @@ reply: …光凭描述定位不了，补个截图或者模组名吧   ← 让用
 1. 主动路径兜底那句话的具体措辞（进 system_prompt）。
 2. C1 判定侧压缩：现在做，还是等 A 上线看日志再定。
 3. `debounce.enabled` 仍为我取证时临时开的 `true`，是否恢复 `false`。
+
+---
+
+## 11. 落地结果（2026-11-01 12:30）
+
+**已实现并部署**（两库各一提交，实例已重启，`check_drift` 双端 NO DRIFT）：
+
+| 位置 | 改动 |
+|---|---|
+| `astrbot/core/proactive_persona.py` | 新增 `_prepare_images()`，在插件钩子之后、`text_chat` 之前执行三步：`prepare_request_images` 压缩本地化 → `_provider_supports_modality` 判定 → 不能看图则用 `_request_img_caption` 转述；都不能则清空 `image_urls` 并注入 `_NO_VISUAL_NOTE` |
+| `astrbot_plugin_proactive_shadow/main.py` | 判定用的图片引用随 `_generate_persona` 传入 `generate_with_persona`，两次尝试都带（含被钩子掐断后的重试） |
+
+**三个刻意的取舍**（写在这里，免得以后被"优化"掉）：
+
+1. **不用 `_ensure_img_caption`**。它失败时会追加 `IMAGE_INPUT_UNAVAILABLE_NOTICE`，
+   而 `openai_source._context_has_unavailable_image` 见到该文本会**短路、不调模型**，
+   直接回「当前看不到图片，请重新发送。」—— 用户问图时说这句是合理的，bot 自己
+   开口说这句就是事故。故改用底层 `_request_img_caption`，失败走 `_NO_VISUAL_NOTE`。
+2. **`_NO_VISUAL_NOTE` 同时禁止两件事**：追问图片内容、以及描述图里有什么。
+   只禁第一件会换来另一种破功（模型开始编造图的内容）。
+3. **模态无法判定时保留图片**，而不是丢弃。core 对空 `modalities` 列表的解释是
+   "全支持"，这里保持一致；丢弃才是静默回归。
+
+**可观测**：每次带图的 REPLY 会留一条 INFO——`proactive image: sent to provider | count=N ...`
+或 `proactive image: text only | captioned=True/False notice=...`。三档各计一次数，
+观察脚本 `.workbuddy/observations/watch_quiet_window.py` 已在跑。
+
+**尚未观察到的**：一次真实的「带图 REPLY」全链路。部署后群里还没有出现该形状，
+需等采样累计。在拿到这条日志之前，只能说"代码路径已通、单测已过"，不能说"线上验证完成"。
