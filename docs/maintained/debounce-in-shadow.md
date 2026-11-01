@@ -241,3 +241,33 @@ debounce `stopped event propagation` 后 4 ms 记录 REPLY，无任何生成日�
 - `_persona_call()` + `_generate_persona` 里的重试：仅当
   `resp is None and event.is_stopped() and not was_stopped` 才重试一次
 - 测试 `tests/test_debounce.py`（16 项）：插件 **88 passed**（原基线 72）
+
+### 9.5 追记（2026-11-01 11:30）：静默窗口曾整日空转，已修
+
+**症状**：上线 12 小时后复盘线上数据，`shadow_log.jsonl` 里 939 次 REPLY，
+静默窗口命中 **0 次**；`astrbot.log` 里「判定期间群里有新消息」**0 条**、
+「群里一直有人说话，不再等静默」**0 条**。也就是说 P2 一次都没真正生效。
+
+**根因**：判定时间点在 `llm_generate` **返回之后**才取。
+
+```python
+resp = await asyncio.wait_for(self.context.llm_generate(...))
+judged_at = time.monotonic()          # ← 判定已经结束
+...
+return self._last_msg_at[origin] > judged_at
+```
+
+判定**期间**到达的消息，其 `_last_msg_at` 必然小于 `judged_at`，于是永远被判成
+「群里没动」。而代码上方注释写的是 *whether the group moved on **while the judge was
+thinking*** —— 注释描述的正是代码看不见的那部分。**意图与实现错位，不是取舍问题。**
+
+**修复**：取样点移到判定请求发出之前，参数改名 `judged_at` → `snapshot_at`，
+语义变成「判定所依据的那份快照的时刻」。
+
+**测试**：`tests/test_debounce.py` 新增
+`test_quiet_window_sees_a_message_that_arrived_while_thinking`，
+复现「消息在调用期间到达、且早于等待」的生产形状。插件 **101 passed**（原 100）。
+
+**修好之后要重新观察**，不能沿用旧结论：窗口会真的开始等待（上限 4×`quiet_sec`，
+默认 6 秒），需要看两条日志的计数是否从 0 变成非 0，以及回复延迟的实际增量。
+在拿到这组数据之前，`debounce.enabled` 保持现状（当前 `true`），不新增结论。
