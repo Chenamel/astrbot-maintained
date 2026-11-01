@@ -13,10 +13,14 @@ import pytest
 
 from astrbot.api import proactive as proactive_api
 from astrbot.core import proactive_persona
+from astrbot.core.pipeline.process_stage.method.agent_sub_stages import image_input
 
 
 class _FakeProvider:
     """Records what it was called with and returns a canned response."""
+
+    #: Read by the image helper to decide whether the provider can see pixels.
+    provider_config = {"modalities": ["text", "image"]}
 
     def __init__(self) -> None:
         self.calls: list[dict] = []
@@ -92,7 +96,13 @@ def test_prompt_and_session_are_forwarded(monkeypatch):
     async def fake_hook(event, event_type, req):
         return False
 
+    async def fake_prepare(req, event, **kwargs):
+        # The real one compresses and localises; this test is about what gets
+        # forwarded, so it only needs to stand in for the rewrite.
+        req.image_urls = ["/tmp/prepared.png"]
+
     monkeypatch.setattr(proactive_persona, "call_event_hook", fake_hook)
+    monkeypatch.setattr(image_input, "prepare_request_images", fake_prepare)
 
     asyncio.run(
         proactive_persona.generate_with_persona(
@@ -101,7 +111,9 @@ def test_prompt_and_session_are_forwarded(monkeypatch):
     )
 
     assert provider.calls[0]["prompt"] == "说话"
-    assert provider.calls[0]["image_urls"] == ["http://x/y.png"]
+    # Prepared reference, not the raw URL: the provider must receive whatever
+    # the shared pipeline decided is sendable.
+    assert provider.calls[0]["image_urls"] == ["/tmp/prepared.png"]
 
 
 def test_api_degrades_to_none_when_core_patch_is_absent(monkeypatch):

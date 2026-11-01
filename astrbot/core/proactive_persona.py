@@ -17,14 +17,27 @@ from __future__ import annotations
 import asyncio
 import copy
 import time
+from pathlib import Path
 from typing import Any
 
 from astrbot import logger
+from astrbot.core.agent.message import TextPart
 from astrbot.core.pipeline.context_utils import call_event_hook
-from astrbot.core.provider.entities import ProviderRequest
+from astrbot.core.provider.entities import IMAGE_CAPTION_MARKER, ProviderRequest
 from astrbot.core.star.star_handler import EventType
 
 __all__ = ["generate_with_persona"]
+
+#: Told to the model when the request carried no usable picture, even though the
+#: conversation mentions one. Two failure modes to avoid, and why each wording
+#: matters: asking for the picture again ("补个截图吧") is what this whole path
+#: was fixed for, and inventing what the picture shows is worse -- so the model
+#: is told to skip the topic, not to pretend it can see.
+_NO_VISUAL_NOTE = (
+    "\n# 关于图片\n"
+    "这次请求没有附带任何图片内容，上下文里的 [Image] 只是占位。\n"
+    "不要追问图片内容，不要描述图片里有什么，直接就文字部分接着聊。\n"
+)
 
 
 async def _resolve_provider(context: Any, chat_provider_id: str | None) -> Any | None:
@@ -46,6 +59,139 @@ async def _resolve_provider(context: Any, chat_provider_id: str | None) -> Any |
             return None
         return await getter(chat_provider_id)
     return getattr(manager, "curr_provider_inst", None)
+
+
+async def _prepare_images(
+    context: Any,
+    event: Any,
+    req: ProviderRequest,
+    provider: Any,
+) -> None:
+    """Make this request's pictures usable by the provider that will read them.
+
+    The normal pipeline does three things to an outgoing picture and this path
+    did none of them, which is how a proactive reply ended up either shipping a
+    full-size screenshot or -- when the caller had no reference to hand -- not
+    shipping one at all:
+
+    1. compress and localise it, so a 1080x2400 phone screenshot stops travelling
+       at several megabytes per request;
+    2. keep it when the provider declares image input;
+    3. otherwise caption it with the dedicated vision provider, because a
+       text-only model cannot use pixels at all.
+
+    Every step degrades instead of failing: a missing helper (older core, no
+    caption provider, unreadable file) leaves the request as it arrived, and the
+    reply still goes out. Nothing here invents an error message for the user.
+    """
+    if not req.image_urls:
+        return
+
+    settings: dict = {}
+    try:
+        config = context.get_config(
+            umo=getattr(event, "unified_msg_origin", "") or None
+        )
+        settings = dict(config.get("provider_settings") or {})
+    except Exception as exc:  # noqa: BLE001 - defaults are good enough
+        logger.debug("proactive image settings unavailable: %s", exc)
+
+    try:
+        from astrbot.core.pipeline.process_stage.method.agent_sub_stages.image_input import (
+            prepare_request_images,
+        )
+        from astrbot.core.utils.astrbot_path import get_astrbot_temp_path
+        from astrbot.core.utils.media_utils import (
+            IMAGE_COMPRESS_DEFAULT_QUALITY,
+            normalize_model_image_max_size,
+        )
+    except ImportError as exc:  # pragma: no cover - older core
+        logger.debug("proactive image preparation unavailable: %s", exc)
+        return
+
+    options = settings.get("image_compress_options")
+    options = options if isinstance(options, dict) else {}
+    quality = options.get("quality")
+    if isinstance(quality, bool) or not isinstance(quality, int):
+        quality = IMAGE_COMPRESS_DEFAULT_QUALITY
+    max_size = normalize_model_image_max_size(options.get("max_size"))
+
+    try:
+        await prepare_request_images(
+            req,
+            event,
+            enabled=settings.get("image_compress_enabled", True) is not False,
+            max_size=max_size,
+            quality=min(max(quality, 1), 100),
+            output_dir=Path(get_astrbot_temp_path()),
+            prepared={},
+            montage_max_size=max_size,
+        )
+    except Exception as exc:  # noqa: BLE001 - a picture must not break the reply
+        logger.warning("proactive image preparation skipped: %s", exc)
+
+    # From here the request may still carry local file paths; a provider that
+    # cannot read them must not be handed them. When the capability cannot be
+    # determined at all, keep the pictures: that matches how core reads an
+    # unconfigured ``modalities`` list, and dropping them would be the silent
+    # regression this whole helper exists to prevent.
+    try:
+        from astrbot.core.astr_main_agent_quote import _provider_supports_modality
+
+        supports_image = _provider_supports_modality(provider, "image")
+    except Exception as exc:  # noqa: BLE001 - unknown means "let it through"
+        logger.debug("proactive image modality unknown, assuming image input: %s", exc)
+        return
+    if supports_image:
+        return
+
+    caption_provider_id = settings.get("default_image_caption_provider_id") or ""
+    if caption_provider_id:
+        # Deliberately not ``_ensure_img_caption``: on failure that one appends
+        # IMAGE_INPUT_UNAVAILABLE_NOTICE, which makes the provider short-circuit
+        # and answer "当前看不到图片，请重新发送。" without calling the model. Fine
+        # when a user asked about a picture, absurd when the bot speaks first.
+        try:
+            from astrbot.core.astr_main_agent import _request_img_caption
+
+            caption = await _request_img_caption(
+                caption_provider_id,
+                settings,
+                list(req.image_urls),
+                context,
+            )
+        except Exception as exc:  # noqa: BLE001 - captioning is an upgrade
+            logger.warning("proactive image caption failed: %s", exc)
+            caption = ""
+        if isinstance(caption, str) and caption.strip():
+            req.extra_user_content_parts.append(
+                TextPart(
+                    text=f"{IMAGE_CAPTION_MARKER}{caption.strip()}</image_caption>"
+                )
+            )
+
+    # Whatever happened above, this provider cannot read these paths.
+    req.image_urls = []
+
+    if not _has_caption(req) and _prompt_mentions_image(req):
+        req.system_prompt = (req.system_prompt or "") + _NO_VISUAL_NOTE
+
+
+def _has_caption(req: ProviderRequest) -> bool:
+    """Return whether the request already carries a picture description."""
+    for part in req.extra_user_content_parts or ():
+        text = getattr(part, "text", None)
+        if not isinstance(text, str) and isinstance(part, dict):
+            text = part.get("text")
+        if isinstance(text, str) and IMAGE_CAPTION_MARKER in text:
+            return True
+    return False
+
+
+def _prompt_mentions_image(req: ProviderRequest) -> bool:
+    """Return whether the text this request carries refers to a picture."""
+    text = f"{req.prompt or ''}\n{req.system_prompt or ''}"
+    return "[Image]" in text or "[图片]" in text
 
 
 async def generate_with_persona(
@@ -109,6 +255,11 @@ async def generate_with_persona(
     # Plugins mutate req here: persona, memory, group context.
     if await call_event_hook(event, EventType.OnLLMRequestEvent, req):
         return None
+
+    # After the hook, so pictures a plugin attached there are covered too --
+    # the same order the normal pipeline uses (internal.py prepares, calls the
+    # hook, then prepares again for whatever the hook added).
+    await _prepare_images(context, event, req, provider)
 
     coro = provider.text_chat(
         prompt=req.prompt,
