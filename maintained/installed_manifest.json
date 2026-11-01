@@ -34,7 +34,7 @@
     "astrbot/core/pipeline/result_decorate/stage.py": "55014eb4dd5487d92f93ca5a84312f4f9039d693800fba25f5b4f132fb526489",
     "astrbot/core/pipeline/scheduler.py": "ecd313b580fe0ab6650d9e8fcd1bf8768fe4705c27d490bd4c00b57c87eca52a",
     "astrbot/core/platform/sources/aiocqhttp/aiocqhttp_message_event.py": "cd96110aa765958dde70eb73f97ac146158527cbe2edc2ef52ff8ce70fb0946f",
-    "astrbot/core/proactive_persona.py": "9fbbcef5d56a74c45b7628c1086be15b56a62f5d16f05822d329ab09051c0314",
+    "astrbot/core/proactive_persona.py": "d768faf265377b50e069309d2715eaeaf52f2d9408496ca6299d2a5c6a71996c",
     "astrbot/core/provider/entities.py": "4036a6b08e3869091606ec944ce810b0d050655975d1d61654e98e225484914b",
     "astrbot/core/provider/sources/openai_source.py": "a9852dc3f82d177b07bcf81bf27eca313554f146a1deb55b43d50520fa833c65",
     "astrbot/core/star/context.py": "ca6448dd3940fd20936376809c6f3eeae371295bf62b7fabb5ae61d8851f4b36",

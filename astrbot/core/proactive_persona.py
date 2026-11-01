@@ -143,6 +143,12 @@ async def _prepare_images(
         logger.debug("proactive image modality unknown, assuming image input: %s", exc)
         return
     if supports_image:
+        logger.info(
+            "proactive image: sent to provider | count=%d max_size=%d quality=%d",
+            len(req.image_urls),
+            max_size,
+            min(max(quality, 1), 100),
+        )
         return
 
     caption_provider_id = settings.get("default_image_caption_provider_id") or ""
@@ -173,8 +179,16 @@ async def _prepare_images(
     # Whatever happened above, this provider cannot read these paths.
     req.image_urls = []
 
-    if not _has_caption(req) and _prompt_mentions_image(req):
+    captioned = _has_caption(req)
+    noted = False
+    if not captioned and _prompt_mentions_image(req):
         req.system_prompt = (req.system_prompt or "") + _NO_VISUAL_NOTE
+        noted = True
+    logger.info(
+        "proactive image: text only | captioned=%s notice=%s",
+        captioned,
+        noted,
+    )
 
 
 def _has_caption(req: ProviderRequest) -> bool:
