@@ -141,6 +141,23 @@ class AstrMessageEvent(abc.ABC):
         """获取消息字符串。"""
         return self.message_str
 
+    def _quote_speaker(self, reply: Reply) -> str:
+        """引用消息的作者名，自己的消息说成「我」。
+
+        A platform reports a quoted message by its nickname, and the bot's own
+        nickname is just another name to a model that was never told it owns
+        that name: quoted replies of its own read like a third participant, and
+        it then answers as if somebody else had written them ("那条是插件发的
+        回执" instead of "我刚才说的是…"). Comparing ids is the only reliable
+        signal here -- nicknames can be changed, and may repeat across members.
+        """
+        nickname = (getattr(reply, "sender_nickname", "") or "").strip()
+        sender_id = str(getattr(reply, "sender_id", "") or "")
+        self_id = str(self.get_self_id() or "")
+        if sender_id and self_id and sender_id == self_id:
+            return "我"
+        return nickname or "未知"
+
     def _outline_chain(self, chain: list[BaseMessageComponent] | None) -> str:
         if not chain:
             return ""
@@ -163,7 +180,9 @@ class AstrMessageEvent(abc.ABC):
             elif isinstance(i, Reply):
                 # 引用回复
                 if i.message_str:
-                    parts.append(f"[引用消息({i.sender_nickname}: {i.message_str})]")
+                    parts.append(
+                        f"[引用消息({self._quote_speaker(i)}: {i.message_str})]"
+                    )
                 else:
                     parts.append("[引用消息]")
             else:

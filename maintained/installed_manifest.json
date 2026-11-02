@@ -47,7 +47,7 @@
     "astrbot/core/utils/control_tags.py": "e3d7358a9c1e7aba5a9186f71c9e89a9ea1d5176c4af2fbc3343c778235cf736",
     "astrbot/core/utils/direct_turns.py": "855c01a768a022557d800011bbbc1f3306ae19bb96122fcd09c2427d7f80a54e",
     "astrbot/dashboard/services/plugin_service.py": "3568f5a720f0c8f7490cc4a31d7cfcb68523b876e54e8d682a24dcc872b328fa",
-    "astrbot/core/platform/astr_message_event.py": "0de9266da8e2fa9d2b719ac8c8647e7203b21443b6716db6fec59155589ab7cb",
+    "astrbot/core/platform/astr_message_event.py": "5e4f754c7b748e7dd9e50811b5d052caa99b47a9f0ab71ea625bfd9010c061ed",
     "astrbot/dashboard/services/stat_service.py": "c87677b3599a4b1a67caf2b72251408600b71a36d88edd3c56a1edec2dd791c3",
     "astrbot/dashboard/api/stats.py": "8b0faae073ec57e848ca258c9dd17d6f74c84974c267e9f81863d8987f9cb52a",
     "astrbot/core/plugin_attribution.py": "a05a465a4e8dce1b16b8b7796b80a009e56b7fcc1542b7ea1a77eccd2c7e0f67",
