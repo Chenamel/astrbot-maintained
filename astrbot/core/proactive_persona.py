@@ -25,6 +25,7 @@ from astrbot.core.agent.message import TextPart
 from astrbot.core.pipeline.context_utils import call_event_hook
 from astrbot.core.provider.entities import IMAGE_CAPTION_MARKER, ProviderRequest
 from astrbot.core.star.star_handler import EventType
+from astrbot.core.utils.self_identity import self_identity_note
 
 __all__ = ["generate_with_persona"]
 
@@ -265,6 +266,13 @@ async def generate_with_persona(
                     req.contexts[:0] = copy.deepcopy(begin_dialogs)
     except Exception as exc:  # noqa: BLE001 - a missing persona must not block
         logger.warning("proactive persona injection skipped: %s", exc)
+
+    # This path builds its own request and never runs _append_system_reminders,
+    # so the identity invariant has to be stated here too -- a proactive reply
+    # is exactly where "somebody else's line is mine" gets invented.
+    identity = self_identity_note(event)
+    if identity:
+        req.system_prompt += f"\n{identity}\n"
 
     # Plugins mutate req here: persona, memory, group context.
     if await call_event_hook(event, EventType.OnLLMRequestEvent, req):

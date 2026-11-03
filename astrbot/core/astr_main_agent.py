@@ -132,6 +132,7 @@ from astrbot.core.utils.media_utils import is_file_uri, is_recoverable_image_err
 from astrbot.core.utils.quoted_message_parser import (
     extract_quoted_message_images,
 )
+from astrbot.core.utils.self_identity import self_identity_note
 from astrbot.core.utils.string_utils import normalize_and_dedupe_strings
 from astrbot.core.workspace import (
     normalize_umo_for_workspace,
@@ -940,6 +941,13 @@ def _append_system_reminders(
     timezone: str | None,
 ) -> None:
     system_parts: list[str] = []
+    # Who the bot itself is has to come before who it is talking to: without it
+    # the model has a name for every participant except itself, and reads its
+    # own words (or somebody else's) as the wrong party.
+    identity = self_identity_note(event)
+    if identity:
+        system_parts.append(identity)
+
     if cfg.get("identifier"):
         user_id = event.message_obj.sender.user_id
         user_nickname = event.message_obj.sender.nickname
