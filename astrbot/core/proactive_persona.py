@@ -288,6 +288,10 @@ async def generate_with_persona(
         system_prompt=req.system_prompt,
         image_urls=req.image_urls,
         contexts=req.contexts or None,
+        # Hooks above appended memory recalls, role notes and image captions
+        # here. Dropping the list made every one of them a no-op on this path
+        # while the docstring promised they would contribute as usual.
+        extra_user_content_parts=req.extra_user_content_parts or None,
     )
 
     async def _with_stats():

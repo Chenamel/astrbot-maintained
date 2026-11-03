@@ -8,8 +8,6 @@ These tests drive the real function with stand-ins and assert on the request the
 provider actually receives -- the only place the injection can be observed.
 """
 
-import sys
-
 import pytest
 
 from astrbot.core import proactive_persona
@@ -64,7 +62,7 @@ class _Event:
         return "aiocqhttp"
 
 
-async def _run(monkeypatch, persona):
+async def _run(monkeypatch, persona, hook=None):
     provider = _Provider()
     context = _Context(persona)
     context.provider_manager.curr_provider_inst = provider
@@ -72,7 +70,7 @@ async def _run(monkeypatch, persona):
     async def _no_hooks(event, event_type, req):
         return False
 
-    monkeypatch.setattr(proactive_persona, "call_event_hook", _no_hooks)
+    monkeypatch.setattr(proactive_persona, "call_event_hook", hook or _no_hooks)
     monkeypatch.setattr(
         proactive_persona,
         "db_helper",
@@ -129,3 +127,27 @@ async def test_begin_dialogs_are_prepended(monkeypatch):
 
     contexts = provider.seen.get("contexts") or []
     assert contexts and contexts[0]["content"] == "在吗"
+
+
+async def test_hook_injected_parts_reach_the_provider(monkeypatch):
+    """Memory recalls and role notes appended by hooks must survive.
+
+    ``generate_with_persona`` runs the ``on_llm_request`` hooks on its own
+    request; before this fix it then called the provider without
+    ``extra_user_content_parts``, so every part a hook added was discarded --
+    long-term memory, the role note, the at-all permission block -- while the
+    docstring promised they would contribute exactly as in a normal reply.
+    """
+    from astrbot.core.agent.message import TextPart
+
+    async def _hook(event, event_type, req):
+        req.extra_user_content_parts.append(
+            TextPart(text="<system_reminder>Role: member</system_reminder>")
+        )
+        return False
+
+    seen = await _run(monkeypatch, {"prompt": "人设", "name": "默认"}, hook=_hook)
+
+    parts = seen.get("extra_user_content_parts") or []
+    texts = [getattr(part, "text", "") for part in parts]
+    assert any("Role: member" in text for text in texts)

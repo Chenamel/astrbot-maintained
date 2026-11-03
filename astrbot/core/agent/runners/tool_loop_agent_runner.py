@@ -253,6 +253,10 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                         session_id=self.req.session_id,
                         abort_signal=self._abort_signal,
                         request_max_retries=0,
+                        # Same request, same attachments: without these the
+                        # rewrite loses quoted text and image notes the model
+                        # was answering from.
+                        extra_user_content_parts=self.req.extra_user_content_parts,
                     ),
                     timeout=AUXILIARY_LLM_TIMEOUT_SEC,
                 )
@@ -1255,6 +1259,12 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                                 session_id=self.req.session_id,
                                 abort_signal=self._abort_signal,
                                 request_max_retries=0,
+                                # The closing message still answers the same
+                                # turn, so it keeps the quoted text and image
+                                # notes even though tools are gone.
+                                extra_user_content_parts=(
+                                    self.req.extra_user_content_parts
+                                ),
                             ),
                             timeout=AUXILIARY_LLM_TIMEOUT_SEC,
                         )
