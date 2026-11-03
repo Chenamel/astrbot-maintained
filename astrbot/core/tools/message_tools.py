@@ -30,6 +30,7 @@ from astrbot.core.utils.astrbot_path import (
     get_astrbot_system_tmp_path,
     get_astrbot_temp_path,
 )
+from astrbot.core.utils.datetime_utils import to_local_display
 
 
 def _file_send_allowed_roots(
@@ -531,7 +532,7 @@ class GetGroupMessageHistoryTool(FunctionTool[AstrAgentContext]):
             matched.append(
                 {
                     "id": record.id,
-                    "time": record.created_at.strftime("%Y-%m-%d %H:%M"),
+                    "time": to_local_display(record.created_at, with_seconds=False),
                     "role": str(content.get("type", "user")).upper(),
                     "sender": display_name,
                     "text": text_value,

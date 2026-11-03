@@ -6,6 +6,7 @@ Public surface (see ``docs/maintained/api-contract.md``):
 - :func:`get_astrbot_data_path`
 - :func:`download_image_by_url`
 - :func:`extract_quoted_message_images`
+- :func:`format_local_time`
 - :data:`HOOK_TIMING_ENHANCED` / :data:`HOOK_TIMING_LEGACY` / :func:`hook_timing_mode`
 
 Degradation is explicit rather than silent:
@@ -31,6 +32,7 @@ __all__ = [
     "available",
     "download_image_by_url",
     "extract_quoted_message_images",
+    "format_local_time",
     "get_astrbot_data_path",
     "hook_timing_mode",
 ]
@@ -38,6 +40,7 @@ __all__ = [
 _PATH_MODULE = "astrbot.core.utils.astrbot_path"
 _IO_MODULE = "astrbot.core.utils.io"
 _QUOTE_MODULE = "astrbot.core.utils.quoted_message_parser"
+_TIME_MODULE = "astrbot.core.utils.datetime_utils"
 _HOOK_TIMING_MODULE = "astrbot.core.config.agent_runner"
 
 #: Hook timing mode in which the agent-completion hook fires **before** the reply
@@ -100,6 +103,37 @@ async def download_image_by_url(url: str, *args: Any, **kwargs: Any) -> Any:
             "download_image_by_url is unavailable: the core helper is missing."
         )
     return await helper(url, *args, **kwargs)
+
+
+def format_local_time(
+    value: Any, with_seconds: bool = True, with_date: bool = True
+) -> str:
+    """Render a stored timestamp in local time.
+
+    Database rows store naive UTC while logs, users and the system-reminder
+    block speak local time. Plugins that put a stored time into text a person
+    or a model reads must call this instead of formatting the raw value, or one
+    prompt ends up carrying two clocks.
+
+    Args:
+        value: A datetime (naive values are treated as UTC), an ISO-8601
+            string, or an epoch number in seconds.
+        with_seconds: Whether the rendered string includes seconds.
+        with_date: Whether the rendered string includes the date. False yields
+            ``HH:MM:SS``, the shape per-line chat renderings use.
+
+    Returns:
+        The local-time string. Falls back to ``str(value)`` when the core
+        helper is unavailable or raises, so a caller still gets readable text
+        rather than an exception mid-prompt.
+    """
+    helper = resolve(_TIME_MODULE, "to_local_display", None)
+    if helper is not None:
+        try:
+            return str(helper(value, with_seconds=with_seconds, with_date=with_date))
+        except Exception:  # noqa: BLE001 - never break a caller's text
+            pass
+    return str(value)
 
 
 def hook_timing_mode() -> str:

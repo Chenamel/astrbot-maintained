@@ -68,6 +68,7 @@ EXPECTED_ALL = {
         "available",
         "download_image_by_url",
         "extract_quoted_message_images",
+        "format_local_time",
         "get_astrbot_data_path",
         "hook_timing_mode",
     },

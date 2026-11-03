@@ -82,6 +82,16 @@ def capabilities() -> dict[str, bool]: ...
 | `HOOK_TIMING_ENHANCED` | `str` 常量 | 字面量 `"enhanced"`（与 core 同值） |
 | `HOOK_TIMING_LEGACY` | `str` 常量 | 字面量 `"legacy"`（与 core 同值） |
 | `hook_timing_mode() -> str` | 函数 | 返回当前生效的模式；默认 `"legacy"`，非法值与 core 缺席时同样回落 `"legacy"` |
+| `format_local_time(value, with_seconds=True, with_date=True) -> str` | 函数 | 原样返回 `str(value)`（不做时区换算） |
+
+**`format_local_time()` 语义（一个时钟规则）**：把**存储时间**渲染成本地时间字符串。
+
+- 数据库里所有时间戳都是 **naive UTC**（`db/po.py` 的 `TimestampMixin` 用 `datetime.now(timezone.utc)` + `DateTime(timezone=False)`）；
+  日志、用户、模型看到的系统提醒都是**本地时间**。
+- 因此任何「把存储时间写进人或模型会读的文本」的地方都必须走这个函数，否则同一个 prompt 里会出现两套差 8 小时的时钟
+  （实测：一次主动生成请求里，同一段对话同时出现 `11:24:45` 与 `03:25:40`）。
+- 输入接受 `datetime`（naive 视为 UTC）、ISO 字符串、epoch 秒；无法解析时原样返回，不抛异常。
+- 插件不得自己实现一份换算逻辑：两份实现就是两套口径。
 
 **`hook_timing_mode()` 语义**：返回当前生效的「agent 完成钩子时序模式」。
 
