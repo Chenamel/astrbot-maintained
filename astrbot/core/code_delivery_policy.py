@@ -232,8 +232,10 @@ def apply_execution_policy(event, config, request) -> None:
     message_id = getattr(getattr(event, "message_obj", None), "message_id", "")
     if provider_settings.get("execution_gate_mode", "legacy") == "legacy":
         # Upstream-compatible default: keep every tool available and let the
-        # per-call administrator gate decide at invocation time.
-        logger.info(
+        # per-call administrator gate decide at invocation time. DEBUG, not
+        # INFO: this runs on every request, so at INFO the log fills up with
+        # "allowed=True removed=" lines and real faults scroll away.
+        logger.debug(
             "Execution policy message_id=%s allowed=%s removed=%s",
             message_id,
             True,

@@ -220,7 +220,9 @@ class DirectTurnCoordinator:
             event.set_extra("_direct_turn_version", turn.version)
             event.set_extra("_direct_turn_supplement", True)
             event.is_at_or_wake_command = True
-            logger.info(
+            # DEBUG: this fires once per follow-up message, so at INFO a lively
+            # group buries everything else in the log.
+            logger.debug(
                 "Direct turn replaced | message_id=%s version=%s messages=%s",
                 event.message_obj.message_id,
                 turn.version,
@@ -251,7 +253,9 @@ class DirectTurnCoordinator:
             if remaining <= 0:
                 turn.owner = event
                 self.prepare(event)
-                logger.info(
+                # DEBUG for the same reason as "replaced" above: one line per
+                # answered turn is not worth an INFO slot.
+                logger.debug(
                     "Direct turn collected | message_id=%s version=%s messages=%s images=%s",
                     event.message_obj.message_id,
                     version,
