@@ -4,6 +4,7 @@ import time
 import traceback
 from collections.abc import AsyncGenerator
 
+from astrbot.api.event.extras import is_active_reply
 from astrbot.core import logger
 from astrbot.core.agent.message import Message
 from astrbot.core.agent.runners.tool_loop_agent_runner import ToolLoopAgentRunner
@@ -164,7 +165,7 @@ async def run_agent(
     A terminal model step alone must not invalidate that pending delivery.
     """
     event = agent_runner.run_context.context.event
-    defer = bool(event.get_extra("_enhance_active_reply_token"))
+    defer = is_active_reply(event)
     if defer:
         agent_runner._proactive_delivery_deferred = True
     try:

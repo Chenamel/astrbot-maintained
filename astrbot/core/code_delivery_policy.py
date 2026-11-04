@@ -3,6 +3,7 @@
 import re
 
 from astrbot import logger
+from astrbot.api.event.extras import followup_direct, followup_task
 from astrbot.core.message.components import Plain
 
 CODE_DELIVERY_FAILURE = "这次没生成完整代码，可以再试一次"
@@ -100,13 +101,7 @@ def _task_text(event) -> tuple[str, str, str | None]:
     text = current_text
     if event and callable(getattr(event, "get_extra", None)):
         text = event.get_extra("_direct_turn_task_text") or text
-    original = (
-        event.get_extra("_enhance_followup_task")
-        if event
-        and callable(getattr(event, "get_extra", None))
-        and event.get_extra("_enhance_followup_direct")
-        else None
-    )
+    original = followup_task(event) if followup_direct(event) else None
     if original:
         text = f"{original}\n当前追问：{text}"
     return current_text, text, original

@@ -24,6 +24,7 @@ from tenacity import (
 )
 
 from astrbot import logger
+from astrbot.api.event.extras import is_active_reply
 from astrbot.core.agent.message import ImageURLPart, TextPart, ThinkPart
 from astrbot.core.agent.tool import FunctionTool, ToolSet
 from astrbot.core.agent.tool_image_cache import tool_image_cache
@@ -889,7 +890,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         event = getattr(getattr(self.run_context, "context", None), "event", None)
         if not event or not callable(getattr(event, "get_extra", None)):
             return
-        if not event.get_extra("_enhance_active_reply_token"):
+        if not is_active_reply(event):
             return
         from astrbot.core.star.star import star_registry
 

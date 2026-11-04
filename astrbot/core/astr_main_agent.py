@@ -11,6 +11,11 @@ from collections.abc import Coroutine
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from astrbot.api.event.extras import (
+    active_reply_triggered,
+    followup_direct,
+    proactive_lightweight,
+)
 from astrbot.core import logger
 from astrbot.core.agent.handoff import HandoffTool
 from astrbot.core.agent.mcp_client import MCPTool
@@ -553,9 +558,9 @@ def _is_lightweight_proactive_request(event: AstrMessageEvent) -> bool:
         Whether this is a lightweight proactive request that may proceed.
     """
     if (
-        event.get_extra("_enhance_proactive_lightweight") is not True
-        or event.get_extra("_enhance_active_reply_triggered") is not True
-        or event.get_extra("_enhance_followup_direct") is True
+        not proactive_lightweight(event)
+        or not active_reply_triggered(event)
+        or followup_direct(event)
         or getattr(event, "is_at_or_wake_command", False) is True
     ):
         return False

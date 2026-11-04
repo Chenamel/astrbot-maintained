@@ -22,6 +22,7 @@ ALLOWED_ADDITIONS = {
     "astrbot/api/content/__init__.py",
     "astrbot/api/delivery/__init__.py",
     "astrbot/api/embedding/__init__.py",
+    "astrbot/api/event/extras.py",
     "astrbot/api/media/__init__.py",
     "astrbot/api/permissions/__init__.py",
     "astrbot/api/proactive/__init__.py",

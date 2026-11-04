@@ -4,6 +4,7 @@ import asyncio
 from dataclasses import dataclass
 
 from astrbot import logger
+from astrbot.api.event.extras import is_active_reply
 from astrbot.core.agent.runners.tool_loop_agent_runner import FollowUpTicket
 from astrbot.core.astr_agent_run_util import AgentRunner
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
@@ -42,9 +43,9 @@ def register_active_runner(umo: str, runner: AgentRunner) -> None:
     runner_event = getattr(getattr(runner.run_context, "context", None), "event", None)
     if runner_event is not None:
         # Events arrive duck-typed: only real platform events are guaranteed to
-        # expose get_extra(), so probe before reading the proactive token.
-        get_extra = getattr(runner_event, "get_extra", None)
-        if callable(get_extra) and get_extra("_enhance_active_reply_token"):
+        # A runner event is only sometimes a real event; the reader handles
+        # the doubles that do not expose get_extra().
+        if is_active_reply(runner_event):
             coordinator.proactive[umo] = (runner_event, runner.request_stop)
         active_event_registry.register_agent_stop_callback(
             runner_event,

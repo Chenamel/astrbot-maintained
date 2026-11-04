@@ -29,7 +29,7 @@ MANIFEST_PATH = REPO_ROOT / "maintained" / "installed_manifest.json"
 #: 61 = 57 (core code, incl. the start-up capability self-check)
 #:      + 4 builtin-plugin assets (schema + metadata for
 #: ``bot_info`` and ``tool_react``), which ``apply_patches`` also has to ship.
-EXPECTED_ENTRY_COUNT = 61
+EXPECTED_ENTRY_COUNT = 62
 
 
 def _manifest() -> dict:

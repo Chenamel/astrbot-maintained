@@ -5,6 +5,11 @@ import json
 import time
 from dataclasses import dataclass, field
 
+from astrbot.api.event.extras import (
+    is_active_reply,
+    owned_image_urls,
+    owned_quote_image_urls,
+)
 from astrbot.core import logger
 from astrbot.core.message.components import At, Image, Plain, Reply
 
@@ -259,7 +264,7 @@ class DirectTurnCoordinator:
             )
 
     async def collect(self, event):
-        if not self.eligible(event) or event.get_extra("_enhance_active_reply_token"):
+        if not self.eligible(event) or is_active_reply(event):
             return True
         if (event.get_message_str() or "").strip().startswith("/"):
             return True
@@ -323,11 +328,10 @@ class DirectTurnCoordinator:
                 for c in source.get_messages()
                 if isinstance(c, Reply)
             ]
+            owned_quotes = owned_quote_image_urls(source)
             for component in source.get_messages():
                 if isinstance(component, Reply):
-                    quote_refs = source.get_extra(
-                        "_enhance_owned_quote_image_urls", {}
-                    ).get(str(component.id), [])
+                    quote_refs = owned_quotes.get(str(component.id), [])
                     refs.extend(
                         quote_refs
                         or [
@@ -340,7 +344,7 @@ class DirectTurnCoordinator:
                 f"message {message_id}: {text}"
                 + ("\n" + "\n".join(quotes) if quotes else "")
             )
-            owned = source.get_extra("_enhance_owned_image_urls", [])
+            owned = owned_image_urls(source)
             refs.extend(
                 owned
                 or [
@@ -349,7 +353,7 @@ class DirectTurnCoordinator:
                     if isinstance(c, Image)
                 ]
             )
-        current_quotes = event.get_extra("_enhance_owned_quote_image_urls", {})
+        current_quotes = owned_quote_image_urls(event)
         priority_refs = [ref for values in current_quotes.values() for ref in values]
         event.set_extra(
             "_direct_turn_image_urls",

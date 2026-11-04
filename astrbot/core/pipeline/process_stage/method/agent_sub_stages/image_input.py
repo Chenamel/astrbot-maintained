@@ -2,6 +2,11 @@
 
 from pathlib import Path
 
+from astrbot.api.event.extras import (
+    set_visual_unavailable,
+    visual_requested,
+    visual_unavailable,
+)
 from astrbot.core import logger
 from astrbot.core.agent.message import ImageURLPart, TextPart
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
@@ -124,11 +129,11 @@ async def prepare_request_images(
     )
     if has_visual_input or has_caption:
         req.image_input_unavailable = False
-        if event.get_extra("_enhance_visual_requested", False):
-            event.set_extra("_enhance_visual_unavailable", False)
-    elif failed or event.get_extra("_enhance_visual_unavailable", False):
+        if visual_requested(event):
+            set_visual_unavailable(event, False)
+    elif failed or visual_unavailable(event):
         req.image_input_unavailable = True
-        event.set_extra("_enhance_visual_unavailable", True)
+        set_visual_unavailable(event, True)
         logger.info(
             "Image input unavailable | message_id=%s | action=notice_or_proactive_skip",
             getattr(event.message_obj, "message_id", "unknown"),
