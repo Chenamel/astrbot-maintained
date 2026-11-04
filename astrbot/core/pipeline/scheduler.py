@@ -88,7 +88,13 @@ class PipelineScheduler:
 
         """
         active_event_registry.register(event)
-        coordinator.configure(self.ctx.astrbot_config.get("direct_turn_quiet_sec"))
+        # Keyed by conversation: a process can serve several bots, and their
+        # profiles may disagree about the window. Without the origin the last
+        # message's profile would decide for everyone.
+        origin = getattr(event, "unified_msg_origin", "") or ""
+        coordinator.configure(
+            self.ctx.astrbot_config.get("direct_turn_quiet_sec"), origin
+        )
         coordinator.observe(event, self.ctx.astrbot_config.get("wake_prefix", []))
         try:
             await self._process_stages(event)

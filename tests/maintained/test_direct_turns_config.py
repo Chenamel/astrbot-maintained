@@ -119,3 +119,62 @@ def test_positive_value_restores_aggregation():
 def test_non_aiocqhttp_events_stay_ineligible():
     coordinator = _coordinator()
     assert coordinator.eligible(_event(platform="qq_official")) is False
+
+
+# --------------------------------------------------------------------------
+# Per-conversation windows: one process, several bots
+# --------------------------------------------------------------------------
+
+
+def test_windows_are_kept_per_conversation():
+    """A second bot's profile must not rewrite the first bot's window.
+
+    The coordinator is a process-wide singleton, so a shared field meant "the
+    last message sets the wait for everyone". Two bots with different profiles
+    quietly fought over it.
+    """
+    coordinator = _coordinator()
+
+    coordinator.configure(8.0, "umo-a")
+    coordinator.configure(0.0, "umo-b")
+
+    assert coordinator.window_for("umo-a") == (8.0, True)
+    assert coordinator.window_for("umo-b") == (0.0, False)
+
+
+def test_an_unseen_conversation_falls_back_to_the_default():
+    coordinator = _coordinator()
+    coordinator.configure(6.0)
+
+    assert coordinator.window_for("umo-never-seen") == (6.0, True)
+
+
+def test_configure_without_an_origin_still_sets_the_default():
+    """Tests and single-bot deployments use the flat form; it must keep working."""
+    coordinator = _coordinator()
+
+    coordinator.configure(0.0)
+
+    assert coordinator.quiet_sec == 0.0
+    assert coordinator.enabled is False
+
+
+def test_a_disabled_conversation_does_not_track_turns():
+    coordinator = _coordinator()
+    coordinator.configure(0.0, "umo-a")
+
+    event = _event()
+    event.unified_msg_origin = "umo-a"
+
+    assert coordinator.eligible(event) is False
+    assert coordinator.turns == {}
+
+
+def test_invalid_values_do_not_erase_a_window():
+    coordinator = _coordinator()
+    coordinator.configure(5.0, "umo-a")
+
+    for bad in (None, "3", -1, True):
+        coordinator.configure(bad, "umo-a")
+
+    assert coordinator.window_for("umo-a") == (5.0, True)

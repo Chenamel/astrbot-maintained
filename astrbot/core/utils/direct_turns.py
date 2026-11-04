@@ -108,31 +108,60 @@ class DirectTurnCoordinator:
         self.enabled = quiet_sec > 0
         self.turns = {}
         self.proactive = {}
+        #: Per-conversation overrides, set by :meth:`configure_for`.
+        #:
+        #: One coordinator serves the whole process, but the window is a config
+        #: value and a process can serve several bots. Reading one shared field
+        #: meant the last message's profile silently rewrote everyone else's.
+        self.windows: dict[str, tuple[float, bool]] = {}
 
-    def configure(self, quiet_sec: object) -> None:
+    def configure(self, quiet_sec: object, origin: str | None = None) -> None:
         """Apply the aggregation window from the running configuration.
 
         Args:
             quiet_sec: Seconds to wait after the last message of a turn. Zero
                 disables aggregation entirely, so each message is handled on
                 its own. Unknown or invalid values leave the window unchanged.
+            origin: Conversation this window belongs to. When given, the value
+                is stored for that conversation only; when omitted it becomes
+                the process-wide default, which is what tests and single-bot
+                deployments want.
         """
         if isinstance(quiet_sec, bool) or not isinstance(quiet_sec, (int, float)):
             return
         if quiet_sec < 0:
             return
-        self.quiet_sec = float(quiet_sec)
+        seconds = float(quiet_sec)
         # A zero-second window must also stop observe() from tracking turns:
         # otherwise the first message is released instantly while the next one
         # still invalidates it, which is worse than not aggregating at all.
-        self.enabled = self.quiet_sec > 0
+        enabled = seconds > 0
+        if origin is None:
+            self.quiet_sec = seconds
+            self.enabled = enabled
+            return
+        self.windows[origin] = (seconds, enabled)
+
+    def window_for(self, origin: str) -> tuple[float, bool]:
+        """Return the aggregation window that applies to a conversation.
+
+        Args:
+            origin: The conversation's unified message origin.
+
+        Returns:
+            ``(seconds, enabled)`` for that conversation, falling back to the
+            process default when its profile has not been seen yet.
+        """
+        return self.windows.get(origin, (self.quiet_sec, self.enabled))
 
     def key(self, event):
         return event.unified_msg_origin, str(event.get_sender_id())
 
     def eligible(self, event):
+        origin = getattr(event, "unified_msg_origin", "") or ""
+        _, enabled = self.window_for(origin)
         return (
-            self.enabled
+            enabled
             and getattr(event, "get_platform_name", lambda: "")() == "aiocqhttp"
             and bool(event.get_sender_id())
         )
@@ -242,11 +271,15 @@ class DirectTurnCoordinator:
             event.set_extra("_direct_turn_state", turn)
             event.set_extra("_direct_turn_version", 1)
         version = event.get_extra("_direct_turn_version")
+        # The window is a per-conversation config value; reading the shared
+        # field here would let a busy second bot shorten this conversation's
+        # wait to nothing.
+        quiet_sec, _ = self.window_for(getattr(event, "unified_msg_origin", "") or "")
         while not turn.closed and version == turn.version and not event.is_stopped():
             remaining = (
                 min(
                     turn.first_at + self.max_wait_sec,
-                    turn.last_at + self.quiet_sec,
+                    turn.last_at + quiet_sec,
                 )
                 - self.clock()
             )
