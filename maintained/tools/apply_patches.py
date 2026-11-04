@@ -24,8 +24,11 @@ See ``docs/maintained/tools.md`` for the operational procedure.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 import shutil
+import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -197,6 +200,71 @@ def _print_plan(plan: list[Change]) -> None:
     )
 
 
+def write_build_stamp(instance: Path, source: Path, manifest_path: Path) -> Path | None:
+    """Record which build a live instance is running.
+
+    Args:
+        instance: Instance root.
+        source: Repository the files came from.
+        manifest_path: Manifest that was applied.
+
+    Returns:
+        Path of the written stamp, or ``None`` when git metadata is unavailable.
+
+    Notes:
+        A deployed instance is a plain copy of files, so nothing on disk says
+        where it came from. Recording the commit turns "is this the build I
+        think it is" into a comparison instead of a memory exercise.
+    """
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=source,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=True,
+        ).stdout.strip()
+        branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=source,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+    try:
+        version = subprocess.run(
+            ["git", "show", f"{commit}:astrbot/__init__.py"],
+            cwd=source,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError):
+        version = ""
+    match = re.search(r'__version__\s*=\s*"([^"]+)"', version)
+
+    payload = {
+        "commit": commit,
+        "branch": branch,
+        "version": match.group(1) if match else "",
+        "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+        "entries": len(load_manifest(manifest_path)),
+        "applied_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+    }
+    target = instance / "core" / "data" / "maintained_build.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(
+        (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    )
+    return target
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point.
 
@@ -286,6 +354,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {report.entries[relative]:8} {relative}", file=sys.stderr)
         print("AstrBot must be restarted for changes to take effect.", file=sys.stderr)
         return 1
+
+    stamp = write_build_stamp(args.instance, args.source, args.manifest)
+    if stamp is not None:
+        print(f"stamp  : {stamp}")
 
     print("AstrBot must be restarted for changes to take effect.")
     return 0
