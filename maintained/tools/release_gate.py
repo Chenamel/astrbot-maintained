@@ -186,6 +186,30 @@ def gate_upstream() -> tuple[str, str, dict[str, int]]:
     )
 
 
+def gate_dashboard_stamp() -> tuple[str, str]:
+    """The built dashboard must declare the version it was built from.
+
+    Without the stamp the core treats the local assets as foreign and tries to
+    download a matching package on every start-up. That download cannot succeed
+    (no upstream release carries this fork's version), so the failure shows up
+    as two errors per boot rather than as a broken dashboard -- easy to live
+    with, and therefore easy to keep.
+    """
+    code, out = _run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/maintained/test_dashboard_stamp.py",
+            "-q",
+        ]
+    )
+    if code != 0:
+        tail = out.strip().splitlines()[-1] if out.strip() else "stamp check failed"
+        return FAIL, tail
+    return PASS, "dist/assets/version matches the core"
+
+
 def gate_drift(instance: Path | None) -> tuple[str, str]:
     """The live instance matches the repository."""
     if instance is None:
@@ -245,6 +269,7 @@ def main(argv: list[str] | None = None) -> int:
 
     rows.append(("lint", *gate_lint()))
     rows.append(("manifest", *gate_manifest()))
+    rows.append(("dashboard", *gate_dashboard_stamp()))
 
     status, detail, counts = gate_maintained()
     rows.append(("maintained", status, detail))
