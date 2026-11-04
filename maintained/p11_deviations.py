@@ -17,6 +17,13 @@ This module is the single source of truth for the upstream tests this fork fails
     ``agent_runner.config.misc.hook_timing_mode = enhanced`` and the code path
     must never be deleted by an upstream merge; see
     ``docs/maintained/inventory.md`` section "β 组回退 / α 组回退".
+``config``
+    Fork-added defaults under ``agent_runner.config.misc``. Upstream migrates
+    that mapping and then compares it by **exact equality**, so the two keys this
+    fork adds (``hook_timing_mode``, ``lightweight_proactive_tools``) make the
+    assertion fail even though both defaults are inert unless opted into. The
+    deviation is a schema-shape difference, not a behaviour difference; see
+    ``docs/maintained/inventory.md`` section 4 (P11).
 
 The root ``conftest.py`` turns each registered node id into an
 ``xfail(strict=True)`` marker: the test still runs, an expected failure is
@@ -41,6 +48,9 @@ ALPHA = "alpha"
 #: Deviation group for the intentional agent-completion hook timing improvement.
 BETA = "beta"
 
+#: Deviation group for the fork's extra ``agent_runner.config.misc`` defaults.
+CONFIG = "config"
+
 _ALPHA_REASON = (
     "alpha (design): apply_execution_policy() tightens execution-tool "
     "authorisation, so this fork withholds the execute tools that upstream "
@@ -53,9 +63,24 @@ _BETA_REASON = (
     "the improved timing on purpose and must not be reverted to upstream."
 )
 
+_CONFIG_REASON = (
+    "config (fork addition): the maintained core adds `hook_timing_mode` and "
+    "`lightweight_proactive_tools` to agent_runner.config.misc. This test "
+    "migrates that mapping and compares it by exact equality, so the two extra "
+    "defaults fail it while the behaviour stays upstream-compatible -- both are "
+    "inert unless a config opts in."
+)
+
 DEVIATIONS: dict[str, tuple[str, str]] = {
-    # Both groups are empty: the alpha tightening and the beta hook timing are
-    # opt-in modes now, so the default run matches upstream on every test.
+    # Alpha and beta are empty: both are opt-in modes now, so the default run
+    # matches upstream on every test.
+    "tests/unit/test_agent_runner_config.py"
+    "::test_local_legacy_fields_are_fully_migrated": (CONFIG, _CONFIG_REASON),
+    "tests/unit/test_agent_runner_config.py"
+    "::test_local_migration_replaces_default_root_inserted_before_version_bump": (
+        CONFIG,
+        _CONFIG_REASON,
+    ),
 }
 
 #: Node ids marked with ``xfail`` during the current pytest session.

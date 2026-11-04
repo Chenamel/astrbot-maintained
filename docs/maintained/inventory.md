@@ -138,7 +138,7 @@
 | P8 | 魔法数字未提取 | `timeout=30`、`16000`、`15s`、图片上限 2、`quiet_sec=4`、`max_wait_sec=15` | 提取常量或配置项 |
 | P9 | `maintenance` fail-open | registry 文件缺失**静默**放行（无日志）；`uninstall_plugin` / `uninstall_failed_plugin` **无闸门** | ✅ **已处置（T8-06）**：缺失 → **明确 `logger.warning`（含路径与原因）后放行**（不改 fail-closed：该 registry 是本 fork 私有机制，公开后多数用户没有它，fail-closed 会锁死纯净环境）；损坏 → 仍 fail-closed；卸载两入口补闸门并留 `force=False` 逃生口（`force` **暂不在面板暴露**）。详见 `docs/maintained/maintenance-gate.md` |
 | P10 | 手写正则做安全判定 | `SAFETY_REFUSAL_PATTERN`、`execution_denial` 中文祈使句 | 明确误判容限并补测试（阶段 3 必做） |
-| **P11** | **维护版 core 打破上游 17 项测试预期**（阶段 7 新发现；**2026-10-18 更新：α 组 9 项随 T8-15、β 组 8 项随 T8-16 回退转绿，现剩 0 项**） | 见下方对照表 | **登记不改**：属补丁质量证据，须在"插件重写"批次统一处理；任何 core 打磨都必须以"不新增失败"为验收 |
+| **P11** | **维护版 core 打破上游测试预期**（阶段 7 新发现；2026-10-18：α 组 9 项随 T8-15、β 组 8 项随 T8-16 回退转绿；**2026-11-04：新增 `config` 组 2 项**——本 fork 给 `agent_runner.config.misc` 加了 `hook_timing_mode` / `lightweight_proactive_tools`，而上游用整字典相等断言） | 见下方对照表 | **登记不改**：`config` 组属 schema 形状差异（两个默认值均为惰性），已登记进 `maintained/p11_deviations.py`；任何 core 打磨都必须以"不新增失败"为验收 |
 
 ### P11 证据（2026-10-09 对照实验）
 

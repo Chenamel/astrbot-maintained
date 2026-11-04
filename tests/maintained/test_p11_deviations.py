@@ -1,11 +1,12 @@
 """Guard the registry of intentional upstream deviations (P11).
 
 The registry in ``maintained/p11_deviations.py`` is what makes "the suite is
-green" a well-defined statement. Both groups are empty since T8-15 and T8-16
-turned their behaviour into opt-in modes, so the default run matches upstream on
-every test. These tests guard the registry itself -- a renamed upstream test, a
-watered-down reason, or a deleted red-line note must turn the suite red instead
-of silently disabling the alarm.
+green" a well-defined statement. Alpha and beta are empty since T8-15/T8-16
+turned their behaviour into opt-in modes; the ``config`` group is not, because
+the fork adds two defaults to a mapping upstream compares by exact equality.
+These tests guard the registry itself -- a renamed upstream test, a watered-down
+reason, a deleted red-line note, or a group whose count drifted must turn the
+suite red instead of silently disabling the alarm.
 """
 
 from __future__ import annotations
@@ -18,10 +19,12 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 #: Number of deviations per group (see ``docs/maintained/inventory.md`` §4 P11).
-#: Both groups are zero since T8-15/T8-16 turned them into opt-in modes.
+#: Alpha and beta are zero since T8-15/T8-16 turned them into opt-in modes; the
+#: config group holds the two exact-dict assertions our extra defaults break.
 EXPECTED_COUNTS = {
     p11_deviations.ALPHA: 0,
     p11_deviations.BETA: 0,
+    p11_deviations.CONFIG: 2,
 }
 
 ALPHA_ANCHOR_FILE = Path("astrbot/core/astr_main_agent.py")
@@ -44,11 +47,13 @@ def _test_name(node_id: str) -> str:
 
 
 def test_registry_matches_the_documented_groups():
-    """The registry holds exactly the documented alpha and beta deviations.
+    """The registry holds exactly the documented deviations.
 
-    Both groups stay empty: the alpha tightening is reachable through
-    ``execution_gate_mode=strict`` and the beta timing through
-    ``hook_timing_mode=enhanced``, so the default run keeps no deviation.
+    Alpha and beta stay empty: the tightening is reachable through
+    ``execution_gate_mode=strict`` and the timing through
+    ``hook_timing_mode=enhanced``. The config group is expected to hold two,
+    and a third appearing there means someone added another default to
+    ``agent_runner.config.misc`` without registering the test it breaks.
     """
     groups = [group for group, _ in p11_deviations.DEVIATIONS.values()]
     for group, expected in EXPECTED_COUNTS.items():
@@ -94,7 +99,7 @@ def test_core_anchors_of_both_groups_are_present():
 
 
 def test_every_deviation_was_matched_when_upstream_runs():
-    """When the upstream files are collected, all 17 markers must be applied.
+    """When the upstream files are collected, every marker must be applied.
 
     Running only ``tests/maintained`` collects no deviation, so the check is
     skipped; running the upstream files collects them and a silent miss (renamed
