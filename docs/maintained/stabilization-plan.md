@@ -214,3 +214,33 @@
 - **不拆两个大文件**（R16）：上游正在重构同一处，先拆会撞车。
 - **不重写 `_bridge` 为 import 时强绑定**：会牺牲"上游覆盖补丁也不崩"的容错，等追完上游再说。
 - **不动主动回复开关**：`proactive_must_remain_disabled` 恒 true。
+
+---
+
+## 8. 实施记录（2026-11-04，S1 已完成）
+
+| 项 | 提交 | 落地内容 | 验证 |
+|---|---|---|---|
+| R1 | `b868dd6f9` | 台账补 4 个 `builtin_stars` 资产（56→60）；新增**集合完整性**断言 `test_every_touched_core_file_is_listed`；`base_ref` 移入台账 | 摘掉 1 条 → 测试红并点名该文件；恢复后绿 |
+| R2 | `69f0efeee` | 新增 `config` 偏差组，登记 2 项上游精确字典断言；`inventory.md` P11 行同步 | 常规跑 `2 xfailed`；`--runxfail` 仍是 2 failed（证明不是消音） |
+| R3 | `9938c9b91` | 两键迁入 `CONFIG_METADATA_3_SYSTEM`；`execution_gate_mode` 补 `_2` 校验；**四语言翻译**；`Settings.vue` 分组白名单加 `direct_turn_quiet_sec`；重建 dist | 浏览器实测两个标签都渲染、页面无原始 i18n key；`test_config_surface.py` 6 项 |
+| R8 | `33512eb7e` | `test_version_marker.py`：`+mtnN`、`__version_base__`、pyproject 一致、README 一致 | 摘掉 `+mtn1` → 测试红 |
+| R9 | `2e52fe137` | 三处热路径 INFO→DEBUG（`direct_turns` ×2、`apply_execution_policy` 的 legacy 分支） | `test_code_delivery_policy` / `direct_turns` / `hook_timing` 68 passed |
+| R10 | `33512eb7e` + `d2e1c3a16` | `apply_patches` 写 `core/data/maintained_build.json`（commit/branch/version/manifest sha/时间） | 门禁的 `build stamp` 行；**发现并修复**了"内容已一致时提前返回不写戳" |
+| 门禁 | `33512eb7e` + `9b125af7c` | `maintained/tools/release_gate.py`：lint / 台账 / 维护版 / 上游 / 漂移 / 构建戳，单命令单结论 | 首跑即抓出 2 个真实问题（见下） |
+
+### R3 的三个隐藏条件（缺一个都看不到字段）
+
+1. **元数据位置**：`_3_SYSTEM` 才有表单；`_2` 只做保存校验。
+2. **页面白名单**：`Settings.vue` 的分组是硬编码数组，不在里面就不渲染。
+3. **四语言翻译**：`_3` 会转成 i18n key，缺翻译就显示 `system_group.system.xxx.description`。
+
+另有一条前置：`dashboard/dist` **不入仓**，改完必须重建并把 dist 同步进实例，否则浏览器跑的还是旧包。
+
+### 门禁首跑的两次误报，都指向真问题
+
+- `upstream FAIL`：把 `xfailed` 当成 `failed` 计数 —— 判定写错了，已改为"零 failed 且 xfailed == 登记数"。
+- `build stamp FAIL`：实例戳落后 HEAD —— 工具在"内容已一致"时提前返回、不写戳，已修。
+
+后一条恰好证明门禁有用：它抓的是"实例跑的不是你以为的那个构建"。
+
