@@ -243,6 +243,10 @@
       "description": "使用电脑能力",
       "hint": "让 AstrBot 访问和使用本机环境或者隔离的沙盒环境，以执行更复杂的任务。详见: [电脑使用](https://docs.astrbot.app/use/computer.html)。",
       "provider_settings": {
+        "execution_gate_mode": {
+          "description": "执行类工具授权模式",
+          "hint": "legacy（默认）：与官方原版一致，只校验管理员权限。strict：额外要求当前消息明确要求运行或执行。"
+        },
         "computer_use_runtime": {
           "description": "运行环境",
           "hint": "允许 Agent 访问的环境。local 为本机环境，sandbox 为沙箱环境，none 为不允许任何环境。"
@@ -1208,6 +1212,14 @@
       "log_level": {
         "description": "控制台日志级别",
         "hint": "控制台输出日志的级别。"
+      },
+      "direct_turn_quiet_sec": {
+        "description": "QQ 消息聚合窗口（秒）",
+        "hint": "仅 aiocqhttp 生效：收到消息后先等待这么多秒，把连续发来的几条合并成一个回合再交给模型。默认 4 秒；设为 0 关闭聚合，每条消息立即处理（与官方原版一致）。"
+      },
+      "log_escape_message_newlines": {
+        "description": "日志中转义消息换行",
+        "hint": "群消息里带换行时，日志会跟着断成多行，很难读。开启（默认）会把换行显示为 ⏎，一条消息一行；关闭则保持原样。只影响日志显示，不影响插件收到的消息内容。"
       },
       "log_file_enable": {
         "description": "启用文件日志",

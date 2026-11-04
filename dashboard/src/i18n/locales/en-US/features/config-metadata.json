@@ -227,6 +227,10 @@
       "description": "Agent Computer Use",
       "hint": "Allows the AstrBot to access and use your computer or an sandbox environment to perform more complex tasks. See: [Computer Use](https://docs.astrbot.app/use/computer.html).",
       "provider_settings": {
+        "execution_gate_mode": {
+          "description": "Execution tool authorization mode",
+          "hint": "legacy (default): matches stock AstrBot, administrator check only. strict: the current message must also explicitly ask to run or execute."
+        },
         "computer_use_runtime": {
           "description": "Computer Use Runtime",
           "hint": "Environment allowed for Agent usage. `local` means the local machine environment, `sandbox` means the sandbox environment, and `none` means no environment is allowed."
@@ -1187,6 +1191,14 @@
       "log_level": {
         "description": "Console Log Level",
         "hint": "Log level for console output."
+      },
+      "direct_turn_quiet_sec": {
+        "description": "Message aggregation window (seconds)",
+        "hint": "aiocqhttp only: wait this many seconds after a message, merging consecutive lines from the same person into one turn. Default 4; set 0 to disable aggregation and handle every message on its own (same as stock AstrBot)."
+      },
+      "log_escape_message_newlines": {
+        "description": "Escape newlines in logs",
+        "hint": "Multi-line group messages make the log hard to read. When on (default) a newline is shown as the return arrow so one message stays on one line; turn off to keep the original text. Display only -- plugins still receive the message unchanged."
       },
       "log_file_enable": {
         "description": "Enable File Logging",

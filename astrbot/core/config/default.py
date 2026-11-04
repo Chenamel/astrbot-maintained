@@ -3047,6 +3047,13 @@ CONFIG_METADATA_2 = {
                     "unsupported_streaming_strategy": {
                         "type": "string",
                     },
+                    "execution_gate_mode": {
+                        "description": "执行类工具授权模式",
+                        "type": "string",
+                        "options": ["legacy", "strict"],
+                        "hint": "legacy（默认）：与官方原版一致，只校验管理员权限。"
+                        "strict：额外要求当前消息明确要求运行/执行。",
+                    },
                     "file_extract": {
                         "type": "object",
                         "items": {
@@ -4726,6 +4733,19 @@ CONFIG_METADATA_3_SYSTEM = {
                         "type": "string",
                         "hint": "控制台输出日志的级别。",
                         "options": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                    },
+                    "direct_turn_quiet_sec": {
+                        "description": "QQ 消息聚合窗口（秒）",
+                        "type": "float",
+                        "hint": "仅 aiocqhttp 生效：收到消息后先等待这么多秒，把连续发来的几条合并成一个回合再交给模型。"
+                        "默认 4 秒；设为 0 关闭聚合，每条消息立即处理（与官方原版一致）。",
+                    },
+                    "log_escape_message_newlines": {
+                        "description": "日志中转义消息换行",
+                        "type": "bool",
+                        "hint": "群消息里带换行时，日志会跟着断成多行，很难读。"
+                        "开启（默认）会把换行显示为 ⏎，一条消息一行；关闭则保持原样。"
+                        "只影响日志显示，不影响插件收到的消息内容。",
                     },
                     "dashboard.ssl.enable": {
                         "description": "启用 WebUI HTTPS",

@@ -315,6 +315,10 @@
       "description": "コンピューター操作機能",
       "hint": "AstrBot がローカル環境または隔離されたサンドボックス環境へアクセスし、より複雑なタスクを実行できるようにします。詳細：[コンピューター操作](https://docs.astrbot.app/en/use/computer.html)。",
       "provider_settings": {
+        "execution_gate_mode": {
+          "description": "実行系ツールの認可モード",
+          "hint": "legacy（既定）：公式版と同じく管理者権限のみ確認します。strict：現在のメッセージが実行を明示的に求めていることも要求します。"
+        },
         "computer_use_runtime": {
           "description": "実行環境",
           "hint": "エージェントにアクセスを許可する環境です。`local` はローカル環境、`sandbox` はサンドボックス環境、`none` はどの環境も許可しないことを示します。"
@@ -1284,6 +1288,14 @@
       "log_level": {
         "description": "コンソールログレベル",
         "hint": "コンソールへ出力するログのレベルです。"
+      },
+      "direct_turn_quiet_sec": {
+        "description": "メッセージ集約ウィンドウ（秒）",
+        "hint": "aiocqhttp のみ有効。メッセージ受信後にこの秒数待ち、同じ人の連続した発言を 1 ターンにまとめます。既定値は 4 秒、0 で集約を無効化し、1 通ずつ処理します（公式版と同じ）。"
+      },
+      "log_escape_message_newlines": {
+        "description": "ログ内の改行をエスケープ",
+        "hint": "複数行のグループメッセージはログが読みにくくなります。オン（既定）では改行を記号で表示し、1 メッセージを 1 行に保ちます。表示のみに影響し、プラグインが受け取る内容は変わりません。"
       },
       "log_file_enable": {
         "description": "ファイルログを有効化",
