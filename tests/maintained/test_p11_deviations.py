@@ -13,12 +13,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import doc_paths
 import p11_deviations
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-#: Number of deviations per group (see ``docs/maintained/inventory.md`` §4 P11).
+#: Number of deviations per group (see the ``inventory`` document, section 4 P11).
 #: Alpha and beta are zero since T8-15/T8-16 turned them into opt-in modes; the
 #: config group holds the two exact-dict assertions our extra defaults break.
 EXPECTED_COUNTS = {
@@ -80,14 +81,44 @@ def test_deviation_reason_names_its_group(node_id):
     assert len(reason) > 40
 
 
-def test_beta_protection_is_documented():
-    """The beta red line may not be edited away from the project docs."""
-    inventory = (REPO_ROOT / "docs/maintained/inventory.md").read_text(encoding="utf-8")
-    rules = (REPO_ROOT / "docs/maintained/project_rules.md").read_text(encoding="utf-8")
-    assert "坚决不改回上游" in inventory
-    assert "核心架构优化" in inventory
-    assert "合并红线" in rules
-    assert "P11" in rules
+def test_beta_protection_is_declared_in_code():
+    """The beta red line is asserted from code, not from a maintainer-only doc.
+
+    The phrases used to be read straight out of ``inventory.md`` and
+    ``project_rules.md``. Those documents are now maintainer-only (``.internal/``,
+    gitignored), so a guard that needed them would fail -- or be skipped -- in a
+    fresh clone of the published repository, quietly removing the alarm it exists
+    to raise. The phrases therefore live in
+    :data:`p11_deviations.PROTECTED_RED_LINES`, which git tracks.
+    """
+    declared = {phrase for _, phrase, _ in p11_deviations.PROTECTED_RED_LINES}
+    assert "坚决不改回上游" in declared
+    assert "核心架构优化" in declared
+    assert "合并红线" in declared
+    assert "P11" in declared
+
+    for name, phrase, why in p11_deviations.PROTECTED_RED_LINES:
+        assert why.strip(), f"{phrase} must say why it is protected"
+        assert len(why) > 20, f"{phrase} needs a real reason, not a label"
+        assert name in doc_paths.DOCUMENTS, f"undeclared document: {name}"
+
+
+def test_the_declared_red_lines_are_still_written_down():
+    """Every declared phrase still appears in the document that states it.
+
+    Skipped -- not failed -- when the document is absent: a fresh clone of the
+    published repository has no ``.internal/`` tree, and absence of a
+    maintainer-only note is not a defect. The alarm lives in
+    ``test_beta_protection_is_declared_in_code``, which needs no document.
+    """
+    missing = [name for name in doc_paths.DOCUMENTS if doc_paths.path(name) is None]
+    if missing:
+        pytest.skip(f"maintainer-only documents not present: {', '.join(missing)}")
+
+    for name, phrase, _ in p11_deviations.PROTECTED_RED_LINES:
+        text = doc_paths.read(name)
+        assert text is not None, name
+        assert phrase in text, f"{name} no longer says {phrase!r}"
 
 
 def test_core_anchors_of_both_groups_are_present():

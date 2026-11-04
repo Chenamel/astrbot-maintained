@@ -1,6 +1,6 @@
 """Mechanical enforcement of the public-surface documentation gate.
 
-``docs/maintained/project_rules.md`` §9 requires that every module this fork adds
+The ``project_rules`` document (§9) requires that every module this fork adds
 under ``astrbot/api/`` is usable by the community: a module docstring, an explicit
 ``__all__`` that matches the contract, a docstring on every exported symbol, a
 ``#:`` comment on every exported constant -- and no public-looking definition

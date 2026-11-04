@@ -67,7 +67,8 @@ PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 
 ## 与仓库根 `conftest.py` 的关系
 
-上游有 **17 项**测试本 fork **有意**不通过（P11，见 `docs/maintained/inventory.md` §4）。
+上游有 **17 项**测试本 fork **有意**不通过（P11，见 `inventory` 文档 §4；
+该文档属维护者本地 `.internal/`，不在公开仓内）。
 按零冲突原则**上游测试文件一字未改**，改由仓库根 `conftest.py` 在收集阶段按
 `maintained/p11_deviations.py` 的注册表打上 `xfail(strict=True)`：
 

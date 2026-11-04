@@ -2,7 +2,7 @@
 
 Upstream tests that this fork fails **on purpose** (P11) are marked as
 ``xfail(strict=True)`` from here instead of being edited in place: the
-zero-conflict rule in ``docs/maintained/project_rules.md`` section 3 forbids
+zero-conflict rule in the ``project_rules`` document (section 3) forbids
 touching upstream files. The deviations themselves are registered in
 ``maintained/p11_deviations.py``.
 
