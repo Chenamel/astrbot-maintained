@@ -307,3 +307,35 @@ flag 类读取器只认**真正的 `True`**（`value is True`），不用 truthy
 `test_api_frozen.py` 用 `git diff baseline -- astrbot/api` 判断"新增"，
 **未入索引的新文件看不到**，必须先 `git add`。这是既有行为，不是本轮引入。
 
+---
+
+## 11. 发版前隐患复查（2026-11-04 17:50）
+
+不复述测试结果，只看**实例真实运行**：13 分钟、193 条入站事件、335 条时间线记录。
+
+### 发现并修掉一个此前未记录的隐患
+
+**仪表盘版本标记缺失**（`4d49cd43e` + `5a1b38ba2`）。
+
+`dist/assets/version` 由**上游发布流水线**写入（`release.yml:71`），本地 `vite build`
+不生成。我们手工重建 dist 时没有这个文件，于是核心判定本地资源"不兼容"，
+每次启动都去下载匹配包——用本 fork 的版本号 `4.28.2+mtn1` 去找官方 release 标签，
+必然 404，然后回落到本地。
+
+**症状**：启动日志两条 ERRO、启动耗时 46s、隐式依赖网络。
+**修复**：`scripts/stamp_dashboard_version.py`（写入 + `--check`），接进
+`npm run build` 三个变体，并作为发布门禁的独立一行。
+**实测**：ERRO 2 → 0，启动 46s → 24s。
+
+`dist/` 被 gitignore，所以标记文件不能入仓——这正是必须做成构建步骤的原因，
+否则每次新克隆都会重现。
+
+### 剩余告警的归属（均非本 fork 引入）
+
+| 告警 | 归属 |
+|---|---|
+| `Hosted Dashboard package failed` | 官方镜像 404，已由本次修复消除 |
+| `prometheus_client 不可用` | 环境未装，上游行为 |
+| `random_likes / livingmemory` 的插件配置与 Provider 警告 | 第三方插件自身 |
+| `http_proxy 环境变量被检测到` | 上游行为 |
+
