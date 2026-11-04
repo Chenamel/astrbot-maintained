@@ -244,3 +244,33 @@
 
 后一条恰好证明门禁有用：它抓的是"实例跑的不是你以为的那个构建"。
 
+---
+
+## 9. 实施记录（S2：R4 / R6 / R7）
+
+| 项 | 提交 | 落地内容 | 验证 |
+|---|---|---|---|
+| R4-a | `f38702f14` | 时序模式随事件携带：`set_hook_timing_mode(value, event)` 写入 `_hook_timing_mode` 快照；`hook_timing_mode(event=None)` 有事件读快照、无事件读全局；runner 新增 `owner_event` 参数，主 agent 构建处传入 | 3 项新测试：快照优先、无 extras 的事件不崩、公开 API 接受事件 |
+| R4-b | `32bdfba56` | 聚合窗口按会话隔离：`configure(quiet_sec, origin)`、`window_for(origin)`；`eligible()` / `collect()` 改读会话值；scheduler 传入 `unified_msg_origin` | 5 项新测试：两会话互不覆盖、未见过回退默认、单参数形式仍设默认、禁用会话不追踪、非法值不擦除 |
+| R7 | `11c8886b5` | `execution_gate_mode(config)` 单一入口（含白名单归一，非法值→legacy）；三处调用点改为调用它 | 12 项参数化：两种合法值、9 种非法值、4 种坏 config |
+| R6 | `11c8886b5` | `REQUIRED_CAPABILITIES` + `missing_required()`；`core_lifecycle.initialize()` 启动自检，缺必需能力记 ERROR 并点名 | 4 项新测试：必选集是注册表子集、完整核心无缺失、缺必需项被报、缺可选项不报 |
+
+### 为什么 R4-a 只改"读"，不改"行为判定"
+
+实际行为判定用的是 `runner.hook_timing_mode`（实例字段，`tool_loop_agent_runner.py:1083`），
+本来就是每轮独立的。全局变量只被**上报接口**读，所以这次只是让上报值也跟着事件走，
+没有触碰执行时序 —— 变更风险因此限制在"插件读到的值"这一层。
+
+### R4-b 的关键：`eligible()` 与 `collect()` 也要改
+
+只改 `configure()` 是不够的。`eligible()` 用 `self.enabled` 决定要不要追踪回合、
+`collect()` 用 `self.quiet_sec` 算剩余等待，两处若继续读全局，就会得到
+"按 A 的窗口决定要不要聚合，按 B 的窗口决定等多久"这种半隔离状态。
+
+### R6 的一个设计取舍
+
+`_bridge` 原本的容错原则是"缺能力就静默降级"，这对可选辅助函数是对的。
+但 `turns.direct_turn` / `permissions.execution_policy` / `delivery.code_policy`
+是本 fork 自有行为的载体，缺失等于补丁没打上。所以只把这 3 个标为 required，
+其余 6 个保持静默降级 —— 一份名单，两种待遇，各自有理由。
+
