@@ -325,6 +325,14 @@ def main(argv: list[str] | None = None) -> int:
     print(f"target : {target_core}")
     if not pending:
         print("  => nothing to do; target already matches the manifest")
+        # Files can match while the stamp is missing or stale -- a re-deploy of
+        # an already-correct tree, or a checkout that moved on without touching
+        # these files. Refreshing it here keeps the stamp honest instead of
+        # leaving the gate comparing against a build that is merely older.
+        if args.apply:
+            stamp = write_build_stamp(args.instance, args.source, args.manifest)
+            if stamp is not None:
+                print(f"stamp  : {stamp}")
         return 0
 
     _print_plan(plan)
