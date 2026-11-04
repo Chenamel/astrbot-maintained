@@ -185,3 +185,66 @@ async def test_skills_like_requery_hook_timing(
     assert sum(chain.get_plain_text() == "Let me check." for chain in chains) == 1
     # The fallback path re-queries for tool arguments and never runs a tool.
     assert not hooks.tool_start_called
+
+
+# --------------------------------------------------------------------------
+# The mode belongs to a turn, not to the process
+# --------------------------------------------------------------------------
+
+
+def test_an_event_snapshot_wins_over_the_global():
+    """Two bots with different profiles share one process.
+
+    The global records "whoever built last", so without the event a plugin
+    auditing bot B's reply could be told bot A's timing.
+    """
+    from types import SimpleNamespace
+
+    from astrbot.core.config.agent_runner import (
+        HOOK_TIMING_EXTRA,
+        hook_timing_mode,
+        set_hook_timing_mode,
+    )
+
+    store = {}
+    event = SimpleNamespace(
+        get_extra=lambda key, default=None: store.get(key, default),
+        set_extra=lambda key, value: store.__setitem__(key, value),
+    )
+
+    set_hook_timing_mode("legacy", event)
+    set_hook_timing_mode("enhanced")  # another bot builds afterwards
+
+    assert hook_timing_mode(event) == "legacy", "the snapshot must win"
+    assert hook_timing_mode() == "enhanced", "no event falls back to the last build"
+    assert event.get_extra(HOOK_TIMING_EXTRA) == "legacy"
+
+
+def test_a_plain_event_without_extras_is_tolerated():
+    from types import SimpleNamespace
+
+    from astrbot.core.config.agent_runner import hook_timing_mode, set_hook_timing_mode
+
+    set_hook_timing_mode("enhanced", SimpleNamespace())
+    set_hook_timing_mode("legacy")
+
+    assert hook_timing_mode(SimpleNamespace()) == "legacy"
+
+
+def test_the_public_api_accepts_an_event():
+    from types import SimpleNamespace
+
+    from astrbot.api.runtime import hook_timing_mode
+    from astrbot.core.config.agent_runner import set_hook_timing_mode
+
+    store = {}
+    event = SimpleNamespace(
+        get_extra=lambda key, default=None: store.get(key, default),
+        set_extra=lambda key, value: store.__setitem__(key, value),
+    )
+
+    set_hook_timing_mode("enhanced", event)
+    set_hook_timing_mode("legacy")
+
+    assert hook_timing_mode(event) == "enhanced"
+    assert hook_timing_mode() == "legacy"

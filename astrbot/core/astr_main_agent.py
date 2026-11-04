@@ -1747,6 +1747,7 @@ async def build_main_agent(
         enforce_max_turns=config.max_context_length,
         tool_schema_mode=config.tool_schema_mode,
         hook_timing_mode=config.hook_timing_mode,
+        owner_event=event,
         fallback_providers=fallback_providers,
         request_max_retries=config.request_max_retries,
         tool_result_overflow_dir=(

@@ -343,6 +343,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         custom_compressor: ContextCompressor | None = None,
         tool_schema_mode: str | None = "full",
         hook_timing_mode: str | None = None,
+        owner_event: T.Any = None,
         fallback_providers: list[Provider] | None = None,
         request_max_retries: int | None = None,
         tool_result_overflow_dir: str | None = None,
@@ -425,7 +426,10 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         self.hook_timing_mode = normalize_hook_timing_mode(hook_timing_mode)
         # Recorded here so every build path (main, background, cron and any
         # future one) reports the same mode through the plugin-facing helper.
-        set_hook_timing_mode(self.hook_timing_mode)
+        # With an event in hand the mode is also pinned onto it: the global is
+        # only the "most recent build wins" fallback, and two bots in one
+        # process can legitimately disagree.
+        set_hook_timing_mode(self.hook_timing_mode, owner_event)
         self._tool_schema_param_set = None
         self._skill_like_raw_tool_set = None
         if tool_schema_mode == "skills_like":

@@ -136,14 +136,20 @@ def format_local_time(
     return str(value)
 
 
-def hook_timing_mode() -> str:
-    """Return the agent-completion hook timing mode currently in effect.
+def hook_timing_mode(event: Any = None) -> str:
+    """Return the agent-completion hook timing mode of the turn being served.
 
     ``"enhanced"`` means the completion hook fires **before** the reply is
     emitted; ``"legacy"`` means the upstream timing is restored on every code
     path that has an upstream counterpart. Plugins that depend on "the reply has
     already been sent" should check this and take their conservative path or
     tell the user when the mode is ``"legacy"``.
+
+    Args:
+        event: The message event, when the caller has one. Passing it makes the
+            answer describe the profile that built this turn instead of
+            whichever build ran last in this process -- the two differ as soon
+            as a second bot uses a different profile.
 
     Returns:
         ``"enhanced"`` or ``"legacy"``. Falls back to :data:`HOOK_TIMING_LEGACY`
@@ -153,7 +159,13 @@ def hook_timing_mode() -> str:
     if helper is None:
         return str(HOOK_TIMING_LEGACY)
     try:
-        mode = helper()
+        mode = helper(event) if event is not None else helper()
+    except TypeError:
+        # Older cores take no argument; keep working against them.
+        try:
+            mode = helper()
+        except Exception:  # noqa: BLE001 - fall through to the fork default
+            return str(HOOK_TIMING_LEGACY)
     except Exception:  # noqa: BLE001 - fall through to the fork default
         return str(HOOK_TIMING_LEGACY)
     if mode in (HOOK_TIMING_ENHANCED, HOOK_TIMING_LEGACY):

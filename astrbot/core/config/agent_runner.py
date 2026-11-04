@@ -255,7 +255,15 @@ def normalize_agent_runner(agent_runner: object) -> dict[str, Any]:
 
 
 #: Mode recorded by the most recent main agent build (see :func:`set_hook_timing_mode`).
+#:
+#: This is a **fallback for callers with no event in hand**, not the source of
+#: truth: the mode is per configuration, and a process can serve several bots
+#: whose profiles disagree. Anything that has an event should pass it, so it
+#: reads the snapshot taken when its own turn started.
 _CURRENT_HOOK_TIMING_MODE = HOOK_TIMING_MODE_DEFAULT
+
+#: Event extra holding the mode that was in effect when a turn started.
+HOOK_TIMING_EXTRA = "_hook_timing_mode"
 
 
 def normalize_hook_timing_mode(value: Any) -> str:
@@ -274,29 +282,61 @@ def normalize_hook_timing_mode(value: Any) -> str:
     return HOOK_TIMING_MODE_DEFAULT
 
 
-def hook_timing_mode() -> str:
-    """Return the hook timing mode used by the most recent main agent build.
+def hook_timing_mode(event: Any = None) -> str:
+    """Return the hook timing mode of the turn being served.
 
-    The agent runner configuration is process-wide, so every conversation shares
-    one mode. Plugins read this to detect whether the completion hook fires
-    before (``enhanced``) or after (``legacy``) the reply is emitted.
+    Args:
+        event: The message event, when the caller has one. Its snapshot wins,
+            because it describes the configuration that built this turn.
 
     Returns:
-        The current mode; :data:`HOOK_TIMING_MODE_DEFAULT` before the first
-        main agent build or when the last recorded value became invalid.
+        ``"enhanced"`` or ``"legacy"``. With an event carrying a snapshot, that
+        value; otherwise the mode of the most recent main agent build, or the
+        default before any build has run.
+
+    Notes:
+        Without the event argument this reads process-wide state, which is only
+        correct while every bot in the process shares one profile. That is the
+        assumption this parameter exists to remove.
     """
+    if event is not None:
+        snapshot = _extra(event, HOOK_TIMING_EXTRA)
+        if isinstance(snapshot, str) and snapshot in HOOK_TIMING_MODES:
+            return snapshot
     return normalize_hook_timing_mode(_CURRENT_HOOK_TIMING_MODE)
 
 
-def set_hook_timing_mode(value: Any) -> str:
+def set_hook_timing_mode(value: Any, event: Any = None) -> str:
     """Record the hook timing mode of a main agent build and return it.
 
     Args:
         value: The raw configured value.
+        event: The message event this build serves. When given, the mode is
+            also written onto the event so later reads do not depend on the
+            most recent build winning a race.
 
     Returns:
         The normalized mode that is now in effect.
     """
     global _CURRENT_HOOK_TIMING_MODE
-    _CURRENT_HOOK_TIMING_MODE = normalize_hook_timing_mode(value)
-    return _CURRENT_HOOK_TIMING_MODE
+    normalized = normalize_hook_timing_mode(value)
+    _CURRENT_HOOK_TIMING_MODE = normalized
+    if event is not None:
+        setter = getattr(event, "set_extra", None)
+        if callable(setter):
+            try:
+                setter(HOOK_TIMING_EXTRA, normalized)
+            except Exception:  # noqa: BLE001 - event contract is duck-typed
+                pass
+    return normalized
+
+
+def _extra(event: Any, key: str) -> Any:
+    """Read an event extra without assuming the full event contract."""
+    getter = getattr(event, "get_extra", None)
+    if not callable(getter):
+        return None
+    try:
+        return getter(key)
+    except Exception:  # noqa: BLE001
+        return None
