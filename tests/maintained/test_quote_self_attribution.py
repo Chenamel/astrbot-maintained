@@ -12,7 +12,7 @@ import pytest
 from astrbot.core.message.components import Plain, Reply
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 
-BOT_ID = "3944860270"
+BOT_ID = "123456789"
 
 
 class _View:

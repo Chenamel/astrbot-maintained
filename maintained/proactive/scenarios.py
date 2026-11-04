@@ -87,7 +87,7 @@ class Scenario:
     family: str
     name: str
     expect: str
-    """REPLY | SKIP | NO_JUDGE, derived from docs/maintained/proactive-design.md."""
+    """REPLY | SKIP | NO_JUDGE, from the fork's proactive scenario corpus."""
     note: str
     messages: list[M] = field(default_factory=list)
     target: int = -1
@@ -101,7 +101,7 @@ ME = "SELF"
 No account number is hardcoded here: this corpus has to work for somebody
 else's instance too.
 """
-OTHER_BOT = "3614096161"  # another bot in the same group
+OTHER_BOT = "OTHER"  # another bot in the same group; placeholder like ME
 U1, U2, U3 = "10001", "10002", "10003"
 
 SCENARIOS: list[Scenario] = [

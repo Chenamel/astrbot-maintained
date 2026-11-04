@@ -23,7 +23,8 @@ Comparison covers ``events``, ``summary`` and ``mode_symmetry`` only.
 move when the runner is edited, which is exactly why the invariant is expressed
 as a *relative* ordering instead of an absolute line number.
 
-See ``docs/maintained/t8-12-plan.md`` sections 5 and 6.
+See ``docs/maintained/api-contract.md`` (hook timing mode) and
+``tests/maintained/test_hook_timing_mode.py``.
 """
 
 from __future__ import annotations

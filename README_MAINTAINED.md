@@ -26,7 +26,7 @@
 | 路径 | 用途 |
 |---|---|
 | `maintained/` | 版本、SHA-256 台账、维护工具 |
-| `docs/maintained/` | 规范文档（proposal / design / tasks / project_rules） |
+| `docs/maintained/` | 对外文档（install / plugin-quickstart / api-contract / fork-advantages / proposal / design / tools） |
 | `tests/maintained/` | 本 fork 的测试 |
 | `CHANGELOG.md` | 相对上游的变更台账（区别于上游 `changelogs/`） |
 
@@ -37,10 +37,10 @@
 
 | 类 | 内容 |
 |---|---|
-| **台账与漂移检测** | `maintained/installed_manifest.json` 记 40 个受保护文件的 SHA-256；`check_drift.py` 可双端（仓库 + 实例）校验，`apply_patches.py` 一键重打。上游没有这套，而上游周更、补丁被覆盖是静默的 |
+| **台账与漂移检测** | `maintained/installed_manifest.json` 记 62 个受保护文件的 SHA-256；`check_drift.py` 可双端（仓库 + 实例）校验，`apply_patches.py` 一键重打。上游没有这套，而上游周更、补丁被覆盖是静默的 |
 | **底层能力（只做加法）** | 新增 `astrbot/api/{turns,delivery,permissions,media,content,runtime,embedding,proactive}`，core 侧缺失时优雅降级返回安全默认值。其中 `api.proactive.generate_with_persona` 让插件能生成**带人格的话** —— 基线上 `Context.llm_generate` / `tool_loop_agent` 都跳过 `on_llm_request` 钩子，插件做不到这件事 |
 | **安全加固** | `execution_gate_mode` **默认 `legacy`（＝上游 admin-only）**，可选 `strict`；转述不再被误判为授权；真拒答不再触发补生成。默认不比上游严也不比上游松 |
-| **主动回复（影子模式）** | 判定/生成分离 + 回复意愿值 + 按群/时段配额 + 沉默退避。**目前只判定不发送**，一条都没真发过 |
+| **主动回复（影子模式）** | 判定/生成分离 + 回复意愿值 + 按群/时段配额 + 沉默退避。**核心层强制关闭开关**（`proactive_must_remain_disabled` 恒为 `true`）；相关能力只在独立插件里做判定，不发送、也不提供开启途径 |
 
 ## 上游同步
 

@@ -98,8 +98,7 @@ def capabilities() -> dict[str, bool]: ...
 - `legacy`（**默认**）：在**上游有对照的路径**上把钩子恢复到「回复先出、钩子后到」，
   行为与官方原版逐点一致；fork 独有的路径（图片降级兜底、末轮补生成）保留优化。
 - `enhanced`：完成钩子在**回复发出之前**触发，让审计/改写类插件先拿到控制权
-  —— 本 fork 的架构优化，**需显式开启**（`agent_runner.config.misc.hook_timing_mode`）
-  （见 `hook-timing-impact.md`）。
+  —— 本 fork 的架构优化，**需显式开启**（`agent_runner.config.misc.hook_timing_mode`）。
 
 插件用法：自检当前模式，遇 `legacy` 时自行走保守路径或提示用户，避免静默故障。
 该函数**不依赖 `_bridge` 能力键**，core 缺席/抛异常/返回非法值一律回落 `"legacy"`。
@@ -194,7 +193,7 @@ def capabilities() -> dict[str, bool]: ...
 >   它是内部错误兜底文案，不应对调用方形成版本承诺）。
 >
 > ⇒ 调用方只需判断「返回值是否为 `None`」，**不要**对具体文本做等值断言（除非用上面的公开常量）。
-> 该安排遵循 `project_rules.md` §9：不允许"公开名字却不在 `__all__`/契约/测试里"的定义存在。
+> 该安排遵循本 fork 的 API 文档门槛：不允许"公开名字却不在 `__all__`/契约/测试里"的定义存在。
 
 ### 3.5 `astrbot/api/proactive/` — 主动场景
 
@@ -247,7 +246,7 @@ core 自己也写群历史（`persist_group_message`），只是优先级最低�
 
 | 测试文件 | 覆盖 |
 |---|---|
-| `test_api_surface.py` | 八个模块可导入；`__all__` 与本文档一致；`_bridge` 不出现在 `__all__`；能力清单键齐全 |
+| `test_api_surface.py` | 各 api 模块可导入；`__all__` 与本文档一致；`_bridge` 不出现在 `__all__`；能力清单键齐全 |
 | `test_api_media.py` | 常量非空且 `NOTICE` 含 `MESSAGE`；`IMAGE_CAPTION_MARKER` 正确；`has_visual_input` / `has_image_caption` 对伪造对象判定正确 |
 | `test_api_turns.py` | 补丁缺席时 `is_current → True`、`mark_sent` no-op、`merged_*` 返回空、`reset* → False`、`available → False` |
 | `test_api_delivery.py` | 缺席时 `code_task_spec → None`、`has_code_delivery → False`、`CODE_DELIVERY_FAILURE` 非空 |
@@ -257,7 +256,7 @@ core 自己也写群历史（`persist_group_message`），只是优先级最低�
 | `test_api_runtime.py` | 数据目录为绝对路径；缺席时下载**响亮失败**、引用图返回空表 |
 | `test_api_embedding.py` | 缺席时 `is_embedding_provider → False`；容错 |
 | `test_manifest_guard.py` | 仓工作树↔台账自洽；台账只含 core、`proactive_must_remain_disabled` 为 `True`、条数钉 |
-| `test_api_frozen.py` | 上游 api 文件相对 `baseline/v4.28.2` 零改动（白名单=9 个新增文件） |
+| `test_api_frozen.py` | 上游 api 文件相对 `baseline/v4.28.2` 零改动（白名单=`ALLOWED_ADDITIONS`，当前 10 个新增文件） |
 | `test_tools_check_drift.py` / `test_tools_apply_patches.py` | 工具链：漂移检测、预演不写、写前备份、源损坏中止、退出码 |
 
 **测试不依赖运行中的 AstrBot**：用 `SimpleNamespace` 伪造 event / request / part。

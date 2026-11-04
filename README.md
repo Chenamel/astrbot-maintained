@@ -58,14 +58,16 @@
 欢迎直接提交 issue，建议附上日志（默认位于 `data/logs/astrbot.log`）。
 
 **本仓库会公开吗？**
-远期计划公开，但仍有部分内容需要先完成脱敏，进度见 `docs/maintained/roadmap.md`。
+远期计划公开；维护者的施工记录与内部台账不随仓库分发，对外说明以本页与 `docs/maintained/` 下的文档为准。
 
 ## 文档导航
 
 | 需要了解的内容 | 位置 |
 |---|---|
 | 维护者向说明（基线、台账、上游同步） | [`README_MAINTAINED.md`](./README_MAINTAINED.md) |
-| 规范与决策记录 | [`docs/maintained/`](./docs/maintained/)（design / project_rules / tasks / roadmap / inventory） |
+| 安装说明 | [`docs/maintained/install.md`](./docs/maintained/install.md) |
+| 插件作者 5 分钟入门 | [`docs/maintained/plugin-quickstart.md`](./docs/maintained/plugin-quickstart.md) |
+| API 契约与能力说明 | [`docs/maintained/`](./docs/maintained/)（api-contract / fork-advantages / design / proposal / tools） |
 | 相对上游的改动清单 | [`CHANGELOG.md`](./CHANGELOG.md) |
 | core 改动台账（SHA-256，可脚本校验） | [`maintained/installed_manifest.json`](./maintained/installed_manifest.json) |
 | 上游官方说明 | [`README_zh.md`](./README_zh.md) 等，或 [上游仓库](https://github.com/AstrBotDevs/AstrBot) |

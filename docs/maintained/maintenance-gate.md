@@ -24,7 +24,7 @@
 ## 3. 为什么"缺失"不改成 fail-closed
 
 `maintenance_registry.json` 位于 `<data>/optimization_tracking/`，是**本 fork 的私有机制**。
-本项目面向社区开源（见 `project_rules.md` 项目定位），**绝大多数用户根本没有这个文件**；
+本项目面向社区开源，**绝大多数用户根本没有这个文件**；
 若缺失即拒绝，等于把纯净环境的插件更新/卸载**全部锁死** —— 与
 「原版插件 100% 兼容 > fork 效率优化透传」直接冲突。
 

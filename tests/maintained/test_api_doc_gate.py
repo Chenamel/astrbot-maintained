@@ -87,14 +87,14 @@ def _declared_all(tree: ast.Module) -> list[str] | None:
 @pytest.mark.parametrize("dotted", OWNED_MODULES)
 def test_module_has_docstring(dotted: str) -> None:
     assert ast.get_docstring(ast.parse(_module_source(dotted))), (
-        f"{dotted} has no module docstring (project_rules.md §9)"
+        f"{dotted} has no module docstring (fork API doc gate)"
     )
 
 
 @pytest.mark.parametrize("dotted", OWNED_MODULES)
 def test_module_declares_all(dotted: str) -> None:
     assert _declared_all(ast.parse(_module_source(dotted))) is not None, (
-        f"{dotted} has no explicit __all__ (project_rules.md §9)"
+        f"{dotted} has no explicit __all__ (fork API doc gate)"
     )
 
 
@@ -115,7 +115,7 @@ def test_public_symbols_have_docstrings(dotted: str) -> None:
             if node.name in exported and not ast.get_docstring(node):
                 undocumented.append(node.name)
     assert not undocumented, (
-        f"{dotted} exports undocumented callables: {undocumented} (project_rules.md §9)"
+        f"{dotted} exports undocumented callables: {undocumented} (fork API doc gate)"
     )
 
 
@@ -141,7 +141,7 @@ def test_no_wild_public_definitions(dotted: str) -> None:
             offenders.append(name)
     assert not offenders, (
         f"{dotted} has public-looking names outside __all__: {offenders} "
-        "(project_rules.md §9 forbids wild private definitions)"
+        "(fork API doc gate forbids wild private definitions)"
     )
 
 
@@ -174,5 +174,5 @@ def test_exported_constants_have_marker_comments(dotted: str) -> None:
             if index < 0 or not lines[index].lstrip().startswith("#:"):
                 unmarked.append(target.id)
     assert not unmarked, (
-        f"{dotted} exports constants without a '#:' comment: {unmarked} (project_rules.md §9)"
+        f"{dotted} exports constants without a '#:' comment: {unmarked} (fork API doc gate)"
     )

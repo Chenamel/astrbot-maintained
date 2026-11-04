@@ -15,7 +15,7 @@
    因此公开面（`astrbot/api/**`）的**文档与注释是交付物的一部分**，不是附属品。
 2. **与官方的关系变了** → 从"尽量跟随上游"变成"**有主张地优化上游**"。
    官方为兼容大众所做的妥协，正是本项目要解决的痛点；这类**有意偏离必须登记**，
-   且**严禁在上游合并时被官方实现覆盖**（登记见 `inventory.md` §4 P11）。
+   且**严禁在上游合并时被官方实现覆盖**（登记见 `maintained/p11_deviations.py`）。
 3. **交付标准变了** → 上游测试全绿不再是目标（本 fork 有意偏离上游语义），
    **真正的标准是：偏离被登记、被测试、被文档化，且不新增意外失败**。
 
@@ -38,8 +38,8 @@
 | G3 | 只做加法 | 新增能力一律落 `astrbot/api/**`，不触碰既有对外可见路径 |
 | G4 | 合规 | 满足 AGPL §13：公开仓库 + `NOTICE` + 同源可获取 |
 | G5 | 可回归 | 每个 core 改动登记 SHA-256 台账，阶段 4 起每个改动附测试 |
-| G6 | **公开面可用** | `astrbot/api/**` 每个模块有模块 docstring + 显式 `__all__` + 逐符号 docstring + 常量 `#:` 注释；契约与 `__all__` 由 `test_api_surface.py` 机械对齐；无"不在 `__all__`/契约/测试中的公开名定义"（门槛见 `project_rules.md` §9） |
-| G7 | **偏离可追溯** | 每处对上游语义的有意偏离都在 `inventory.md` §4 P11 登记（含类别、证据、影响判定），并在 `project_rules.md` §5 声明为上游合并红线 |
+| G6 | **公开面可用** | `astrbot/api/**` 每个模块有模块 docstring + 显式 `__all__` + 逐符号 docstring + 常量 `#:` 注释；契约与 `__all__` 由 `test_api_surface.py` 机械对齐；无"不在 `__all__`/契约/测试中的公开名定义"（门槛由 `tests/maintained/test_api_doc_gate.py` 机械校验） |
+| G7 | **偏离可追溯** | 每处对上游语义的有意偏离都在 `maintained/p11_deviations.py` 登记（含 nodeid、组别与理由），合并红线由 `PROTECTED_RED_LINES` 固化在受版本控制的代码里 |
 
 ## 3. 明确不做的事情
 
@@ -59,7 +59,7 @@
 
 - **社区插件作者（首要受众）**：需要**一个官方主线没有的、有文档与降级语义的底层扩展 API 面**，
   用来做拟人化干预（回合状态、交付策略、执行授权、媒体契约、内容部件……）。
-  他们的诉求决定了本 fork 的存在理由，也是 api 文档门槛（`project_rules.md` §9）的来源。
+  他们的诉求决定了本 fork 的存在理由，也是 api 文档门槛（由 `test_api_doc_gate.py` 机械校验）的来源。
 - **实例运维者**：需要机器人可恢复、补丁可重放、升级不失控；漂移可一键检测与恢复。
 - **本项目自身**：需要长期可维护——偏离官方的地方必须登记、可检索、不被合并覆盖。
 - **上游 AstrBotDevs**：fork 需明确标注来源与许可，不冒用其名义；
@@ -97,9 +97,9 @@
 - **A1** `git rev-parse baseline/v4.28.2` = `3c7adafa…`（锚点标签永久指向基线，主干 HEAD 随维护推进而前进），`git status --porcelain` 为空，本地无 `master` 分支。
 - **A2** `git remote -v`：`upstream` 禁推、`origin` 为 SSH `Chenamel/astrbot-maintained`；`ssh -T git@github.com` 返回 Chenamel。
 - **A3** `astrbot/__init__.py` 与 `pyproject.toml` 版本均为 `4.28.2`。
-- **A4** 全仓 grep 无增强插件名、无 `Axi404`、`git ls-files` 无 `data/plugins` 路径。
-  ⚠️ **当前未达成（暂缓）**：仍有 2 处 core 站点（P2：`astr_main_agent.py`、`tool_loop_agent_runner.py` 的插件目录名匹配）
-  + `.gitignore` 黑名单 + 3 篇内部文档。发布转公开前必须一并处理；守卫测试的实现在 P2 完成后才有意义。
+- **A4** 全仓 grep 无私有插件名、无第三方 fork 名、`git ls-files` 无 `data/plugins` 路径。
+  ✅ **已达成**：P2 改造已让 core 侧不再按插件目录名找插件（改走能力契约）；内部施工文档
+  已移出公开树；守卫见 `tests/maintained/test_plugin_capability_lookup.py`（插件目录名白名单为空）。
 - **A5** `ruff check .` 相对基线**零新增**错误。
 - **A6** 四份 sdd 文档齐备（layouts 已声明跳过）。
 

@@ -21,7 +21,7 @@ from astrbot.core.platform.message_type import MessageType
 from astrbot.core.provider.entities import LLMResponse, ProviderRequest
 from astrbot.core.utils.self_identity import self_identity_note
 
-SELF_ID = "3944860270"
+SELF_ID = "123456789"
 
 
 class _Event:
@@ -37,7 +37,7 @@ class _Event:
         self._self_id = self_id
         self._message_type = message_type
         self.message_obj = SimpleNamespace(
-            sender=SimpleNamespace(user_id="1295445770", nickname="大肥鱼"),
+            sender=SimpleNamespace(user_id="987654321", nickname="测试用户"),
             group_id="999000111",
             group=SimpleNamespace(group_name="测试群"),
         )
@@ -97,7 +97,7 @@ def test_normal_request_carries_the_note() -> None:
     text = "\n".join(getattr(part, "text", "") for part in req.extra_user_content_parts)
     assert f"Your account: {SELF_ID}" in text
     # The upstream line stays untouched.
-    assert "User ID: 1295445770, Nickname: 大肥鱼" in text
+    assert "User ID: 987654321, Nickname: 测试用户" in text
 
 
 def test_proactive_persona_request_carries_the_note(monkeypatch) -> None:

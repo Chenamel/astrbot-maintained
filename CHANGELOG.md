@@ -4,6 +4,9 @@
 
 格式参照 Keep a Changelog，版本标签形如 `maintained/v4.28.2-rN`。
 
+> 本文件是逐阶段施工台账：文中提到的部分 `docs/maintained/...` 文档属维护者内部记录，
+> 不随公开仓库分发。当前可查阅的对外文档以 `docs/maintained/` 目录实际内容为准。
+
 ## 基线
 
 - **阶段 1 基线**：`3c7adafa1397e182d60b1016bf88759265113c8a`（上游 tag `v4.28.2`）。
@@ -138,7 +141,7 @@
   三个模块（纯新增，未改既有 api 文件），把插件剩余的 core 依赖全部纳入公开面。
   契约见 [`docs/maintained/api-contract.md`](./docs/maintained/api-contract.md) §3.0。
   台账 28 → 31 条；`tests/maintained/` 47 → 62 项全绿（阶段 7 后为 94）。
-  插件侧改造记录见 [`docs/maintained/deploy-log.md`](./docs/maintained/deploy-log.md)。
+  插件侧改造记录见 `docs/maintained/deploy-log.md`（维护者内部记录）。
 - **阶段 3 API 层**：`astrbot/api/` 下新增六个文件（**未修改任何既有 api 文件**）：
   - `_bridge.py` — 内部能力桥（惰性解析 core 符号 + 能力清单，**非公开面**）
   - `media/` — 图片输入契约（**修复 P1**：插件不再需要 import core 私有路径；同时集中 `IMAGE_CAPTION_MARKER`）
@@ -165,7 +168,7 @@
   机器人启动后已核验**插件加载成功**（插件自身 WebUI 监听 `127.0.0.1:6196`）。
   另将 `active_reply.enable` 由 `true` 改为 `false`（防调试期误发，符合铁律 6）。
   备份位于 `<INST>/optimization_backups/20261009_124413_CST_premaintenance/` 与
-  `..._142013_CST_proactive_off/`。详见 [`docs/maintained/deploy-log.md`](./docs/maintained/deploy-log.md)。
+  `..._142013_CST_proactive_off/`。详见 `docs/maintained/deploy-log.md`（维护者内部记录）。
 - `README.md` 替换为本 fork 说明（GitHub 首页渲染入口）。这是**唯一**被修改的上游既有文件：
   `.gitattributes` 声明 `README.md merge=ours` 并配置对应 merge driver，
   上游对 README 的改动永不覆盖本 fork 版本；其余全部上游文件（含 `docs/`、
