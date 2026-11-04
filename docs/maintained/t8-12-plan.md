@@ -19,7 +19,7 @@
 | 探针 | 基线 `maintained/baselines/hook_timing/57bacfc09.json`，**每步 MATCH** |
 
 **复盘与技术债**：见 `docs/maintained/t8-12-retrospective.md`（§4 为技术债清单，共 7 项）。
-**新对话交接**：见 `.workbuddy/handover-after-t8-12.md`。
+**新对话交接**：维护者本地 `.internal/handover/`（不入仓）。
 
 ## 0. 取证原则（本轮起生效，T8-12 全程适用）
 

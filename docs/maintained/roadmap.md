@@ -40,7 +40,7 @@
         ▼
 阶段 9 · 主动回复 / 拟人化（**2026-10 起的新主线**）
         │   目标只有一个：让主动说出的话像人。分层：L1 时机 / L2 内容 / L3 形态
-        │   施工图：docs/maintained/proactive-plan.md；状态：proactive-handoff.md
+        │   施工图：docs/maintained/proactive-plan.md；状态跟踪见维护者本地 `.internal/`
         │
         ├─ S9-1  P0 收尾：双机器人防护 / 实时转发展开 / 解析 bug ×3   ← ✅
         ├─ S9-2  方案 A：fork 补「带人格的生成入口」                  ← ✅
@@ -145,11 +145,13 @@ T7-90 脱敏 → T7-91 对外材料 → 转公开 + 发布 tag
 | 位置 | 内容 | 处理时机 |
 |---|---|---|
 | `docs/maintained/future-ideas.md:105` | 本实例机器人 QQ 号 + 昵称 | B1（最该先清：直接暴露账号） |
-| `docs/maintained/proactive-handoff.md:63` | 绝对路径，含系统用户名 + 实例 UUID | B1 |
-| `docs/maintained/proactive-handoff.md:84` | 同上（测试用 python 路径） | B1，或改成占位符 |
-| `tests/maintained/README.md:18` | 同上 | B1 |
+| `tests/maintained/README.md:18` | 绝对路径，含系统用户名 + 实例 UUID | B1，或改成占位符 |
 | `maintained/proactive/replay.py:53` | 默认实例路径 | ✅ **已可移植**：支持 `PROACTIVE_INSTANCE` 环境变量，且有"找不到时给出提示"（2026-10-25） |
-| `proactive-handoff.md` / `roadmap.md` 中引用的 `3944860270` | 记录旧代码用，说明问题用 | 无害，B1 时顺手替换成 `<bot-id>` |
+| `roadmap.md` 中引用的 `3944860270` | 记录旧代码用，说明问题用 | 无害，B1 时顺手替换成 `<bot-id>` |
+
+> 原清单里另有 `proactive-handoff.md` 三处实例绝对路径。该文件已移出仓库
+> （连同其它会话交接文档进 `.internal/`，见 `.gitignore`），本条随之失效。
+
 
 **没有发现的问题**（扫描确认干净）：
 

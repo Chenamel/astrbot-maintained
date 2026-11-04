@@ -112,6 +112,9 @@ maintained/.tmp/
 # WorkBuddy local state (never published)
 .workbuddy/
 
-# Internal project-map docs (structural audits, handoff notes, session logs).
-# Kept out of GitHub: they describe local deployment and per-file rationale.
-docs/local/
+# Internal working documents: session handovers, pending-work lists, local ops logs,
+# project maps and audits. They answer "where did we stop" / "why is this file like
+# this" for the maintainer, not "how do I use this fork" for a reader. They also name
+# the operator's own instance path, accounts and private plugins, so they stay on disk
+# only. Everything that should be published lives under docs/.
+.internal/
