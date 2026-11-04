@@ -20,7 +20,7 @@
 
 ## 2. 台账与漂移检测（最独特的一项）
 
-- `maintained/installed_manifest.json`：**40 条**受保护文件及其 SHA-256（30 core + 9 api + …）
+- `maintained/installed_manifest.json`：**62 条**受保护文件及其 SHA-256（52 core + 10 api）
 - `maintained/tools/check_drift.py`：双端校验（仓库工作树 + 实例），退出码 0/1/2
 - `maintained/tools/apply_patches.py`：一键重打（默认预演，`--apply` 才写）
 
@@ -28,7 +28,7 @@
 上游周更，插件/补丁随时可能被覆盖，而**覆盖是静默的** —— 没人会告诉你哪个补丁没了。
 有了台账，`check_drift` 一行就能回答「我的改动还在不在」。
 
-实测口径：仓库 + 实例**双端 NO DRIFT（40/40）**。
+实测口径：仓库工作树 **62/62** 条哈希与磁盘字节一致（`mismatch: 0`）；实例侧双端校验需 `--instance`。
 
 ## 3. 底层能力：补「插件做不到」的部分
 
@@ -78,26 +78,31 @@
 
 - 一改动一提交；改 core **必同步台账 SHA-256**
 - 入仓文件强制 LF；哈希按**磁盘字节**算
-- 测试门禁：`tests/maintained` **384 passed**，含台账条数钉、api 契约、降级契约
+- 测试门禁：`tests/maintained` **603 passed / 1 skipped**；上游全量 `pytest tests --ignore=tests/maintained` **2949 passed / 6 skipped / 2 xfailed**；含台账条数钉、api 契约、降级契约
 - 不动主动回复开关（`proactive_must_remain_disabled` 恒 true）
 
 ## 6. 诚实说明：有代价的 / 还不成熟的
 
-1. **维护成本**：40 个受保护文件，上游每发一版都要重打 + 处理冲突。
-   目前落后上游 **163 个提交**（v4.28.2 → v4.29.1），追版本成本不低。
-2. **上游 3 个测试仍红**（`test_agent_runner_config` 等 agent_runner 配置迁移）。
-   已用 worktree 验证**在本次改动前就存在**，属 fork 既有基线，但**没有修**。
+1. **维护成本**：62 个受保护文件，上游每发一版都要重打 + 处理冲突。
+   目前落后上游 **222 个提交**（v4.28.2 → v4.29.4；`git rev-list --count baseline/v4.28.2..v4.29.4`），追版本成本不低。
+2. **上游 2 项测试有意偏离**（`config` 组：fork 给 `agent_runner.config.misc` 加了两个默认键，
+   上游用精确字典相等断言）。已登记 P11 并加 `xfail(strict=True)` 守卫：若某次上游合并把偏离
+   覆盖掉，测试会 `XPASS(strict)` 判红 —— 即**偏离被静默回退时有机械报警**。
 3. **拟人的实际效果还只在影子模式验证过**：至今**一条都没真发过**。
    对照样本也只有 8 条，趋势可信但样本量小。
-4. **可移植性未清理**：`maintained/proactive/` 里仍写死了本实例的 QQ 号，
-   开源前必须清（已记为 roadmap **B0**）。
+4. **可移植性已收口**：`maintained/proactive/` 的账号标识全部是占位符，回放时用
+   `--self-id` / `PROACTIVE_INSTANCE` 注入真实账号；公开树内无真实账号、群号或实例路径。
 5. 部分能力（意愿值、配额、退避）**默认关闭**，是为了不影响正在收集的数据，
    它们**还没有在真实流量下长期跑过**。
 
 ## 7. 怎么验证本文的说法
 
 ```bash
+# 台账哈希 vs 磁盘字节（无需实例）
+python -c "import hashlib,json,pathlib; f=json.load(open('maintained/installed_manifest.json',encoding='utf-8'))['files']; print('mismatch:', sum(hashlib.sha256(pathlib.Path(k).read_bytes()).hexdigest()!=v for k,v in f.items()))"
+# 双端漂移检测（需要实例目录）
 python maintained/tools/check_drift.py --instance "<实例目录>" --check-repo
-TMP=/d/pytest_tmp TEMP=/d/pytest_tmp python -m pytest tests/maintained -q
+# 测试（$TV = 装有项目依赖与 pytest 的 Python 3.12+ 解释器）
+TMP=/d/pytest_tmp TEMP=/d/pytest_tmp "$TV" -m pytest tests/maintained -q
 python maintained/proactive/replay.py --selftest     # 解析器 7 条，不调模型
 ```

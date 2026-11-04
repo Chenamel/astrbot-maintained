@@ -26,9 +26,10 @@ MANIFEST_PATH = REPO_ROOT / "maintained" / "installed_manifest.json"
 
 #: Number of protected files. Adding or removing entries requires updating this
 #: pin in the same commit -- that is the point of the pin.
-#: 61 = 57 (core code, incl. the start-up capability self-check)
-#:      + 4 builtin-plugin assets (schema + metadata for
-#: ``bot_info`` and ``tool_react``), which ``apply_patches`` also has to ship.
+#: 62 = 52 core (incl. the start-up capability self-check) + 10 api modules.
+#: Six of the 52 core entries are builtin-plugin assets (``bot_info`` and
+#: ``tool_react``: ``main.py`` + ``_conf_schema.json`` + ``metadata.yaml``),
+#: which ``apply_patches`` also has to ship.
 EXPECTED_ENTRY_COUNT = 62
 
 
