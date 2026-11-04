@@ -160,18 +160,28 @@ def gate_upstream() -> tuple[str, str, dict[str, int]]:
     )
     counts = _pytest_summary(out)
     expected = expected_deviations()
-    actual = counts.get("failed", 0) + counts.get("error", 0)
     if expected < 0:
         return FAIL, "could not read the deviation registry", counts
-    if actual != expected:
+
+    # A registered deviation is marked xfail(strict), so it is reported as
+    # "xfailed", never as "failed". Both conditions have to hold: nothing failed
+    # outright, and every registered deviation actually fired. A deviation that
+    # stops failing means upstream moved and the entry is now stale.
+    failed = counts.get("failed", 0) + counts.get("error", 0)
+    xfailed = counts.get("xfailed", 0)
+
+    if failed:
+        return FAIL, f"{failed} unexpected failure(s)", counts
+    if xfailed != expected:
         return (
             FAIL,
-            f"{actual} unexpected failure(s), {expected} registered deviation(s)",
+            f"{xfailed} deviation(s) fired, {expected} registered "
+            "(an entry is stale, or a new one is missing)",
             counts,
         )
     return (
         PASS,
-        (f"{counts.get('passed', '?')} passed, {actual} registered deviation(s)"),
+        f"{counts.get('passed', '?')} passed, {xfailed} registered deviation(s)",
         counts,
     )
 
