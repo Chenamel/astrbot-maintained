@@ -97,11 +97,11 @@ def check_tool_permission(
 
     # Upstream-compatible default: the execution level falls back to the plain
     # administrator check, matching how the official build gates the tools.
-    if (
-        level is ToolPermissionLevel.EXECUTION
-        and provider_settings.get("execution_gate_mode", "legacy") == "legacy"
-    ):
-        level = ToolPermissionLevel.IDENTITY
+    if level is ToolPermissionLevel.EXECUTION:
+        from astrbot.core.code_delivery_policy import execution_gate_mode
+
+        if execution_gate_mode(config) == "legacy":
+            level = ToolPermissionLevel.IDENTITY
 
     if level is ToolPermissionLevel.IDENTITY:
         require_admin = provider_settings.get("computer_use_require_admin", True)

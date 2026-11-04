@@ -220,6 +220,40 @@ def _drop_execution_tools(request) -> list[str]:
     return removed
 
 
+#: Modes ``provider_settings.execution_gate_mode`` accepts.
+EXECUTION_GATE_MODES = ("legacy", "strict")
+
+#: Mode assumed when the key is missing or holds something unrecognised.
+EXECUTION_GATE_DEFAULT = "legacy"
+
+
+def execution_gate_mode(config: object) -> str:
+    """Return the configured execution gate mode, normalized.
+
+    Args:
+        config: The effective AstrBot config mapping.
+
+    Returns:
+        ``"legacy"`` or ``"strict"``. Anything unrecognised falls back to
+        ``"legacy"``: an unreadable value must not silently tighten the gate,
+        because tightened tool lists and a stricter call check would disagree
+        with each other.
+
+    Notes:
+        This is the only place that reads the setting. It used to be checked
+        inline in three modules, so adding a third mode meant finding all three
+        -- and a miss would leave the tool list filtered while the call gate
+        still allowed the call.
+    """
+    provider_settings = (
+        config.get("provider_settings", {}) if isinstance(config, dict) else {}
+    )
+    if not isinstance(provider_settings, dict):
+        return EXECUTION_GATE_DEFAULT
+    value = provider_settings.get("execution_gate_mode", EXECUTION_GATE_DEFAULT)
+    return value if value in EXECUTION_GATE_MODES else EXECUTION_GATE_DEFAULT
+
+
 def apply_execution_policy(event, config, request) -> None:
     """Filter only execution tools after the complete request has been assembled.
 
@@ -228,9 +262,8 @@ def apply_execution_policy(event, config, request) -> None:
         config: Effective configuration.
         request: Assembled provider request, modified per request only.
     """
-    provider_settings = config.get("provider_settings", {})
     message_id = getattr(getattr(event, "message_obj", None), "message_id", "")
-    if provider_settings.get("execution_gate_mode", "legacy") == "legacy":
+    if execution_gate_mode(config) == "legacy":
         # Upstream-compatible default: keep every tool available and let the
         # per-call administrator gate decide at invocation time. DEBUG, not
         # INFO: this runs on every request, so at INFO the log fills up with

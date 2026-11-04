@@ -109,6 +109,30 @@ def resolve(module: str, name: str, default: Any = None) -> Any:
     return value
 
 
+#: Capabilities whose absence means the fork's patches are not in place.
+#:
+#: Everything else degrades safely -- a missing optional helper costs a feature,
+#: not correctness. These do not: the fork's own behaviour depends on them, so
+#: their absence has to be visible at start-up rather than discovered when a
+#: user reports that something quietly stopped working.
+REQUIRED_CAPABILITIES: tuple[str, ...] = (
+    "turns.direct_turn",
+    "permissions.execution_policy",
+    "delivery.code_policy",
+)
+
+
+def missing_required() -> list[str]:
+    """Return the required capabilities that are not currently available.
+
+    Returns:
+        Names from :data:`REQUIRED_CAPABILITIES` whose core-side provider cannot
+        be resolved. An empty list means the fork's own machinery is in place.
+    """
+    available = capabilities()
+    return [name for name in REQUIRED_CAPABILITIES if not available.get(name, False)]
+
+
 def capabilities() -> dict[str, bool]:
     """Report which core-side capabilities are currently available.
 

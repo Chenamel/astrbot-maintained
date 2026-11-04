@@ -350,3 +350,36 @@ def test_unlabelled_block_is_currently_missed_when_a_language_is_requested(
     assert not has_code_delivery(f"```\n{body}\n```", language)
     # Without a requested language the same block is accepted.
     assert has_code_delivery(f"```\n{body}\n```", "")
+
+
+# --------------------------------------------------------------------------
+# One reader for the gate mode
+# --------------------------------------------------------------------------
+
+
+def test_the_gate_mode_is_read_in_exactly_one_place():
+    """Three inline copies is how a third mode gets half-implemented.
+
+    The tool list is filtered by one module and the per-call check run by
+    another; if they ever disagree the bot offers a tool and then refuses to
+    run it.
+    """
+    from astrbot.core.code_delivery_policy import execution_gate_mode
+
+    assert execution_gate_mode({"provider_settings": {"execution_gate_mode": "strict"}}) == "strict"
+    assert execution_gate_mode({"provider_settings": {"execution_gate_mode": "legacy"}}) == "legacy"
+
+
+@pytest.mark.parametrize("bad", ["STRICT", "Strict", "", "enabled", 1, True, None, [], {}])
+def test_an_unreadable_mode_falls_back_to_legacy(bad):
+    """Falling back to strict would tighten the gate on a typo."""
+    from astrbot.core.code_delivery_policy import execution_gate_mode
+
+    assert execution_gate_mode({"provider_settings": {"execution_gate_mode": bad}}) == "legacy"
+
+
+@pytest.mark.parametrize("config", [None, {}, {"provider_settings": None}, {"provider_settings": "x"}])
+def test_a_missing_or_broken_config_still_answers(config):
+    from astrbot.core.code_delivery_policy import execution_gate_mode
+
+    assert execution_gate_mode(config) == "legacy"

@@ -143,3 +143,51 @@ def test_resolve_returns_default_for_unknown_module():
     sentinel = object()
     resolved = bridge.resolve("astrbot.core.no_such_module", "anything", sentinel)
     assert resolved is sentinel
+
+
+# --------------------------------------------------------------------------
+# Required capabilities are reported, not discovered by users
+# --------------------------------------------------------------------------
+
+
+def test_the_required_set_is_a_subset_of_the_registry():
+    from astrbot.api._bridge import CAPABILITIES, REQUIRED_CAPABILITIES
+
+    unknown = [name for name in REQUIRED_CAPABILITIES if name not in CAPABILITIES]
+
+    assert not unknown, f"required capabilities not in the registry: {unknown}"
+
+
+def test_a_complete_core_reports_nothing_missing():
+    from astrbot.api._bridge import missing_required
+
+    assert missing_required() == []
+
+
+def test_a_missing_required_capability_is_reported(monkeypatch):
+    """The point of the set: absence becomes an ERROR at start-up, not a shrug.
+
+    Optional helpers still degrade quietly -- only the ones the fork's own
+    behaviour depends on are escalated.
+    """
+    import astrbot.api._bridge as bridge
+
+    monkeypatch.setattr(
+        bridge,
+        "CAPABILITIES",
+        {**bridge.CAPABILITIES, "turns.direct_turn": ("astrbot.core.nope", "nothing")},
+    )
+
+    assert bridge.missing_required() == ["turns.direct_turn"]
+
+
+def test_an_optional_capability_missing_is_not_required(monkeypatch):
+    import astrbot.api._bridge as bridge
+
+    monkeypatch.setattr(
+        bridge,
+        "CAPABILITIES",
+        {**bridge.CAPABILITIES, "content.parts": ("astrbot.core.nope", "nothing")},
+    )
+
+    assert bridge.missing_required() == []
