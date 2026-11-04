@@ -1,5 +1,6 @@
 {
   "proactive_must_remain_disabled": true,
+  "base_ref": "baseline/v4.28.2",
   "files": {
     "astrbot/__init__.py": "cc3f4ce1afd6cb6e7636fb72b28beefdd8bd99de63f94ed271ac18f0a0992d08",
     "astrbot/api/_bridge.py": "7f0585b9288ae72d2b9dfcc89045fb76f5085371ca3017d55bec9d51a48d14ff",
@@ -56,6 +57,10 @@
     "astrbot/core/plugin_attribution.py": "a05a465a4e8dce1b16b8b7796b80a009e56b7fcc1542b7ea1a77eccd2c7e0f67",
     "astrbot/core/pipeline/process_stage/method/star_request.py": "1d79bba56aac516bd3664f6d758160f9484ea987600479cf7025de31eec783b4",
     "astrbot/core/provider/sources/openai_responses_source.py": "dd126d55a85b644efef3079bc50c4776b2b9bc6331fb2bb3128dfc9ddd7282e6",
-    "astrbot/core/event_bus.py": "aec4138ce94bf93ef8c7b6d1880a8a503b372510380fe80562928a1ac1238d00"
+    "astrbot/core/event_bus.py": "aec4138ce94bf93ef8c7b6d1880a8a503b372510380fe80562928a1ac1238d00",
+    "astrbot/builtin_stars/bot_info/_conf_schema.json": "daf186bf2b5033d04683fb44d35ec2a03d83ace097c980f38fa1d86d918d275d",
+    "astrbot/builtin_stars/bot_info/metadata.yaml": "bfd40cd800464856bfef3cf9c544b3e80b3c228f230e797db1e16e1789c20200",
+    "astrbot/builtin_stars/tool_react/_conf_schema.json": "8f8bfe19aa6f048fa6c417668069da89553efb43e7150ddae1a7492e782587d5",
+    "astrbot/builtin_stars/tool_react/metadata.yaml": "e3415197ea480b91e47d3c11e5592948df5b57a2761d8153b9487f5c8db0ba33"
   }
 }
