@@ -43,9 +43,11 @@
 | 源码 | `uv sync && uv run main.py` | 推荐；改代码、调试 |
 | pip | `pip install astrbot-maintained` | 当库用 |
 | 容器 | 用本仓库 `Dockerfile` 自建镜像 | 部署 |
+| 自建 wheel | `ASTRBOT_BUILD_DASHBOARD=1 uv build --wheel` | **必须带此变量，否则不含 WebUI** |
 
-分发名为 **`astrbot-maintained`**，与官方 `AstrBot` 不同名，安装不会互相覆盖；
-**Python 导入名仍是 `astrbot`**，所以上游插件无需改动。
+分发名为 **`astrbot-maintained`**，与官方 `AstrBot` 在包管理器里是两份不同发行版；
+但 **Python 导入名同为 `astrbot`**，所以同一环境只能留一份（先卸官方再装本 fork），
+上游插件因此无需改动。
 
 启动后访问 `http://localhost:6185`。完整步骤（含容器注意事项、如何确认跑的是本 fork）见
 [`docs/maintained/install.md`](./docs/maintained/install.md)。

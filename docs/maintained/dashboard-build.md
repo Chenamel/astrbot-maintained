@@ -4,6 +4,23 @@
 > （例如 `ai_group.agent_computer_use.provider_settings.execution_gate_mode.description`）。
 > 原因：配置页按路径查 `features/config-metadata.json`，查不到就回退显示键名。
 
+## 打包发布时：必须带上 dist
+
+打 wheel 时钩子只在 `ASTRBOT_BUILD_DASHBOARD=1` 下才构建并复制面板：
+
+```bash
+ASTRBOT_BUILD_DASHBOARD=1 uv build --wheel
+```
+
+不带该变量会得到一个**没有面板**的 wheel —— 装上去 `astrbot run` 后 6185 端口没有界面。
+校验（应输出约 272）：
+
+```bash
+python -c "import zipfile,glob;z=zipfile.ZipFile(glob.glob('*.whl')[0]);print(sum('dashboard/dist/' in n for n in z.namelist()))"
+```
+
+`astrbot/dashboard/dist/` 已列入 `.gitignore`，构建产物不入库。
+
 ## 什么时候需要走这套流程
 
 在 `astrbot/core/config/default.py` 的**配置 schema 里新增了 fork 独有的键**时。

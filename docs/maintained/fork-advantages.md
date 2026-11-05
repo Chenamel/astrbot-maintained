@@ -20,7 +20,7 @@
 
 ## 2. 台账与漂移检测（最独特的一项）
 
-- `maintained/installed_manifest.json`：**62 条**受保护文件及其 SHA-256（52 core + 10 api）
+- `maintained/installed_manifest.json`：**65 条**受保护文件及其 SHA-256（55 core + 10 api）
 - `maintained/tools/check_drift.py`：双端校验（仓库工作树 + 实例），退出码 0/1/2
 - `maintained/tools/apply_patches.py`：一键重打（默认预演，`--apply` 才写）
 
@@ -83,7 +83,7 @@
 
 ## 6. 诚实说明：有代价的 / 还不成熟的
 
-1. **维护成本**：62 个受保护文件，上游每发一版都要重打 + 处理冲突。
+1. **维护成本**：65 个受保护文件，上游每发一版都要重打 + 处理冲突。
    目前落后上游 **222 个提交**（v4.28.2 → v4.29.4；`git rev-list --count baseline/v4.28.2..v4.29.4`），追版本成本不低。
 2. **上游 2 项测试有意偏离**（`config` 组：fork 给 `agent_runner.config.misc` 加了两个默认键，
    上游用精确字典相等断言）。已登记 P11 并加 `xfail(strict=True)` 守卫：若某次上游合并把偏离

@@ -29,19 +29,32 @@ uv sync
 uv run main.py
 ```
 
-### 方式 B：pip 安装（当库用，不推荐跑服务）
+### 方式 B：pip 安装（wheel）
 
-本 fork 以 `astrbot-maintained` 为分发名发布，**与官方的 `astrbot` 是不同包名**，
-不会互相覆盖：
+本 fork 以 `astrbot-maintained` 为分发名发布：
 
 ```bash
 pip install astrbot-maintained
 astrbot run
 ```
 
-> 为什么改名：官方包名是 `AstrBot`。若沿用同名，`pip install` 两个包会互相覆盖，
-> 装完之后无法判断跑的是哪一份。本项目把分发名固定为 `astrbot-maintained`，
-> 但**Python 导入名仍是 `astrbot`**（`import astrbot` 不变），所以上游插件无需改动。
+> **命名说明**：官方分发名是 `AstrBot`，本 fork 固定为 `astrbot-maintained`，两者不重名，
+> 因此从包管理器看是两份不同的发行版。但**Python 导入名同为 `astrbot`**
+> （`import astrbot` 不变，上游插件无需改动）——这意味着**同一个环境里只能留一份**：
+> 先卸掉官方包再装本 fork，否则安装会互相覆盖文件。
+
+> ⚠️ **wheel 必须带 WebUI 才有面板**。官方发布的 wheel 里包含
+> `astrbot/dashboard/dist/`（Vue 构建产物）。自行构建时必须显式开启：
+>
+> ```bash
+> ASTRBOT_BUILD_DASHBOARD=1 uv build --wheel
+> ```
+>
+> 不带该变量构建出的 wheel **不含面板**，`astrbot run` 起来后访问 6185 端口拿不到界面。
+> 构建前置：Node.js + npm（`dashboard/` 用 pnpm 10 锁文件，详见
+> [`dashboard-build.md`](./dashboard-build.md)）。校验方法：
+> `python -c "import zipfile,glob;z=zipfile.ZipFile(glob.glob('*.whl')[0]);print(sum('dashboard/dist/' in n for n in z.namelist()))"`
+> 应输出大于 0 的数字（完整构建约 272）。
 
 ### 方式 C：容器（需自行构建镜像）
 
@@ -103,7 +116,7 @@ git rev-parse 'baseline/v4.28.2^{commit}'
 python -c "import hashlib,json,pathlib; f=json.load(open('maintained/installed_manifest.json',encoding='utf-8'))['files']; print('mismatch:', sum(hashlib.sha256(pathlib.Path(k).read_bytes()).hexdigest()!=v for k,v in f.items()))"
 ```
 
-期望输出 `mismatch: 0`。台账共 62 条（52 个 core 文件 + 10 个 `astrbot/api` 文件），
+期望输出 `mismatch: 0`。台账共 65 条（55 个 core 文件 + 10 个 `astrbot/api` 文件），
 逐条登记本 fork 改动过的文件；实例侧的双端校验见 [`tools.md`](./tools.md)。
 
 ## 7. 配置与插件

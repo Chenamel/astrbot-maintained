@@ -37,7 +37,7 @@
 
 | 类 | 内容 |
 |---|---|
-| **台账与漂移检测** | `maintained/installed_manifest.json` 记 62 个受保护文件的 SHA-256；`check_drift.py` 可双端（仓库 + 实例）校验，`apply_patches.py` 一键重打。上游没有这套，而上游周更、补丁被覆盖是静默的 |
+| **台账与漂移检测** | `maintained/installed_manifest.json` 记 65 个受保护文件的 SHA-256；`check_drift.py` 可双端（仓库 + 实例）校验，`apply_patches.py` 一键重打。上游没有这套，而上游周更、补丁被覆盖是静默的 |
 | **底层能力（只做加法）** | 新增 `astrbot/api/{turns,delivery,permissions,media,content,runtime,embedding,proactive}`，core 侧缺失时优雅降级返回安全默认值。其中 `api.proactive.generate_with_persona` 提供了走 `on_llm_request` 钩子的生成入口 —— 基线上 `Context.llm_generate` / `tool_loop_agent` 都直接调 provider、跳过该钩子，人格与记忆链无法参与 |
 | **安全加固** | `execution_gate_mode` **默认 `legacy`（＝上游 admin-only）**，可选 `strict`；转述不再被误判为授权；真拒答不再触发补生成。默认不比上游严也不比上游松 |
 | **主动型能力** | 与上游一致：`proactive_capability.add_cron_tools` 默认开启，定时任务自唤醒正常工作 |
