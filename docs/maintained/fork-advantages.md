@@ -79,7 +79,7 @@
 - 一改动一提交；改 core **必同步台账 SHA-256**
 - 入仓文件强制 LF；哈希按**磁盘字节**算
 - 测试门禁：`tests/maintained` **603 passed / 1 skipped**；上游全量 `pytest tests --ignore=tests/maintained` **2949 passed / 6 skipped / 2 xfailed**；含台账条数钉、api 契约、降级契约
-- 不动主动回复开关（`proactive_must_remain_disabled` 恒 true）
+- **本仓库只发布 core 本体，不包含任何插件**；插件不在打包与发布范围内
 
 ## 6. 诚实说明：有代价的 / 还不成熟的
 
@@ -88,12 +88,8 @@
 2. **上游 2 项测试有意偏离**（`config` 组：fork 给 `agent_runner.config.misc` 加了两个默认键，
    上游用精确字典相等断言）。已登记 P11 并加 `xfail(strict=True)` 守卫：若某次上游合并把偏离
    覆盖掉，测试会 `XPASS(strict)` 判红 —— 即**偏离被静默回退时有机械报警**。
-3. **拟人的实际效果还只在影子模式验证过**：至今**一条都没真发过**。
-   对照样本也只有 8 条，趋势可信但样本量小。
-4. **可移植性已收口**：`maintained/proactive/` 的账号标识全部是占位符，回放时用
-   `--self-id` / `PROACTIVE_INSTANCE` 注入真实账号；公开树内无真实账号、群号或实例路径。
-5. 部分能力（意愿值、配额、退避）**默认关闭**，是为了不影响正在收集的数据，
-   它们**还没有在真实流量下长期跑过**。
+3. **`generate_with_persona` 的对照样本量偏小**：目前只有 8 条真实群消息的 A/B 对照
+   （走钩子 vs 不走钩子），趋势可信但还不足以支撑定量结论。
 
 ## 7. 怎么验证本文的说法
 

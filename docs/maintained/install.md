@@ -73,7 +73,8 @@ python -c "import hashlib,json,pathlib; f=json.load(open('maintained/installed_m
   5 分钟写一个最小插件见 [`plugin-quickstart.md`](./plugin-quickstart.md)。
 - **外部代码只允许 `import astrbot.api.*`**，不要直接依赖 `astrbot.core.**` 私有路径。
 - 本 fork 新增的开关都在面板 → 配置页，并附中文说明；默认值与上游一致。
-- **主动回复没有开关**：核心层强制关闭且不提供任何开启途径，详见 [`README.md`](../../README.md)。
+- **主动型能力与上游一致**：`proactive_capability.add_cron_tools` 默认开启，定时任务自唤醒正常工作。
+- **本仓库只发布 core 本体，不包含任何插件**；插件不在打包与发布范围内。
 
 ## 7. 出问题看哪
 
