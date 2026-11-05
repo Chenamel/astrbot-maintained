@@ -41,11 +41,11 @@ astrbot run
 
 > 文件名含 `+`，部分 shell（尤其 PowerShell）会当作特殊字符。写成 `./文件名`，
 > 或给整个文件名加引号，都可以绕开。
-
+>
 > **尚未发布到 PyPI。** 本 fork 的分发名固定为 `astrbot-maintained`，与官方 `AstrBot`
 > 不重名；但**Python 导入名同为 `astrbot`**（`import astrbot` 不变，上游插件无需改动）
 > ——这意味着**同一个环境里只能留一份**，装本 fork 前先卸掉官方包。
-
+>
 > ⚠️ **wheel 必须带 WebUI 才有面板**。官方发布的 wheel 里包含
 > `astrbot/dashboard/dist/`（Vue 构建产物）。自行构建时必须显式开启：
 >
