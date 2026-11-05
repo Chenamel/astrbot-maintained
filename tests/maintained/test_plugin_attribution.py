@@ -38,8 +38,8 @@ def _handler_from(file_path: str):
     [
         # Windows, the case that actually runs here.
         (
-            r"C:\Users\x\.astrbot\core\data\plugins\astrbot_plugin_proactive_shadow\main.py",
-            "astrbot_plugin_proactive_shadow",
+            r"C:\Users\x\.astrbot\core\data\plugins\sample_plugin\main.py",
+            "sample_plugin",
         ),
         # POSIX.
         (
@@ -122,12 +122,12 @@ def test_restoring_a_token_from_another_context_is_not_fatal():
     production as ``ValueError: <Token ...> was created in a different
     Context``, once for every debounced proactive reply.
     """
-    token = set_current_plugin("astrbot_plugin_proactive_shadow")
+    token = set_current_plugin("sample_plugin")
 
     # Running inside a copied context is what a cancelled task ends up with.
     contextvars.copy_context().run(lambda: reset_current_plugin(token))
 
     # The original context is untouched and still attributes correctly.
-    assert current_plugin() == "astrbot_plugin_proactive_shadow"
+    assert current_plugin() == "sample_plugin"
     reset_current_plugin(token)
     assert current_plugin() == ""
