@@ -23,6 +23,20 @@ from pathlib import Path
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 
+def _npm() -> str:
+    """Return the npm executable name for this platform.
+
+    ``subprocess`` does not go through a shell, so on Windows the bare name
+    ``npm`` does not resolve: the launcher there is ``npm.cmd``, and CreateProcess
+    only appends ``.exe``. Asking for ``npm`` fails with WinError 2 even though
+    ``npm`` is on PATH.
+
+    Returns:
+        ``"npm.cmd"`` on Windows, ``"npm"`` everywhere else.
+    """
+    return "npm.cmd" if os.name == "nt" else "npm"
+
+
 class CustomBuildHook(BuildHookInterface):
     PLUGIN_NAME = "custom"
 
@@ -30,6 +44,11 @@ class CustomBuildHook(BuildHookInterface):
         # Only run when explicitly requested (e.g. during CI / release builds).
         # This prevents `uv sync` / editable installs from triggering npm.
         if os.environ.get("ASTRBOT_BUILD_DASHBOARD", "").strip() != "1":
+            print(
+                "[hatch_build] ASTRBOT_BUILD_DASHBOARD is not 1 -- the wheel will "
+                "contain no WebUI. Set it to 1 for a release build.",
+                file=sys.stderr,
+            )
             return
 
         root = Path(self.root)
@@ -44,11 +63,13 @@ class CustomBuildHook(BuildHookInterface):
             )
             return
 
+        npm = _npm()
+
         # ── Install Node dependencies if node_modules is absent ─────────────
         if not (dashboard_src / "node_modules").exists():
             print("[hatch_build] Installing dashboard Node dependencies...")
             subprocess.run(
-                ["npm", "install"],
+                [npm, "install"],
                 cwd=dashboard_src,
                 check=True,
             )
@@ -56,7 +77,7 @@ class CustomBuildHook(BuildHookInterface):
         # ── Build the Vue/Vite dashboard ──────────────────────────────────────
         print("[hatch_build] Building Vue dashboard (npm run build)...")
         subprocess.run(
-            ["npm", "run", "build"],
+            [npm, "run", "build"],
             cwd=dashboard_src,
             check=True,
         )
