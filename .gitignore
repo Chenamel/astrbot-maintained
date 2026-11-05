@@ -118,3 +118,7 @@ maintained/.tmp/
 # the operator's own instance path, accounts and private plugins, so they stay on disk
 # only. Everything that should be published lives under docs/.
 .internal/
+
+# Build and release artefacts (regenerated, never committed)
+/dist/
+/release-assets/

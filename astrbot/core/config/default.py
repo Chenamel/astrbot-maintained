@@ -233,6 +233,10 @@ DEFAULT_CONFIG = {
     "t2i_endpoint": "",
     "t2i_use_file_service": False,
     "t2i_active_template": "base",
+    # Where the panel checks for updates. Defaults to this distribution's own
+    # releases; point it at upstream's releases to leave the fork deliberately.
+    "update_source": "https://api.github.com/repos/Chenamel/astrbot-maintained/releases",
+    "update_repository": "https://github.com/Chenamel/astrbot-maintained",
     "http_proxy": "",
     "no_proxy": ["localhost", "127.0.0.1", "::1", "10.*", "192.168.*"],
     "dashboard": {
@@ -3259,6 +3263,12 @@ CONFIG_METADATA_2 = {
             "t2i_use_file_service": {
                 "type": "bool",
             },
+            "update_source": {
+                "type": "string",
+            },
+            "update_repository": {
+                "type": "string",
+            },
             "pip_install_arg": {
                 "type": "string",
             },
@@ -4739,6 +4749,20 @@ CONFIG_METADATA_3_SYSTEM = {
                         "type": "float",
                         "hint": "仅 aiocqhttp 生效：收到消息后先等待这么多秒，把连续发来的几条合并成一个回合再交给模型。"
                         "默认 4 秒；设为 0 关闭聚合，每条消息立即处理（与官方原版一致）。",
+                    },
+                    "update_source": {
+                        "description": "更新检查地址",
+                        "type": "string",
+                        "hint": "面板「检查更新」请求的地址，需要返回 GitHub Releases 兼容的 JSON。"
+                        "默认指向本维护版自己的发布页，因此面板只会提示本维护版的版本，"
+                        "不会出现上游新版本，也就不会有人误点后被覆盖成本 fork 改动不存在的上游代码。"
+                        "填 `https://api.soulter.top/releases` 可以改回跟随官方上游。留空则使用默认值。",
+                    },
+                    "update_repository": {
+                        "description": "更新来源仓库",
+                        "type": "string",
+                        "hint": "下载更新包时使用的仓库地址，需与上面的更新检查地址指向同一个项目。"
+                        "默认是本维护版的仓库；改回 `https://github.com/AstrBotDevs/AstrBot` 则跟随官方。",
                     },
                     "log_escape_message_newlines": {
                         "description": "日志中转义消息换行",

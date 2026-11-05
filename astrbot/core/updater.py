@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import shutil
 import tempfile
 import zipfile
@@ -27,6 +28,7 @@ from astrbot.core.utils.astrbot_path import (
     get_astrbot_temp_path,
 )
 from astrbot.core.utils.io import ensure_dir, remove_dir
+from astrbot.core.utils.version_comparator import VersionComparator
 
 from .zip_updater import ReleaseInfo, _RepoZipUpdater
 
@@ -62,22 +64,131 @@ UpdateProgressCallback = Callable[[UpdateProgress], Awaitable[None]]
 class AstrBotUpdater(_RepoZipUpdater):
     """Expose the complete, high-level AstrBot Core update operations."""
 
+    #: Where the panel looks for updates when nothing else says otherwise.
+    #: This distribution, not upstream: upstream is a different codebase on a
+    #: faster cadence, and offering its releases would invite a one-click action
+    #: that replaces this tree with one where the APIs this fork adds do not
+    #: exist, with no way back.
+    DEFAULT_UPDATE_SOURCE = (
+        "https://api.github.com/repos/Chenamel/astrbot-maintained/releases"
+    )
+    DEFAULT_UPDATE_REPOSITORY = "https://github.com/Chenamel/astrbot-maintained"
+
     def __init__(
         self,
         verify: str | bool | None = None,
+        config: dict | None = None,
     ) -> None:
         """Initialize the AstrBot core updater.
 
         Args:
             verify: TLS certificate verification configuration for HTTPX.
+            config: Core configuration. When given, ``update_source`` and
+                ``update_repository`` are read from it; otherwise those two fall
+                back to the environment, then to this distribution's defaults.
         """
         super().__init__(verify=verify)
         self._main_path = get_astrbot_path()
-        self._release_api = "https://api.soulter.top/releases"
-        self._repository_url = "https://github.com/AstrBotDevs/AstrBot"
-        self._core_package_base_url = (
-            "https://astrbot-registry.soulter.top/download/astrbot-core"
+        self._release_api = self._resolve_setting(
+            config,
+            "update_source",
+            "ASTRBOT_UPDATE_SOURCE",
+            self.DEFAULT_UPDATE_SOURCE,
         )
+        self._repository_url = self._resolve_setting(
+            config,
+            "update_repository",
+            "ASTRBOT_UPDATE_REPOSITORY",
+            self.DEFAULT_UPDATE_REPOSITORY,
+        )
+        # This fork publishes no hosted core packages; the upstream mirror would
+        # hand back a tarball with none of these changes. Opt in explicitly if a
+        # mirror is ever set up.
+        self._core_package_base_url = os.environ.get(
+            "ASTRBOT_CORE_PACKAGE_BASE_URL", ""
+        ).strip()
+
+    @staticmethod
+    def _resolve_setting(
+        config: dict | None,
+        key: str,
+        env_var: str,
+        default: str,
+    ) -> str:
+        """Pick an update setting from config, then the environment, then default.
+
+        Config comes first so the value can be changed from the panel without a
+        restart; the environment stays available for tests and for deployments
+        that generate configuration themselves.
+
+        Args:
+            config: Core configuration, or None when unavailable.
+            key: Configuration key to read.
+            env_var: Environment variable consulted when the key is empty.
+            default: Value used when neither yields anything.
+
+        Returns:
+            The chosen value, never empty.
+        """
+        if config is not None:
+            value = config.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return os.environ.get(env_var, "").strip() or default
+
+    @staticmethod
+    def _release_tag_to_version(tag_name: str) -> str:
+        """Turn a release tag into the version string the panel compares.
+
+        Release tags carry transport details that the version does not: upstream
+        uses ``v4.29.4``, this fork uses ``maintained/v4.28.2-r1`` for the tag
+        while the package reports ``4.28.2+mtn1``. Feeding either raw form to
+        :meth:`VersionComparator.compare_version` fails to parse, which would
+        make the panel offer an "update" to the version already installed.
+
+        Args:
+            tag_name: Tag as published by the release source.
+
+        Returns:
+            A PEP 440-shaped version, e.g. ``4.28.2+mtn1`` for
+            ``maintained/v4.28.2-r1``, or the input unchanged when it does not
+            match that shape.
+        """
+        match = re.search(
+            r"(\d+\.\d+\.\d+)(?:-r(\d+))?$",
+            tag_name.rsplit("/", 1)[-1],
+        )
+        if not match:
+            return tag_name
+        base, revision = match.group(1), match.group(2)
+        return f"{base}+mtn{revision}" if revision else base
+
+    @staticmethod
+    def _is_newer(current: str, candidate: str) -> bool:
+        """Whether ``candidate`` should be offered over ``current``.
+
+        Semver ignores build metadata, so ``4.28.2+mtn1`` and ``4.28.2+mtn2``
+        compare equal. For a fork that ships successive builds on the same
+        upstream base that is wrong: publishing the second build would never
+        reach anyone already on the first. Compare the numeric part first, and
+        fall back to the local segment only when the numbers match.
+
+        Args:
+            current: Version currently installed.
+            candidate: Version offered by the release source.
+
+        Returns:
+            True when ``candidate`` is a later build than ``current``.
+        """
+        order = VersionComparator.compare_version(current, candidate)
+        if order != 0:
+            return order < 0
+
+        def local(version: str) -> tuple[int, ...]:
+            match = re.search(r"\+mtn(\d+)$", version.strip().lower())
+            return (int(match.group(1)),) if match else (0,)
+
+        return local(candidate) > local(current)
 
     def _build_core_package_url(self, version: str | None) -> str | None:
         """Build the hosted core package URL for a release tag.
@@ -112,11 +223,24 @@ class AstrBotUpdater(_RepoZipUpdater):
         Returns:
             The newer release, or None when the current version is up to date.
         """
-        return await self._check_update(
-            self._release_api,
-            VERSION,
-            consider_prerelease,
-        )
+        releases = await self.get_releases()
+        if not releases:
+            logger.error("No suitable release was found.")
+            return None
+        for release in releases:
+            if not consider_prerelease and re.search(
+                r"[\-_.]?(alpha|beta|rc|dev)[\-_.]?\d*$",
+                release.version,
+                re.IGNORECASE,
+            ):
+                continue
+            # Compare on the release's version shape, not the tag: a tag may carry
+            # a branch prefix ("maintained/v4.28.2-r1") that the version does not.
+            if self._is_newer(VERSION, self._release_tag_to_version(release.version)):
+                return release
+            return None
+        logger.error("No suitable release was found.")
+        return None
 
     async def get_releases(self) -> list[ReleaseInfo]:
         """Fetch available AstrBot releases.

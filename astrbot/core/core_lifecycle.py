@@ -276,7 +276,7 @@ class AstrBotCoreLifecycle:
         self.pipeline_scheduler_mapping = await self.load_pipeline_scheduler()
 
         # 初始化更新器
-        self.astrbot_updater = AstrBotUpdater()
+        self.astrbot_updater = AstrBotUpdater(config=self.astrbot_config)
 
         # 初始化事件总线
         self.event_bus = EventBus(
