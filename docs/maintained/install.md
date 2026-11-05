@@ -138,7 +138,7 @@ python -c "import hashlib,json,pathlib; f=json.load(open('maintained/installed_m
 | 启动报错 / 能力失效 | `data/logs/astrbot.log`，再用 §6 的哈希命令核对受保护文件 |
 | 不知道某个 API 怎么用 | [`api-contract.md`](./api-contract.md)（唯一规格来源）、[`plugin-quickstart.md`](./plugin-quickstart.md) |
 | 想知道补丁被覆盖后怎么恢复 | [`tools.md`](./tools.md)（`check_drift.py` / `apply_patches.py`） |
-| 想知道相对上游改了什么 | [`CHANGELOG.md`](../../CHANGELOG.md)、[`README_MAINTAINED.md`](../../README_MAINTAINED.md) |
+| 想知道相对上游改了什么 | [`CHANGELOG.md`](../../CHANGELOG.md)、[`fork-advantages.md`](./fork-advantages.md) |
 
 `CHANGELOG.md` 是逐阶段施工台账，其中提到的部分内部文档不随公开仓库分发；当前可查阅的
 对外文档以 `docs/maintained/` 目录实际内容为准。

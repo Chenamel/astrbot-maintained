@@ -57,17 +57,6 @@ def test_pyproject_and_package_agree_on_the_version():
     )
 
 
-def test_the_version_readme_matches_the_running_version():
-    """``README_MAINTAINED.md`` states the base line; it drifts silently."""
-    readme = (REPO_ROOT / "README_MAINTAINED.md").read_text(encoding="utf-8")
-    mentioned = re.findall(r"v?(\d+\.\d+\.\d+)", readme)
-
-    assert astrbot.__version_base__ in mentioned, (
-        f"README_MAINTAINED.md never mentions {astrbot.__version_base__}; "
-        f"it mentions {sorted(set(mentioned))[:6]}"
-    )
-
-
 def test_version_file_matches_the_package():
     """``maintained/VERSION`` is a readable copy, so it may not drift.
 
