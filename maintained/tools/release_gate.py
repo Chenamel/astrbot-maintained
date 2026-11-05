@@ -21,8 +21,10 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 if __package__ in (None, ""):  # run directly: python maintained/tools/release_gate.py
@@ -153,11 +155,49 @@ def gate_maintained() -> tuple[str, str, dict[str, int]]:
 
 
 def gate_upstream() -> tuple[str, str, dict[str, int]]:
-    """Upstream's suite may only fail where a deviation is registered."""
-    code, out = _run(
-        [sys.executable, "-m", "pytest", "tests", "--ignore=tests/maintained", "-q"],
-        timeout=3600,
-    )
+    """Upstream's suite may only fail where a deviation is registered.
+
+    The bundled dashboard is moved aside for the run. Upstream's own tests
+    assume ``astrbot/dashboard/dist`` is absent -- several assert that a
+    rejected WebUI directory resolves to ``None``, and the updater tests take a
+    different branch once a bundled copy exists. A release build creates that
+    directory by design (``ASTRBOT_BUILD_DASHBOARD=1``), so without this the
+    gate would report failures that say nothing about the code, and the order
+    "build then verify" would be impossible. The directory is restored
+    afterwards whatever the outcome.
+
+    Returns:
+        The gate status, a one-line detail, and the parsed pytest counts.
+    """
+    bundled = REPO_ROOT / "astrbot" / "dashboard" / "dist"
+    stashed: Path | None = None
+    if bundled.is_dir():
+        stashed = Path(tempfile.mkdtemp(prefix="release-gate-dist-")) / "dist"
+        shutil.move(str(bundled), str(stashed))
+        print(
+            "  note: bundled dashboard dist moved aside for the upstream run",
+            file=sys.stderr,
+        )
+
+    try:
+        code, out = _run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "tests",
+                "--ignore=tests/maintained",
+                "-q",
+            ],
+            timeout=3600,
+        )
+    finally:
+        if stashed is not None and stashed.is_dir():
+            if bundled.exists():
+                shutil.rmtree(bundled)
+            shutil.move(str(stashed), str(bundled))
+            shutil.rmtree(stashed.parent, ignore_errors=True)
+
     counts = _pytest_summary(out)
     expected = expected_deviations()
     if expected < 0:

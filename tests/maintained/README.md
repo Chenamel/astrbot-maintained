@@ -28,7 +28,7 @@ EV="<托管工具 venv>"                                  # 提供 pytest / pyte
 PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 ```
 
-两种方式结果一致（当前 **603 passed / 1 skipped**）。方式 B 不需要额外磁盘，依赖实例 venv 存在。
+两种方式结果一致（当前 **608 passed / 1 skipped**）。方式 B 不需要额外磁盘，依赖实例 venv 存在。
 
 > 另有 **1 项** `test_every_deviation_was_matched_when_upstream_runs` 只在**同时收集到上游那两个
 > 测试文件**时才有意义（断言 P11 登记的 xfail 全部命中），单独跑本目录时会 `skip`——属预期行为。
@@ -73,7 +73,7 @@ PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 `maintained/p11_deviations.py` 的注册表打上 `xfail(strict=True)`：
 
 - 失败 → `xfailed`（绿）；**意外通过 → `XPASS(strict)` 判红**（＝偏离被回退 / 被上游合并覆盖，报警）。
-- 所以"全绿"的完整口径是：本目录 `603 passed / 1 skipped` **且** 上游全量
+- 所以"全绿"的完整口径是：本目录 `608 passed / 1 skipped` **且** 上游全量
   `pytest tests --ignore=tests/maintained` 输出 `2949 passed / 6 skipped / 2 xfailed`。
 
 ```bash

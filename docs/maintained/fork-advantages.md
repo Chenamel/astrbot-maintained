@@ -78,7 +78,7 @@
 
 - 一改动一提交；改 core **必同步台账 SHA-256**
 - 入仓文件强制 LF；哈希按**磁盘字节**算
-- 测试门禁：`tests/maintained` **603 passed / 1 skipped**；上游全量 `pytest tests --ignore=tests/maintained` **2949 passed / 6 skipped / 2 xfailed**；含台账条数钉、api 契约、降级契约
+- 测试门禁：`tests/maintained` **608 passed / 1 skipped**；上游全量 `pytest tests --ignore=tests/maintained` **2949 passed / 6 skipped / 2 xfailed**；含台账条数钉、api 契约、降级契约
 - **本仓库只发布 core 本体，不包含任何插件**；插件不在打包与发布范围内
 
 ## 6. 诚实说明：有代价的 / 还不成熟的
