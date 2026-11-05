@@ -1,6 +1,7 @@
 # maintained/ — 本 fork 自有工具区
 
-本目录是 `astrbot-maintained` fork 的自有内容，**不修改任何上游文件**，以避免三方合并冲突。
+本目录是 `astrbot-maintained` fork 的自有工具区，不参与上游合并。
+硬约束是上游插件不改代码也能跑；本 fork 可改 core 与上游文档，不再要求增量兼容以达成合并。
 
 | 文件 | 用途 |
 |---|---|
