@@ -61,3 +61,17 @@ def test_the_version_readme_matches_the_running_version():
         f"README_MAINTAINED.md never mentions {astrbot.__version_base__}; "
         f"it mentions {sorted(set(mentioned))[:6]}"
     )
+
+
+def test_version_file_matches_the_package():
+    """``maintained/VERSION`` is a readable copy, so it may not drift.
+
+    Two version strings in one repository is how a release ends up labelled
+    differently in two places. The package is the source; this file follows it.
+    """
+    version_file = REPO_ROOT / "maintained" / "VERSION"
+    assert version_file.is_file(), "maintained/VERSION is missing"
+    assert version_file.read_text(encoding="utf-8").strip() == astrbot.__version__, (
+        f"maintained/VERSION says {version_file.read_text(encoding='utf-8').strip()!r}, "
+        f"package is {astrbot.__version__!r}"
+    )

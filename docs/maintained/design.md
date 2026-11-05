@@ -115,8 +115,12 @@ def old_name(*args, **kwargs):
 
 ## 12. 版本与发布策略
 
-- `pyproject.toml` 与 `astrbot.__version__` **保持 4.28.2 不变**（减少三方合并冲突）。
-- 本 fork 版本记在 `maintained/VERSION`（如 `4.28.2.m1`）与 `CHANGELOG.md`。
+- **单一版本来源**：`astrbot/__init__.py` 的 `__version__`，形如 `4.28.2+mtn1`。
+  `+mtnN` 后缀是 PEP 440 允许的本地版本标记，用于区分维护版与官方发布。
+- `pyproject.toml` 的 `version` 保持基版本 `4.28.2`（不带后缀）：严格 `Version()` 调用方
+  需要可解析的纯发布号。二者关系由 `tests/maintained/test_version_marker.py` 钉住。
+- `maintained/VERSION` 是同一版本号的人类可读副本，必须与 `__version__` 完全一致，
+  由 `test_version_marker.py` 校验；不是独立版本来源。
 - 发布 tag：`maintained/v4.28.2-rN`（N 从 1 起）；阶段 7 转公开满足 AGPL §13。
 
 ## 13. 风险登记表
