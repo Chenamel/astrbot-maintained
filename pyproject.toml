@@ -1,7 +1,7 @@
 [project]
-name = "AstrBot"
-version = "4.28.2"
-description = "Easy-to-use multi-platform LLM chatbot and development framework"
+name = "astrbot-maintained"
+version = "4.28.2+mtn1"
+description = "AstrBot 维护版（Maintained Fork）：core 本体，兼容上游插件并补充底层扩展 API"
 readme = "README.md"
 license = { text = "AGPL-3.0-or-later" }
 requires-python = ">=3.12"
@@ -87,7 +87,8 @@ dev = [
 astrbot = "astrbot.cli.__main__:cli"
 
 [project.urls]
-Repository = "https://github.com/AstrBotDevs/AstrBot"
+Repository = "https://github.com/Chenamel/astrbot-maintained"
+Upstream = "https://github.com/AstrBotDevs/AstrBot"
 
 [tool.ruff]
 exclude = ["astrbot/core/utils/t2i/local_strategy.py", "astrbot/api/all.py", "tests"]
@@ -126,8 +127,14 @@ exclude = ["dashboard", "node_modules", "dist", "data", "tests"]
 allow-direct-references = true
 
 # Include bundled dashboard dist even though it is not tracked by VCS.
+# ``packages`` must be explicit: the distribution is named ``astrbot-maintained``
+# while the import package stays ``astrbot``, so hatchling cannot infer the
+# directory from the project name.
 [tool.hatch.build]
 artifacts = ["astrbot/dashboard/dist/**"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["astrbot"]
 
 # Custom build hook: builds the Vue dashboard and copies dist into the package.
 [tool.hatch.build.hooks.custom]

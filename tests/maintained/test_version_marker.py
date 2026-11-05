@@ -40,15 +40,20 @@ def test_base_version_is_a_plain_release_number():
     assert astrbot.__version__.startswith(astrbot.__version_base__)
 
 
-def test_pyproject_and_package_agree_on_the_base_version():
-    """A version bump that updates one file and not the other is a half release."""
+def test_pyproject_and_package_agree_on_the_version():
+    """A version bump that updates one file and not the other is a half release.
+
+    The two must match **exactly**, fork suffix included. ``pyproject.toml`` is
+    what a wheel is labelled with, so a base-version-only pin would let a built
+    package silently drop the marker and become indistinguishable from an
+    official release once installed.
+    """
     pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     match = re.search(r'^version = "([^"]+)"', pyproject, re.MULTILINE)
 
     assert match, "pyproject.toml has no version line"
-    assert match.group(1) == astrbot.__version_base__, (
-        f"pyproject has {match.group(1)!r}, package base is "
-        f"{astrbot.__version_base__!r}"
+    assert match.group(1) == astrbot.__version__, (
+        f"pyproject has {match.group(1)!r}, package is {astrbot.__version__!r}"
     )
 
 

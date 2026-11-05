@@ -36,7 +36,19 @@
 
 ## 安装与使用
 
-使用方式与官方 AstrBot 一致：支持 launcher 与源码两种启动方式，配置文件亦保持兼容。
+当前版本 **`4.28.2+mtn1`**（`python -c "import astrbot; print(astrbot.__version__)"`）。
+
+| 方式 | 命令 | 适用 |
+|---|---|---|
+| 源码 | `uv sync && uv run main.py` | 推荐；改代码、调试 |
+| pip | `pip install astrbot-maintained` | 当库用 |
+| 容器 | 用本仓库 `Dockerfile` 自建镜像 | 部署 |
+
+分发名为 **`astrbot-maintained`**，与官方 `AstrBot` 不同名，安装不会互相覆盖；
+**Python 导入名仍是 `astrbot`**，所以上游插件无需改动。
+
+启动后访问 `http://localhost:6185`。完整步骤（含容器注意事项、如何确认跑的是本 fork）见
+[`docs/maintained/install.md`](./docs/maintained/install.md)。
 
 ⚠️ **注意**：面板顶部若提示“AstrBot 有新版本”，**请勿升级**。该提示指向上游 v4.29+，升级会覆盖本 fork 的改动。如需跟进新版本，请等待本仓库合并，或自行合并（参见维护者文档）。
 
