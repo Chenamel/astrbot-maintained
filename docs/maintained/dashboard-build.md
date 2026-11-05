@@ -34,15 +34,22 @@
    - 非交互环境必须 `CI=true`，否则 `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`
    - 构建会顺带重新生成 `src/assets/mdi-subset/*`，那是工具链噪音，**不要提交**
 
-3. **补版本文件**（关键，否则会被覆盖）：
+3. **版本标记**（已自动化，通常无需手动处理）：
+
+   `pnpm build` 末尾已接 `npm run stamp`，会调用
+   `scripts/stamp_dashboard_version.py` 把 `astrbot.__version__`（当前 `4.28.2+mtn1`）
+   加 `v` 前缀后写入 `dashboard/dist/assets/version`（当前 `v4.28.2+mtn1`）。
+
+   单独补写或校验时：
 
    ```bash
-   printf 'v4.28.2' > dashboard/dist/assets/version   # 与 astrbot.__version__ 一致
+   python ../scripts/stamp_dashboard_version.py           # 写入当前包版本
+   python ../scripts/stamp_dashboard_version.py --check   # 缺失或过期则退出码 1
    ```
 
-   官方的 `dist` 是发布打包时带上 `assets/version` 的，本地 `pnpm build` **不会**生成它。
-   缺了这个文件，`resolve_dashboard_dist()` 判定 dist 不完整/版本不匹配，
-   **AstrBot Launcher 启动时就会重新下载官方面板覆盖掉我们的构建**。
+   ⚠️ **不要手写该文件**。戳记内容是 `v` + `astrbot.__version__`（含 `+mtnN` 后缀），
+   `resolve_dashboard_dist()` 按此逐字符比较；写成 `v4.28.2` 会被判为不匹配，
+   进而触发重新下载官方面板，覆盖本 fork 的构建。
 
 4. **部署到实例**：
 
