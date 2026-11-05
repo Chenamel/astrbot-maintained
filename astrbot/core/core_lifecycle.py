@@ -16,6 +16,7 @@ import time
 import traceback
 from asyncio import Queue
 
+from astrbot import __version_base__
 from astrbot.api import logger, sp
 from astrbot.core import LogBroker, LogManager
 from astrbot.core.astrbot_config_mgr import AstrBotConfigManager
@@ -41,6 +42,7 @@ from astrbot.core.utils.event_loop_diagnostics import (
     create_event_loop_diagnostic_tasks,
 )
 from astrbot.core.utils.llm_metadata import update_llm_metadata
+from astrbot.core.utils.maintained_marker import claim_marker_slot, maintained_marker
 from astrbot.core.utils.migra_helper import migra
 from astrbot.core.utils.temp_dir_cleaner import TempDirCleaner
 
@@ -161,6 +163,9 @@ class AstrBotCoreLifecycle:
         """
         # 初始化日志代理
         logger.info("AstrBot v" + VERSION)
+        marker = maintained_marker(VERSION, __version_base__)
+        if marker and claim_marker_slot():
+            logger.info(marker)
         if os.environ.get("TESTING", ""):
             LogManager.configure_logger(
                 logger, self.astrbot_config, override_level="DEBUG"

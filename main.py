@@ -31,6 +31,7 @@ def _apply_startup_env_flags(argv: list[str]) -> None:
 
 _apply_startup_env_flags(sys.argv[1:])
 
+from astrbot import __version__, __version_base__  # noqa: E402
 from astrbot.core import LogBroker, LogManager, db_helper, logger  # noqa: E402
 from astrbot.core.dashboard_assets import resolve_dashboard_dist  # noqa: E402
 from astrbot.core.initial_loader import InitialLoader  # noqa: E402
@@ -42,6 +43,10 @@ from astrbot.core.utils.astrbot_path import (  # noqa: E402
     get_astrbot_root,
     get_astrbot_site_packages_path,
     get_astrbot_temp_path,
+)
+from astrbot.core.utils.maintained_marker import (  # noqa: E402
+    claim_marker_slot,
+    maintained_marker,
 )
 from astrbot.core.utils.runtime_env import is_packaged_desktop_runtime  # noqa: E402
 
@@ -142,6 +147,11 @@ async def main_async(webui_dir_arg: str | None) -> None:
 
     # 打印 logo
     logger.info(logo_tmpl)
+    # 紧跟一行维护版标记：官方 AstrBot 不会有这一行，便于从日志首屏区分版本来源。
+    # 由 core 也打印同一个标记，claim_marker_slot() 保证一个进程只出现一次。
+    marker = maintained_marker(__version__, __version_base__)
+    if marker and claim_marker_slot():
+        logger.info(marker)
 
     core_lifecycle = InitialLoader(db, log_broker)
     core_lifecycle.webui_dir = webui_dir

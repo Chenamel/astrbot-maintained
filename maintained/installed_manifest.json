@@ -62,7 +62,8 @@
     "astrbot/builtin_stars/bot_info/metadata.yaml": "bfd40cd800464856bfef3cf9c544b3e80b3c228f230e797db1e16e1789c20200",
     "astrbot/builtin_stars/tool_react/_conf_schema.json": "8f8bfe19aa6f048fa6c417668069da89553efb43e7150ddae1a7492e782587d5",
     "astrbot/builtin_stars/tool_react/metadata.yaml": "e3415197ea480b91e47d3c11e5592948df5b57a2761d8153b9487f5c8db0ba33",
-    "astrbot/core/core_lifecycle.py": "a12261535a495ef2cc84adab81ae60aca260c0abc075bd44beddaacb66b2e015",
-    "astrbot/api/event/extras.py": "8d47709465c5a86531abce28e9c4e8678554760447f8c3d5a0819b0e8b29bb2a"
+    "astrbot/core/core_lifecycle.py": "c75e5a7e4b00b696668e546d50b442d5f1570910c65d3793c8d4db24a859166c",
+    "astrbot/api/event/extras.py": "8d47709465c5a86531abce28e9c4e8678554760447f8c3d5a0819b0e8b29bb2a",
+    "astrbot/core/utils/maintained_marker.py": "3ad6a5902257b70edc5406b0362b1f0840b31c2a49738ebeae39389c77a2b055"
   }
 }

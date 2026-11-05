@@ -4,7 +4,9 @@ import sys
 
 import click
 
-from . import __version__
+from astrbot.core.utils.maintained_marker import claim_marker_slot, maintained_marker
+
+from . import __version__, __version_base__
 from .commands import conf, init, password, plug, run
 
 logo_tmpl = r"""
@@ -22,6 +24,9 @@ logo_tmpl = r"""
 def cli() -> None:
     """The AstrBot CLI"""
     click.echo(logo_tmpl)
+    marker = maintained_marker(__version__, __version_base__)
+    if marker and claim_marker_slot():
+        click.echo(marker)
     click.echo("Welcome to AstrBot CLI!")
     click.echo(f"AstrBot CLI version: {__version__}")
 
