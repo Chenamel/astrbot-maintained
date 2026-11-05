@@ -12,6 +12,41 @@
 - **阶段 1 基线**：`3c7adafa1397e182d60b1016bf88759265113c8a`（上游 tag `v4.28.2`）。
 - 本 fork 从此提交起家，主干分支 `maintained/v4.28.2`，锚点标签 `baseline/v4.28.2`。
 
+## [maintained/v4.28.2-r1] — 首个公开打包版本
+
+本仓库的第一个公开发行版：**只含 core 本体，不含任何插件**。
+
+### 发行物
+
+- 分发包名 `astrbot-maintained`，版本 `4.28.2+mtn1`，wheel 内含 WebUI 静态资产。
+- 构建命令必须带 `ASTRBOT_BUILD_DASHBOARD=1`，否则产物不含面板。
+
+### 相对上游 `v4.28.2` 的可感知差异
+
+- **新增** `astrbot/api/**` 共 10 个模块：`turns`、`delivery`、`permissions`、`media`、
+  `content`、`runtime`、`embedding`、`proactive`、`event.extras`、`_bridge`（内部）。
+  其中 `api.proactive.generate_with_persona` 提供走 `on_llm_request` 钩子的生成入口 ——
+  上游 `Context.llm_generate` / `tool_loop_agent` 直接调 provider、跳过该钩子。
+- **新增** 四个配置键，默认值均等于上游行为：`execution_gate_mode`（`legacy`）、
+  `hook_timing_mode`（`legacy`）、`direct_turn_quiet_sec`（`4`）、
+  `lightweight_proactive_tools`（关闭）。
+- **新增** 启动日志在 ASCII 艺术字下方打印维护版标识，官方版本无此行。
+
+### 工程
+
+- 受保护文件台账 65 条 SHA-256（55 core + 10 api），`check_drift.py` 双端校验，
+  `apply_patches.py` 一键重打。
+- `release_gate.py` 七项门禁。构建产物存在时，上游测试段会临时移走随包面板再跑，
+  跑完恢复 —— 否则「先构建后验证」无法完成。
+- 测试：维护版 608 passed，上游全量 2949 passed / 6 skipped / 2 registered xfail。
+
+### 已知限制
+
+- 落后上游 222 个提交；刻意锁基线，不追 `master`。
+- `main.py` 不入台账（台账只收 `astrbot/`），故核心逻辑放在 `core_lifecycle.py`。
+- 多语言 `README_*.md` 仍是上游原文。
+- 容器镜像需自行基于仓库 `Dockerfile` 构建，本仓库不发布镜像 tag。
+
 ## [未发布]
 
 ### 新增
