@@ -7,7 +7,7 @@
 
 ## 问题
 
-`provider_config.custom_extra_body` 是**配置级**的：一旦填上，这个 provider 的
+`provider_config.custom_extra_body` 是配置级的：一旦填上，这个 provider 的
 所有调用都会带上（上游原生行为）。当两个调用方对同一个参数需求相反时
 （判定器要 `reasoning.effort=none`，主对话要默认思考），配置级开关无法表达。
 
@@ -47,7 +47,7 @@ if isinstance(call_extra_body, dict):
 | `provider_config.custom_extra_body` | ✅ 原生 | 该 provider 的所有调用 |
 | 单次调用 `extra_body=` | ❌ 仅本分支 | 仅本次请求 |
 
-在上游实现里，`extra_body=` 会被 `_prepare_chat_payload` 静默丢弃——**不报错、只是
+在上游实现里，`extra_body=` 会被 `_prepare_chat_payload` 静默丢弃，**不报错、只是
 不生效**。因此任何依赖此能力的调用方在纯上游环境会表现为"填了没反应"，而不是报错。
 
 这也是插件配置项 hint 里标注依赖的原因：**静默失败比报错更难排查**。

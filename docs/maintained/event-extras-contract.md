@@ -1,6 +1,6 @@
 # 事件附加字段契约（R5）
 
-> 目标：核心不再直接读写**插件私有**的事件附加字段，而是通过一个有名字、有类型、
+> 目标：核心不再直接读写插件私有的事件附加字段，而是通过一个有名字、有类型、
 > 有兜底的契约层。字面量保持原样，所以现存插件零改动。
 >
 > 编写时间：2026-11-04 · 对应风险 R5 / 病根 C3
@@ -14,7 +14,7 @@
 | 键 | 方向 | 处数 |
 |---|---|---|
 | `_enhance_active_reply_token` | 插件写 → core 读 | 4 |
-| `_enhance_visual_unavailable` | core 读**并写** | 3 |
+| `_enhance_visual_unavailable` | core 读并写 | 3 |
 | `_enhance_owned_quote_image_urls` | 插件写 → core 读 | 2 |
 | `_enhance_followup_direct` | 插件写 → core 读 | 2 |
 | `_enhance_visual_requested` | 插件写 → core 读 | 1 |
@@ -23,13 +23,13 @@
 | `_enhance_followup_task` | 插件写 → core 读 | 1 |
 | `_enhance_active_reply_triggered` | 插件写 → core 读 | 1 |
 
-**为什么这是问题**，不是风格问题：
+为什么这是问题，不是风格问题：
 
-1. **核心反向依赖插件**。项目自己的 P2 原则是"core 不得反向硬依赖插件"，
+1. 核心反向依赖插件。项目自己的 P2 原则是"core 不得反向硬依赖插件"，
    T8-03 已经把"按插件目录名"改成能力契约，这批 `_enhance_*` 是同一类问题的残留。
-2. **字段名带 `_` 前缀，是私有的意思**。插件改名、换实现或卸载后，核心**静默走 false 分支**：
-   图片丢失、followup 退化、主动回复判断反转，**全程无日志**。
-3. **无类型约定**。`_enhance_owned_quote_image_urls` 被当作 `dict` 直接 `.get(...)`，
+2. 字段名带 `_` 前缀，是私有的意思。插件改名、换实现或卸载后，核心静默走 false 分支：
+   图片丢失、followup 退化、主动回复判断反转，全程无日志。
+3. 无类型约定。`_enhance_owned_quote_image_urls` 被当作 `dict` 直接 `.get(...)`，
    `_enhance_owned_image_urls` 被当作 `list` 直接 `extend(...)`；
    插件若写成别的类型（例如 `None`、字符串），core **抛异常**而不是降级。
 
@@ -47,7 +47,7 @@
 
 ## 3. 方案
 
-新增 `astrbot/api/event/extras.py` —— 注意**不能**放进 `astrbot/api/event/__init__.py`：
+新增 `astrbot/api/event/extras.py`。注意**不能**放进 `astrbot/api/event/__init__.py`：
 那个文件在上游基线里就存在，改动会违反 API 冻结（`test_api_frozen.py` 会红）。
 
 ### 3.1 三组内容
@@ -81,14 +81,14 @@ ACTIVE_REPLY_TRIGGERED = "_enhance_active_reply_triggered"
 | `proactive_lightweight(event)` | `bool` | `False` |
 | `active_reply_triggered(event)` | `bool` | `False` |
 
-**③ 唯一的写入器**：`set_visual_unavailable(event, flag)` —— 只有这一个键是 core 自己写的。
+**③ 唯一的写入器**：`set_visual_unavailable(event, flag)`：只有这一个键是 core 自己写的。
 
 ### 3.2 降级规则
 
 - 事件没有 `get_extra` / `set_extra`（鸭子类型的测试替身）→ 返回默认值，不抛异常。
 - `get_extra` 自身抛异常 → 返回默认值，**记一次 debug**。
 - 值类型不符（例如 url 列表给了 `None` 或字符串）→ 返回默认值。
-  字符串按"单个 url"接受，不拆字符 —— 那是最常见的插件笔误。
+  字符串按"单个 url"接受，不拆字符，那是最常见的插件笔误。
 
 ### 3.3 不改的部分
 

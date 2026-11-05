@@ -52,7 +52,7 @@ class HelloFork(Star):
 ## 2. 用上 fork 的核心能力：人格感知生成
 
 上游的 `Context.llm_generate()` / `Context.tool_loop_agent()` 直接调 provider，
-跳过了 `on_llm_request` 钩子 —— 而人格、长期记忆、群上下文插件正是挂在这个钩子上。
+跳过了 `on_llm_request` 钩子，而人格、长期记忆、群上下文插件正是挂在这个钩子上。
 `generate_with_persona` 构造 `ProviderRequest` → 跑该钩子 → 再调 provider。
 把 §1 的 `main.py` 换成下面这一版（或把 `say` 方法加进同一个类）：
 
@@ -137,7 +137,7 @@ print({
 })
 ```
 
-`False` 不代表插件写错了，只表示对应 core 补丁未就位 —— 按 §3 的降级列处理即可。
+`False` 不代表插件写错了，只表示对应 core 补丁未就位，按 §3 的降级列处理即可。
 
 ## 6. 下一步读什么
 

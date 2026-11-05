@@ -1,18 +1,18 @@
 # 安装与运行
 
-本页说明如何把 **AstrBot 维护版 fork** 跑起来。基线锁定上游 `v4.28.2`，配置文件格式与
+本页说明如何把 AstrBot 维护版 fork 跑起来。基线锁定上游 `v4.28.2`，配置文件格式与
 上游兼容，已安装的上游插件无需修改即可继续使用。想先了解"比官方多了什么"，请先读
 [`fork-advantages.md`](./fork-advantages.md)。
 
-> **本仓库只发布 core 本体，不包含任何插件。** 插件需另行获取与安装，不在本仓库的
+> 本仓库只发布 core 本体，不包含任何插件。 插件需另行获取与安装，不在本仓库的
 > 打包与发布范围内。本文只讲 core 怎么装、怎么确认装对了。
 >
-> 面板使用、平台适配器配置、模型接入、插件开发等**通用内容不在本文重复**，请看官方文档
-> （仓库内自带副本：`docs/zh/`，或 <https://docs.astrbot.app>）。本文只写**本 fork 特有的部分**。
+> 面板使用、平台适配器配置、模型接入、插件开发等通用内容不在本文重复，请看官方文档
+> （仓库内自带副本：`docs/zh/`，或 <https://docs.astrbot.app>）。本文只写本 fork 特有的部分。
 
 ## 1. 准备
 
-- Python **3.12 或更高**（`pyproject.toml` 的 `requires-python = ">=3.12"`）
+- Python 3.12 或更高（`pyproject.toml` 的 `requires-python = ">=3.12"`）
 - `uv`（仓库用 `uv sync` 管理依赖）
 - git
 
@@ -44,7 +44,7 @@ astrbot run
 >
 > **尚未发布到 PyPI。** 本 fork 的分发名固定为 `astrbot-maintained`，与官方 `AstrBot`
 > 不重名；但**Python 导入名同为 `astrbot`**（`import astrbot` 不变，上游插件无需改动）
-> ——这意味着**同一个环境里只能留一份**，装本 fork 前先卸掉官方包。
+> 这意味着**同一个环境里只能留一份**，装本 fork 前先卸掉官方包。
 >
 > ⚠️ **wheel 必须带 WebUI 才有面板**。官方发布的 wheel 里包含
 > `astrbot/dashboard/dist/`（Vue 构建产物）。自行构建时必须显式开启：
@@ -79,7 +79,7 @@ docker run -d --name astrbot -p 6185:6185 \
 - WebUI 地址 `http://localhost:6185`，平台适配器、模型、插件开关都在**面板 → 配置页**设置。
 - 配置、插件、日志等运行时数据落在仓库的 `data/` 目录，该目录不入库。
 - 首次使用按面板引导完成初始化即可；配置文件格式与上游 `v4.28.2` 兼容。
-- 启动日志的艺术字下方会多一行 **`AstrBot Maintained Fork v4.28.2+mtn1`**——
+- 启动日志的艺术字下方会多一行 **`AstrBot Maintained Fork v4.28.2+mtn1`**：
   官方版本没有这一行，可据此快速确认跑的是本 fork。
 
 ## 4. 哪些内容请直接看官方文档

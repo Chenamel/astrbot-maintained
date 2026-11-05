@@ -38,7 +38,7 @@ maintained/v4.28.2  (长期主干)
 ### 3.1 冻结层（不可动）
 
 - `astrbot/api/**` 现存**全部**符号。
-- core 中被插件**事实依赖**的 5 个路径（视为事实公开，冻结）：
+- core 中被插件事实依赖的 5 个路径（视为事实公开，冻结）：
   - `astrbot.core.agent.message.TextPart`
   - `astrbot.core.provider.provider.EmbeddingProvider`
   - `astrbot.core.utils.astrbot_path.get_astrbot_data_path`
@@ -47,24 +47,24 @@ maintained/v4.28.2  (长期主干)
 
 ### 3.2 加法层（自由）
 
-新模块、新钩子、新可选参数 —— **默认值必须保持旧行为**。
+新模块、新钩子、新可选参数，**默认值必须保持旧行为**。
 
 ### 3.3 例外（内部重命名）
 
-必须同时满足：shim 转发 + `DeprecationWarning` + 测试 + **单独提交**并在 commit message 说明理由。
+必须同时满足：shim 转发 + `DeprecationWarning` + 测试 + 单独提交并在 commit message 说明理由。
 
 ## 4. 新增模块清单（阶段 3 落 + 阶段 5 追加）
 
-**接口契约以 [`api-contract.md`](./api-contract.md) 为唯一规格**（含签名、降级语义、测试要求）。
+接口契约以 [`api-contract.md`](./api-contract.md) 为唯一规格（含签名、降级语义、测试要求）。
 
 | 模块 | 职责 | 解决的共性问题 |
 |---|---|---|
-| `astrbot/api/_bridge.py` | 内部桥：惰性解析 core 符号 + 能力清单（**非公开面**） | 统一降级机制 |
-| `astrbot/api/media/` | 图片输入契约与判定 | **P1**（插件顶层 import 私有常量）、P4（`<image_caption>` 硬编码） |
+| `astrbot/api/_bridge.py` | 内部桥：惰性解析 core 符号 + 能力清单（非公开面） | 统一降级机制 |
+| `astrbot/api/media/` | 图片输入契约与判定 | P1（插件顶层 import 私有常量）、P4（`<image_caption>` 硬编码） |
 | `astrbot/api/turns/` | 直报回合状态访问与重置 | P2 的一半 |
 | `astrbot/api/delivery/` | 交付策略纯函数 | P3 的一部分 |
 | `astrbot/api/permissions/` | 权限与执行授权 | P6 |
-| `astrbot/api/proactive/` | 轻量主动判定（**开关恒关**） | 铁律 6 |
+| `astrbot/api/proactive/` | 轻量主动判定（开关恒关） | 铁律 6 |
 | `astrbot/api/content/` | 内容部件类型 + `is_*` 判定 | 阶段 5 追加 |
 | `astrbot/api/runtime/` | 运行时工具（数据目录 / 下载 / 引用图） | 阶段 5 追加 |
 | `astrbot/api/embedding/` | 嵌入提供者类型 | 阶段 5 追加 |

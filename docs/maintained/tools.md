@@ -1,6 +1,6 @@
 # 维护工具链（阶段 6）
 
-> 回答一个问题：**启动器又把 core 覆盖了怎么办？** 答案是两条命令。
+> 回答一个问题：启动器又把 core 覆盖了怎么办？ 答案是两条命令。
 
 ## 0. 背景
 
@@ -11,20 +11,20 @@
 
 | 工具 | 作用 | 何时用 |
 |---|---|---|
-| `maintained/tools/check_drift.py` | **检测**实例 core 是否与台账（=维护版真相源）不一致 | 机器人异常时、启动器更新后、定期巡检 |
-| `maintained/tools/apply_patches.py` | **修复**：把仓内维护版 core 打回实例（带备份与校验） | check_drift 报出漂移后 |
-| `maintained/tools/hook_timing_probe.py` | **取证**：记录并校验 agent 完成钩子相对最终回复的时序 | T8-12 每步拆分前后（β 红线） |
+| `maintained/tools/check_drift.py` | 检测实例 core 是否与台账（=维护版真相源）不一致 | 机器人异常时、启动器更新后、定期巡检 |
+| `maintained/tools/apply_patches.py` | 修复：把仓内维护版 core 打回实例（带备份与校验） | check_drift 报出漂移后 |
+| `maintained/tools/hook_timing_probe.py` | 取证：记录并校验 agent 完成钩子相对最终回复的时序 | T8-12 每步拆分前后（β 红线） |
 
 ## 1. 共同约定
 
-- **真相源**：`maintained/installed_manifest.json`（**66 条**：56 个 core 文件 + 10 个 `astrbot/api` 文件）
-  - 判定口径：**凡是本 fork 改动过的 `astrbot/**` 文件都必须登记**，否则 `apply_patches` 不会部署它；
+- 真相源：`maintained/installed_manifest.json`（66 条：56 个 core 文件 + 10 个 `astrbot/api` 文件）
+  - 判定口径：凡是本 fork 改动过的 `astrbot/**` 文件都必须登记**，否则 `apply_patches` 不会部署它；
     若该文件又被别的已登记文件 import，就会在实例侧 `ImportError`（曾由此导致启动失败）。
   + fork 仓的工作树。
-- **哈希口径**：文件**磁盘字节**的 SHA-256。仓内文件全部为 LF。
-- **目标根**：`--instance <实例目录>`，工具自动定位其下的 `core/`。
-- **只碰台账内的文件**：工具不会读写台账之外的任何文件（不动 `data/`、不动配置、不动插件）。
-- **不含任何插件信息**：与本仓「只留 core」的定位一致，工具里没有插件名。
+- 哈希口径：文件磁盘字节的 SHA-256。仓内文件全部为 LF。
+- 目标根：`--instance <实例目录>`，工具自动定位其下的 `core/`。
+- 只碰台账内的文件：工具不会读写台账之外的任何文件（不动 `data/`、不动配置、不动插件）。
+- 不含任何插件信息：与本仓「只留 core」的定位一致，工具里没有插件名。
 
 ## 2. `check_drift.py`
 
@@ -39,9 +39,9 @@ python maintained/tools/check_drift.py --instance "<实例目录>" --json
 python maintained/tools/check_drift.py --instance "<实例目录>" --check-repo
 ```
 
-**输出**：每条文件的状态（`ok` / `mismatch` / `missing`），以及计数与结论。
+输出：每条文件的状态（`ok` / `mismatch` / `missing`），以及计数与结论。
 
-**退出码**：`0` 无漂移；`1` 有漂移；`2` 用法/环境错误（如实例路径不存在、台账读不到）。
+退出码：`0` 无漂移；`1` 有漂移；`2` 用法/环境错误（如实例路径不存在、台账读不到）。
 便于直接接进自动化（例如让机器人在启动后自检并告警）。
 
 ## 3. `apply_patches.py`
@@ -54,18 +54,18 @@ python maintained/tools/apply_patches.py --instance "<实例目录>"
 python maintained/tools/apply_patches.py --instance "<实例目录>" --apply
 ```
 
-**行为**：
+行为：
 
-1. 读台账，逐个核对**源文件**（fork 仓工作树）哈希与台账一致 → 不一致则**中止**（源损坏，宁可不做）。
+1. 读台账，逐个核对源文件（fork 仓工作树）哈希与台账一致 → 不一致则中止（源损坏，宁可不做）。
 2. 计算计划：`create`（实例缺失）/ `update`（内容不符）/ `skip`（已一致）。
 3. `--apply` 时先备份到 `<实例>/optimization_backups/<时间戳>_CST_apply_patches/`
    （只备份将被覆盖的文件 + 一份记录操作前状态的 `manifest.json`）。
-4. 逐文件复制，随后**立即复核**台账，输出最终一致率。
-5. **绝不动**台账之外的文件；**绝不**删除任何东西。
+4. 逐文件复制，随后立即复核台账，输出最终一致率。
+5. 绝不动台账之外的文件；绝不删除任何东西。
 
-**退出码**：`0` 成功（或无变化）；`1` 复核后仍有不符；`2` 用法/源校验失败。
+退出码：`0` 成功（或无变化）；`1` 复核后仍有不符；`2` 用法/源校验失败。
 
-**注意**：写完 core 源码后需**重启 AstrBot** 才生效（工具不做重启，避免突然中断正在跑的任务）。
+**注意**：写完 core 源码后需重启 AstrBot 才生效（工具不做重启，避免突然中断正在跑的任务）。
 
 ## 4. `hook_timing_probe.py`
 
@@ -90,7 +90,7 @@ python maintained/tools/hook_timing_probe.py --quiet --compare maintained/baseli
 - 984 / 1100 / 1340 **没有** `legacy_timing` 分支 ⇒ 两种模式下结果必须完全相同（`mode_symmetry`）
 
 **结构守卫**：每次运行都符号化扫描 runner，断言 `await self._complete_with_assistant_response(`
-恰好 **5 处**，其中 enhanced 分支 1 处、legacy 分支 1 处、无条件 3 处 —— **不依赖行号**，
+恰好 **5 处**，其中 enhanced 分支 1 处、legacy 分支 1 处、无条件 3 处，**不依赖行号**，
 所以拆分后行号漂移不会误报，但少一处/多一处立刻判红。
 
 **比对范围**：只比 `events` / `summary` / `mode_symmetry`。`repo_commit` 与 `case.call_site`
@@ -119,7 +119,7 @@ python maintained/tools/apply_patches.py --instance "<实例目录>" --apply
 - **不拦启动器**（做不到：拦不住进程外的文件覆盖）。本工具链的定位是**事后快速检测 + 一键恢复**，
   把 MTTR 从"人工排查半小时"降到"两条命令"。
 - 不自动重启机器人、不改配置、不动插件、不碰 `data/`。
-- 不做「上游版本升级」——那走三方合并，与本工具无关。
+- 不做「上游版本升级」，那走三方合并，与本工具无关。
 
 ## 7. 测试
 

@@ -1,6 +1,6 @@
 # Dashboard（WebUI）构建与部署
 
-> 本分支**新增的配置项**必须在 dashboard 语言包里登记，否则配置页会显示原始键路径
+> 本分支新增的配置项必须在 dashboard 语言包里登记，否则配置页会显示原始键路径
 > （例如 `ai_group.agent_computer_use.provider_settings.execution_gate_mode.description`）。
 > 原因：配置页按路径查 `features/config-metadata.json`，查不到就回退显示键名。
 
@@ -12,7 +12,7 @@
 ASTRBOT_BUILD_DASHBOARD=1 uv build --wheel
 ```
 
-不带该变量会得到一个**没有面板**的 wheel —— 装上去 `astrbot run` 后 6185 端口没有界面。
+不带该变量会得到一个没有面板的 wheel：装上去 `astrbot run` 后 6185 端口没有界面。
 校验（应输出约 272）：
 
 ```bash
@@ -23,11 +23,11 @@ python -c "import zipfile,glob;z=zipfile.ZipFile(glob.glob('*.whl')[0]);print(su
 
 ## 什么时候需要走这套流程
 
-在 `astrbot/core/config/default.py` 的**配置 schema 里新增了 fork 独有的键**时。
+在 `astrbot/core/config/default.py` 的配置 schema 里新增了 fork 独有的键时。
 
 ## 步骤
 
-1. **补语言包**（4 种语言各一份，纯新增）：
+1. 补语言包（4 种语言各一份，纯新增）：
 
    `dashboard/src/i18n/locales/{zh-CN,en-US,ja-JP,ru-RU}/features/config-metadata.json`
 
@@ -35,10 +35,10 @@ python -c "import zipfile,glob;z=zipfile.ZipFile(glob.glob('*.whl')[0]);print(su
    - `ai_group.agent_computer_use.provider_settings.<key>` → `{ "description": …, "hint": … }`
    - `ai_group.others.agent_runner.config.misc.<key>` → 同上
 
-   ⚠️ 用**按行插入**保住原文件排版；`json.dumps` 整文件重写会产生上千行噪音 diff
-   （ru-RU 实测 2055 行）。插入时注意：末尾键没有尾逗号，新词条要插在它**前面**。
+   ⚠️ 用按行插入保住原文件排版；`json.dumps` 整文件重写会产生上千行噪音 diff
+   （ru-RU 实测 2055 行）。插入时注意：末尾键没有尾逗号，新词条要插在它前面。
 
-2. **构建**（在 `dashboard/` 下）：
+2. 构建（在 `dashboard/` 下）：
 
    ```bash
    CI=true pnpm install --registry=https://registry.npmmirror.com
