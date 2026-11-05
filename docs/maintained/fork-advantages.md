@@ -20,7 +20,7 @@
 
 ## 2. 台账与漂移检测（最独特的一项）
 
-- `maintained/installed_manifest.json`：**65 条**受保护文件及其 SHA-256（55 core + 10 api）
+- `maintained/installed_manifest.json`：**66 条**受保护文件及其 SHA-256（56 core + 10 api）
 - `maintained/tools/check_drift.py`：双端校验（仓库工作树 + 实例），退出码 0/1/2
 - `maintained/tools/apply_patches.py`：一键重打（默认预演，`--apply` 才写）
 

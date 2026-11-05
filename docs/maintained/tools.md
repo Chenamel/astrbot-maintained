@@ -17,7 +17,7 @@
 
 ## 1. 共同约定
 
-- **真相源**：`maintained/installed_manifest.json`（**65 条**：55 个 core 文件 + 10 个 `astrbot/api` 文件）
+- **真相源**：`maintained/installed_manifest.json`（**66 条**：56 个 core 文件 + 10 个 `astrbot/api` 文件）
   - 判定口径：**凡是本 fork 改动过的 `astrbot/**` 文件都必须登记**，否则 `apply_patches` 不会部署它；
     若该文件又被别的已登记文件 import，就会在实例侧 `ImportError`（曾由此导致启动失败）。
   + fork 仓的工作树。

@@ -140,28 +140,25 @@ class AstrBotUpdater(_RepoZipUpdater):
     def _release_tag_to_version(tag_name: str) -> str:
         """Turn a release tag into the version string the panel compares.
 
-        Release tags carry transport details that the version does not: upstream
-        uses ``v4.29.4``, this fork uses ``maintained/v4.28.2-r1`` for the tag
-        while the package reports ``4.28.2+mtn1``. Feeding either raw form to
-        :meth:`VersionComparator.compare_version` fails to parse, which would
-        make the panel offer an "update" to the version already installed.
+        Tags carry transport details the version does not. Upstream tags look
+        like ``v4.29.4``; this fork's look like ``maintained/v4.28.2-r2``, where
+        ``-r2`` counts builds of the same ``4.28.2+mtn1`` release and is *not* a
+        version. Feeding a raw tag to :meth:`VersionComparator.compare_version`
+        fails to parse, and mapping the build number onto the version would
+        invent a release that does not exist -- the panel would then offer an
+        "update" whose download reports the version already installed.
 
         Args:
             tag_name: Tag as published by the release source.
 
         Returns:
-            A PEP 440-shaped version, e.g. ``4.28.2+mtn1`` for
-            ``maintained/v4.28.2-r1``, or the input unchanged when it does not
-            match that shape.
+            The numeric release with its branch prefix and build suffix removed,
+            e.g. ``4.28.2`` for ``maintained/v4.28.2-r2``, or the input unchanged
+            when it does not match that shape.
         """
-        match = re.search(
-            r"(\d+\.\d+\.\d+)(?:-r(\d+))?$",
-            tag_name.rsplit("/", 1)[-1],
-        )
-        if not match:
-            return tag_name
-        base, revision = match.group(1), match.group(2)
-        return f"{base}+mtn{revision}" if revision else base
+        bare = tag_name.rsplit("/", 1)[-1]
+        match = re.match(r"v?(\d+(?:\.\d+)*)(?:-r\d+)?(\+[0-9A-Za-z.]+)?$", bare)
+        return f"{match.group(1)}{match.group(2) or ''}" if match else tag_name
 
     @staticmethod
     def _is_newer(current: str, candidate: str) -> bool:
