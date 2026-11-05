@@ -96,7 +96,9 @@
 
 - **A1** `git rev-parse baseline/v4.28.2` = `3c7adafa…`（锚点标签永久指向基线，主干 HEAD 随维护推进而前进），`git status --porcelain` 为空，本地无 `master` 分支。
 - **A2** `git remote -v`：`upstream` 禁推、`origin` 为 SSH `Chenamel/astrbot-maintained`；`ssh -T git@github.com` 返回 Chenamel。
-- **A3** `astrbot/__init__.py` 与 `pyproject.toml` 版本均为 `4.28.2`。
+- **A3** `pyproject.toml` 为 `4.28.2`（PEP 440 严格可解析的基版本），
+  `astrbot.__version__` 为 `4.28.2+mtn1`（带 fork 标记），二者的一致性由
+  `tests/maintained/test_version_marker.py` 钉住；`python -c "import astrbot; print(astrbot.__version__)"` 应输出 `4.28.2+mtn1`。
 - **A4** 全仓 grep 无私有插件名、无第三方 fork 名、`git ls-files` 无 `data/plugins` 路径。
   ✅ **已达成**：P2 改造已让 core 侧不再按插件目录名找插件（改走能力契约）；内部施工文档
   已移出公开树；守卫见 `tests/maintained/test_plugin_capability_lookup.py`（插件目录名白名单为空）。
