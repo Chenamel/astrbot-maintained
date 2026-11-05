@@ -48,8 +48,7 @@ if isinstance(call_extra_body, dict):
 | 单次调用 `extra_body=` | ❌ 仅本分支 | 仅本次请求 |
 
 在上游实现里，`extra_body=` 会被 `_prepare_chat_payload` 静默丢弃——**不报错、只是
-不生效**。因此任何依赖此能力的调用方（如 `astrbot_plugin_proactive_shadow` 的
-`judge_extra_body`）在纯上游环境会表现为"填了没反应"，而不是报错。
+不生效**。因此任何依赖此能力的调用方在纯上游环境会表现为"填了没反应"，而不是报错。
 
 这也是插件配置项 hint 里标注依赖的原因：**静默失败比报错更难排查**。
 

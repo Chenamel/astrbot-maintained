@@ -18,13 +18,19 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
 
 #: Dashboard port; the AstrBot process owns it.
 PANEL_PORT = "6185"
-SHADOW_LOG = "core/data/plugins/astrbot_plugin_proactive_shadow/shadow_log.jsonl"
+
+#: Optional plugin log to summarise, relative to the instance root. Defaults to
+#: none: this repository ships the core only, so naming a plugin directory here
+#: would point readers at something they cannot obtain from this tree.
+_plugin = os.environ.get("ASTRBOT_CHECK_PLUGIN", "")
+SHADOW_LOG = f"core/data/plugins/{_plugin}/shadow_log.jsonl" if _plugin else ""
 
 FIELDS = [
     "unix_ts",
@@ -97,7 +103,17 @@ def read_memory(pid: int) -> dict:
 
 
 def read_judgements(instance: Path) -> tuple[int, int]:
-    """Total decisions recorded, and how many in the last hour."""
+    """Total decisions recorded, and how many in the last hour.
+
+    Args:
+        instance: Instance root to read from.
+
+    Returns:
+        ``(total, recent)``; zeros when no plugin log is configured, which is
+        the default for a tree that ships the core only.
+    """
+    if not SHADOW_LOG:
+        return 0, 0
     path = instance / SHADOW_LOG
     if not path.exists():
         return 0, 0

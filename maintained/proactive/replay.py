@@ -72,7 +72,11 @@ def _find_instance() -> Path:
 
 
 INSTANCE = _find_instance()
-PLUGIN_DIR = INSTANCE / "core/data/plugins/astrbot_plugin_proactive_shadow"
+# The plugin whose handler is replayed. Named through the environment rather
+# than in the source: this tree distributes the core only, so a literal plugin
+# directory would reference something a reader cannot obtain here.
+PLUGIN_NAME = os.environ.get("ASTRBOT_REPLAY_PLUGIN", "my_plugin")
+PLUGIN_DIR = INSTANCE / "core/data/plugins" / PLUGIN_NAME
 CMD_CONFIG = INSTANCE / "core/data/cmd_config.json"
 DB_PATH = INSTANCE / "core/data/data_v4.db"
 PLACEHOLDER_SELF = "SELF"
@@ -231,7 +235,7 @@ def build_context(db: SQLiteDatabase, provider, provider_id: str) -> Context:
 def load_plugin(context: Context):
     """Import the shadow plugin from the instance and bind it to our context."""
     spec = importlib.util.spec_from_file_location(
-        "proactive_shadow_under_test", PLUGIN_DIR / "main.py"
+        "replay_plugin_under_test", PLUGIN_DIR / "main.py"
     )
     if spec is None or spec.loader is None:
         raise SystemExit(f"无法加载插件: {PLUGIN_DIR / 'main.py'}")
@@ -711,7 +715,7 @@ def selftest() -> int:
     cases pin that down so it cannot come back unnoticed.
     """
     spec = importlib.util.spec_from_file_location(
-        "proactive_shadow_selftest", PLUGIN_DIR / "main.py"
+        "replay_plugin_selftest", PLUGIN_DIR / "main.py"
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

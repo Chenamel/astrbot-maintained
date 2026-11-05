@@ -15,14 +15,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sqlite3
 from pathlib import Path
 
-PLUGIN_DIR = "core/data/plugins/astrbot_plugin_proactive_shadow"
-CONFIG_PATH = "core/data/config/astrbot_plugin_proactive_shadow_config.json"
+#: The plugin under inspection, relative to the instance root. Kept out of the
+#: source: this repository distributes the core only, and a hard-coded plugin
+#: directory would name an artefact a reader cannot obtain here. Point it at
+#: whatever plugin you are checking with ``--plugin`` or ``ASTRBOT_CHECK_PLUGIN``.
+PLUGIN_NAME = os.environ.get("ASTRBOT_CHECK_PLUGIN", "my_plugin")
+PLUGIN_DIR = f"core/data/plugins/{PLUGIN_NAME}"
+CONFIG_PATH = f"core/data/config/{PLUGIN_NAME}_config.json"
 LOG_PATH = "core/data/logs/astrbot.log"
-SHADOW_LOG = "core/data/plugins/astrbot_plugin_proactive_shadow/shadow_log.jsonl"
+SHADOW_LOG = f"core/data/plugins/{PLUGIN_NAME}/shadow_log.jsonl"
 DB_PATH = "core/data/data_v4.db"
 
 #: Recently means "after the process started"; used to tell new errors from old.

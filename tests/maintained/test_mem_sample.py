@@ -7,6 +7,7 @@ import json
 import time
 from pathlib import Path
 
+from tools import mem_sample
 from tools.mem_sample import (
     FIELDS,
     _print_delta,
@@ -23,10 +24,19 @@ def _write_log(path: Path, rows: list[dict]) -> None:
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
-def test_read_judgements_skips_replay_and_counts_recent(tmp_path: Path) -> None:
-    log = (
-        tmp_path / "core/data/plugins/astrbot_plugin_proactive_shadow/shadow_log.jsonl"
+def test_read_judgements_skips_replay_and_counts_recent(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # The log lives under whatever plugin the operator configured; the tool
+    # takes it from ASTRBOT_CHECK_PLUGIN, so name one here rather than
+    # depending on whatever the developer's environment happens to be.
+    monkeypatch.setenv("ASTRBOT_CHECK_PLUGIN", "sample_plugin")
+    monkeypatch.setattr(
+        mem_sample,
+        "SHADOW_LOG",
+        "core/data/plugins/sample_plugin/shadow_log.jsonl",
     )
+    log = tmp_path / mem_sample.SHADOW_LOG
     fresh = time.strftime("%Y-%m-%d %H:%M:%S")
     old = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 7200))
     _write_log(
