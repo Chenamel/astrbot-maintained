@@ -1,10 +1,20 @@
 # AstrBot 维护版（Maintained Fork）
 
+[![version](https://img.shields.io/badge/version-4.28.2%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
+[![license](https://img.shields.io/badge/license-AGPL--3.0-green)](./LICENSE)
+[![python](https://img.shields.io/badge/python-3.10%2B-blue)](./pyproject.toml)
+
 > 官方 [AstrBot](https://github.com/AstrBotDevs/AstrBot) 的长期维护分支，锁定在 `v4.28.2` 基线。
 > 上游插件不用改就能跑，另加一批上游没有的底层 API。
 >
 > A maintained fork of AstrBot pinned to the `v4.28.2` baseline: drop-in compatible
 > with upstream plugins, plus low-level APIs upstream does not provide.
+
+**一句话判断：你写 AstrBot 插件吗？**
+
+- **不写** → 用官方版，别在这里浪费时间。官方更新更快。
+- **写，而且碰过"拿不到回合上下文 / 主动回复没有人格 / 钩子触发太晚"** → 往下看，这个 fork 是为你做的。
+- **写，但没遇到上面这些** → 先收藏，等真需要了再来。
 
 ---
 
@@ -17,10 +27,7 @@
 - 想在**回复发出之前**拦截改写，但官方钩子在回复之后才触发，只能事后补救；
 - 想判断这次调用**到底有没有执行授权**，官方只给"是不是管理员"。
 
-这几条需求都源自同一件事：**官方没有对外暴露这些底层状态**。本 fork 把它们做成 `astrbot/api/**`。
-
-如果你只是装个 bot 日常聊天、不写插件，那说实话——**这个 fork 对你没什么用**。
-官方版更适合你，更新也快。
+这几条需求的根源是同一个：**官方没有对外暴露这些底层状态**。本 fork 把它们做成 `astrbot/api/**`。
 
 ## 和官方版的核心区别
 
@@ -33,14 +40,6 @@
 | 更新检查 | 指向官方 Releases | **指向本仓库**（唯一一处故意不同的默认值，原因见下） |
 
 一句话：**它不是"更好的 AstrBot"，是"给插件作者多开了一层接口的 AstrBot"。**
-
-> **看到"后门"字样？那是旧版本的说法。**
->
-> 本 README 在 `v4.28.2+mtn1` 首个公开版里曾把这层接口写成"后门"，现已统一改为"**接口**"。
-> 如果你是在镜像站、搜索引擎快照或较早的缓存页里看到"后门"两个字，那不是现在的表述。
-> 这些模块是公开、有文档、可逐行审查的 Python API（源码在 `astrbot/api/**`，
-> 调用手册见 [`docs/maintained/api-reference.md`](./docs/maintained/api-reference.md)），
-> 不涉及任何绕过鉴权的隐蔽入口。
 
 ## 新增了什么
 
@@ -79,10 +78,12 @@
 
 **这四个都是 fork 新增的键**，上游配置文件里没有。不改就一直走上游行为。
 
-### 3. 两处会看到但不用管的差异
+### 3. 两处会看到、但不用管的差异
 
-- 启动日志在 ASCII 艺术字下方多一行 `AstrBot Maintained Fork v4.28.2+mtn1`，官方版没有；
-- 分发包名是 `astrbot-maintained`，但 **Python 导入名仍是 `astrbot`**——这是刻意的，正因为如此上游插件不用改。
+| 现象 | 说明 |
+|---|---|
+| 启动日志多一行 `AstrBot Maintained Fork v4.28.2+mtn1` | 在 ASCII 艺术字下方，官方版没有。只是标识，不影响行为 |
+| 分发包名叫 `astrbot-maintained` | 但 **Python 导入名仍是 `astrbot`**。这是刻意的——正因为如此，上游插件不用改 |
 
 ## 兼容性：我实测过的事
 
@@ -93,10 +94,12 @@
 | `>=4.16,<5`（市场最常见） | ✅ 兼容 |
 | `>=4.28.2` / `==4.28.2` / `~=4.28.0` | ✅ 兼容 |
 | `>=4.29` / `<4.28` | ❌ 正确拒绝 |
-
-唯一例外是 `===4.28.2`（三等号严格相等）会判否——PEP 440 标准行为，市场基本不这么写。
+| `===4.28.2`（三等号严格相等） | ❌ 会判否[^1] |
 
 **上游测试全绿。** 相对基线零改动，2949 passed / 6 skipped / 2 项已登记的 xfail。
+
+[^1]: 这是 PEP 440 的标准行为，不是本 fork 的缺陷：`===` 要求版本字符串逐字符相等，
+    而 `4.28.2+mtn1` 多了 local 段。插件市场里几乎没有插件这样写版本约束。
 
 ## 快速上手
 
@@ -135,30 +138,21 @@ ASTRBOT_BUILD_DASHBOARD=1 uv build --wheel
 
 ## 注意事项
 
-### 更新检查默认指向本仓库，不是官方
+> [!IMPORTANT]
+> **更新检查默认指向本仓库，不是官方。**
+> 这是本 fork 唯一一处故意偏离上游默认值的地方。上游 `4.29+` 是另一套代码，
+> 本 fork 的 API 在那边不存在——把上游当升级目标，等于给用户一个"一点就毁"的按钮。
 
-这是本 fork **唯一一处故意偏离上游默认值**的地方。
+想离开本 fork 改回跟随官方，在**面板 → 配置 → 系统**里改这两项，两者要指向同一个项目：
 
-原因：上游 `4.29+` 是另一套代码，本 fork 的 API 在那边不存在。把上游当升级目标，等于给用户一个"一点就毁"的按钮。
+- `更新检查地址` → `https://api.soulter.top/releases`
+- `更新来源仓库` → `https://github.com/AstrBotDevs/AstrBot`
 
-想离开本 fork 改回跟随官方，在**面板 → 配置 → 系统**里把：
+**另外三条要知道的：**
 
-- `更新检查地址` 填 `https://api.soulter.top/releases`
-- `更新来源仓库` 填 `https://github.com/AstrBotDevs/AstrBot`
-
-两者要指向同一个项目。
-
-### 不要追上游 `master`
-
-锁基线是刻意选择。需要上游的新修复，等本仓库合并，或自己 cherry-pick。
-
-### 本仓库只发 core，不含任何插件
-
-`pip` 装完是干净的核心，插件各自独立安装。
-
-### 基线是 `v4.28.2`，不是上游最新
-
-这是当前状态，不是失误。评估时请按 `4.28.2` 的能力算，不要拿上游 `4.29+` 的功能对照。
+- **别追上游 `master`。** 锁基线是刻意选择；需要上游的新修复，等本仓库合并，或自己 cherry-pick。
+- **本仓库只发 core，不含任何插件。** `pip` 装完是干净的核心，插件各自独立安装。
+- **基线是 `v4.28.2`，不是上游最新。** 这是当前状态，不是失误——评估时按 `4.28.2` 的能力算。
 
 ## 给插件作者
 
@@ -203,6 +197,19 @@ else:
 | 维护者向（基线、台账、合并流程） | [`README_MAINTAINED.md`](./README_MAINTAINED.md) |
 | core 改动台账（SHA-256，可脚本校验） | [`maintained/installed_manifest.json`](./maintained/installed_manifest.json) |
 | 上游官方说明 | [`README_zh.md`](./README_zh.md) |
+
+## 关于文档版本
+
+**看到"后门"字样？那是旧说法。**
+
+本 README 在 `v4.28.2+mtn1` 首个公开版里，曾把这层接口写成"后门"，现已统一改为"**接口**"。
+
+如果你是在镜像站、搜索引擎快照或较早的缓存页里看到"后门"两个字，那不是现在的表述。
+这些模块是公开、有文档、可逐行审查的 Python API（源码在 `astrbot/api/**`，
+调用手册见 [`docs/maintained/api-reference.md`](./docs/maintained/api-reference.md)），
+不涉及任何绕过鉴权的隐蔽入口。
+
+**判断手里的副本是新是旧**：正式表述里出现"后门"的，就是旧的。
 
 ## 许可证
 

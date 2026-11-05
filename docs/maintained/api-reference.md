@@ -17,6 +17,23 @@
 
 ---
 
+## 模块速览
+
+八个模块各管一件事，按你手上的问题挑一个看：
+
+| 你想解决 | 看这个 | 一句话 |
+|---|---|---|
+| 这条消息是不是已被新一轮取代 | [`api.turns`](#apiturns--回合状态) | 回合状态、合并后的原文与图片 |
+| 主动开口时想带上人格和记忆 | [`api.proactive`](#apiproactive--主动回复) | 过 `on_llm_request` 的生成入口 |
+| 该发文字还是发文件 / 代码给全了吗 | [`api.delivery`](#apidelivery--交付策略) | 交付策略判定 |
+| 这次操作到底有没有被授权 | [`api.permissions`](#apipermissions--执行授权) | 区分"是管理员"与"本次被授权" |
+| 模型这次能不能看图 | [`api.media`](#apimedia--视觉输入) | 视觉输入可用性 |
+| 这段内容是文字还是图 | [`api.content`](#apicontent--消息段判定) | 消息段类型判定 |
+| 时间、路径、下载、钩子时序 | [`api.runtime`](#apiruntime--运行时杂项) | 运行时杂项 |
+| 这个对象是不是 embedding provider | [`api.embedding`](#apiembedding--向量化) | 向量化判定 |
+
+---
+
 ## 读之前
 
 **每个模块都有 `available()`。** 在上游原版 AstrBot 上调用会返回 `False`，
@@ -236,9 +253,13 @@ if not delivery.has_code_delivery(reply, "python"):
 #### 注意
 
 - 返回的是给用户看的文字，可以直接 `await event.send(reason)`。
-- **`None` 才是放行**，不是 `False`。别写成 `if not execution_denial(...)` 就调——那样 `""` 之类的空值也会被当成放行。
 - 它和 `is_admin` 是**两件事**：管理员身份通过，也可能因为"本次消息没明确要求执行"被拒。
   本 fork 的 `execution_gate_mode` 设成 `strict` 时，后者的判定会更严。
+
+> [!IMPORTANT]
+> **`None` 才是放行，不是 `False`。**
+> 别写成 `if not execution_denial(...)` 就放行——那样 `""` 之类的空值也会被当成"已拒绝"，
+> 反之一个假值也可能被误读。判断一律用 `is not None`。
 
 ```python
 reason = permissions.execution_denial(event, context.get_config())
@@ -345,9 +366,11 @@ await event.send(f"上次说话是 {runtime.format_local_time(ts)}")
 
 **异步。** 通过 core 助手下载图片，返回它的返回值（通常是本地文件路径）。
 
-**注意**：**这是本套 API 里唯一会抛异常的降级点**——core 助手不可用时直接抛
-`RuntimeError`，而不是返回 `None`。这是故意的：下载失败悄悄返回空值，
-后面会变成一个更难查的 `NoneType` 错误。**调用处要 try**。
+> [!WARNING]
+> **这是本套 API 里唯一会抛异常的降级点。**
+> core 助手不可用时它直接抛 `RuntimeError`，而不是像旁边的函数那样返回 `None`。
+> 这是故意的——下载失败悄悄返回空值，后面会变成一个更难查的 `NoneType` 错误。
+> **调用处必须 try。**
 
 ```python
 try:
