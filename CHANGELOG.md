@@ -42,7 +42,7 @@
 
 ### 已知限制
 
-- 落后上游 222 个提交；刻意锁基线，不追 `master`。
+- 刻意锁基线，不追 `master`，因此会持续落后上游提交；用 `git rev-list --count HEAD..upstream/master` 查当前差值。
 - `main.py` 不入台账（台账只收 `astrbot/`），故核心逻辑放在 `core_lifecycle.py`。
 - 多语言 `README_*.md` 仍是上游原文。
 - 容器镜像需自行基于仓库 `Dockerfile` 构建，本仓库不发布镜像 tag。

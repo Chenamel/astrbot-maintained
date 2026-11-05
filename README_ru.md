@@ -2,240 +2,133 @@
 
 <div align="center">
 
-<a href="https://github.com/AstrBotDevs/AstrBot/blob/master/README_zh.md">简体中文</a> ｜
-<a href="https://github.com/AstrBotDevs/AstrBot/blob/master/README.md">English</a> ｜
-<a href="https://github.com/AstrBotDevs/AstrBot/blob/master/README_zh-TW.md">繁體中文</a> ｜
-<a href="https://github.com/AstrBotDevs/AstrBot/blob/master/README_ja.md">日本語</a> ｜
-<a href="https://github.com/AstrBotDevs/AstrBot/blob/master/README_fr.md">Français</a> ｜
-<a href="https://github.com/AstrBotDevs/AstrBot/blob/master/README_es.md">Español</a>
+<a href="./README.md">English</a> ｜ <a href="./README_zh.md">简体中文</a> ｜ <a href="./README_zh-TW.md">繁體中文</a> ｜ <a href="./README_ja.md">日本語</a> ｜ <a href="./README_fr.md">Français</a> ｜ <a href="./README_es.md">Español</a> ｜ Русский
 
 <br>
-
-<div>
-<a href="https://trendshift.io/repositories/21369" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21369" alt="AstrBotDevs%2FAstrBot | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-<a href="https://hellogithub.com/repository/AstrBotDevs/AstrBot" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=d127d50cd5e54c5382328acc3bb25483&claim_uid=ZO9by7qCXgSd6Lp&t=2" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" /></a>
-</div>
-
 <br>
 
-<div>
-<img src="https://img.shields.io/github/v/release/AstrBotDevs/AstrBot?color=76bad9" href="https://github.com/AstrBotDevs/AstrBot/releases/latest">
-<img src="https://img.shields.io/badge/python-3.12+-blue.svg" alt="python">
-<img src="https://deepwiki.com/badge.svg" href="https://deepwiki.com/AstrBotDevs/AstrBot">
-<a href="https://zread.ai/AstrBotDevs/AstrBot" target="_blank"><img src="https://img.shields.io/badge/Ask_Zread-_.svg?style=flat&color=00b0aa&labelColor=000000&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTQuOTYxNTYgMS42MDAxSDIuMjQxNTZDMS44ODgxIDEuNjAwMSAxLjYwMTU2IDEuODg2NjQgMS42MDE1NiAyLjI0MDFWNC45NjAxQzEuNjAxNTYgNS4zMTM1NiAxLjg4ODEgNS42MDAxIDIuMjQxNTYgNS42MDAxSDQuOTYxNTZDNS4zMTUwMiA1LjYwMDEgNS42MDE1NiA1LjMxMzU2IDUuNjAxNTYgNC45NjAxVjIuMjQwMUM1LjYwMTU2IDEuODg2NjQgNS4zMTUwMiAxLjYwMDEgNC45NjE1NiAxLjYwMDFaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik00Ljk2MTU2IDEwLjM5OTlIMi4yNDE1NkMxLjg4ODEgMTAuMzk5OSAxLjYwMTU2IDEwLjY4NjQgMS42MDE1NiAxMS4wMzk5VjEzLjc1OTlDMS42MDE1NiAxNC4xMTM0IDEuODg4MSAxNC4zOTk5IDIuMjQxNTYgMTQuMzk5OUg0Ljk2MTU2QzUuMzE1MDIgMTQuMzk5OSA1LjYwMTU2IDE0LjExMzQgNS42MDE1NiAxMy43NTk5VjExLjAzOTlDNS42MDE1NiAxMC42ODY0IDUuMzE1MDIgMTAuMzk5OSA0Ljk2MTU2IDEwLjM5OTlaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik0xMy43NTg0IDEuNjAwMUgxMS4wMzg0QzEwLjY4NSAxLjYwMDEgMTAuMzk4NCAxLjg4NjY0IDEwLjM5ODQgMi4yNDAxVjQuOTYwMUMxMC4zOTg0IDUuMzEzNTYgMTAuNjg1IDUuNjAwMSAxMS4wMzg0IDUuNjAwMUgxMy43NTg0QzE0LjExMTkgNS42MDAxIDE0LjM5ODQgNS4zMTM1NiAxNC4zOTg0IDQuOTYwMVYyLjI0MDFDMTQuMzk4NCAxLjg4NjY0IDE0LjExMTkgMS42MDAxIDEzLjc1ODQgMS42MDAxWiIgZmlsbD0iI2ZmZiIvPgo8cGF0aCBkPSJNNCAxMkwxMiA0TDQgMTJaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik00IDEyTDEyIDQiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K&logoColor=ffffff" alt="zread"/></a>
-<a href="https://hub.docker.com/r/soulter/astrbot"><img alt="Docker pull" src="https://img.shields.io/docker/pulls/soulter/astrbot.svg?color=76bad9"/></a>
-<img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.soulter.top%2Fastrbot%2Fplugin-num&query=%24.result&suffix=%20&label=%D0%9C%D0%B0%D1%80%D0%BA%D0%B5%D1%82%D0%BF%D0%BB%D0%B5%D0%B9%D1%81&cacheSeconds=3600">
-<img src="https://gitcode.com/Soulter/AstrBot/star/badge.svg" href="https://gitcode.com/Soulter/AstrBot">
+[![version](https://img.shields.io/badge/version-4.28.2%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
+[![license](https://img.shields.io/badge/license-AGPL--3.0-green)](./LICENSE)
+[![python](https://img.shields.io/badge/python-3.12%2B-blue)](./pyproject.toml)
+
 </div>
 
-<br>
+Это поддерживаемая ветка AstrBot с базовой версией, зафиксированной на апстриме `v4.28.2`. Репозиторий поддерживается независимо и не входит в сеть форков GitHub. Пакет распространения содержит только core без плагинов. Лицензия — AGPL-3.0-or-later, без какой-либо аффилированности с авторами апстрима.
 
-<a href="https://astrbot.app/">Документация</a> ｜
-<a href="https://blog.astrbot.app/">Блог</a> ｜
-<a href="https://astrbot.featurebase.app/roadmap">Дорожная карта</a> ｜
-<a href="https://github.com/AstrBotDevs/AstrBot/issues">Сообщить о проблеме</a> ｜
-<a href="mailto:community@astrbot.app">Email Support</a>
-</div>
+## Ключевые различия и новые API
 
-AstrBot — это универсальная платформа Agent-чатботов с открытым исходным кодом, которая интегрируется с основными приложениями для обмена мгновенными сообщениями. Она предоставляет надёжную и масштабируемую инфраструктуру разговорного ИИ для частных лиц, разработчиков и команд. Будь то персональный ИИ-компаньон, интеллектуальная служба поддержки, автоматизированный помощник или корпоративная база знаний — AstrBot позволяет быстро создавать готовые к использованию ИИ-приложения в рабочих процессах вашей платформы обмена сообщениями.
+Официальная апстрим-версия не раскрывает часть низкоуровневых состояний. В этом форке добавлены интерфейсы в `astrbot/api/**`, делающие эти состояния доступными.
 
-![screenshot_1 5x_postspark_2026-02-27_22-37-45](https://github.com/user-attachments/assets/f17cdb90-52d7-4773-be2e-ff64b566af6b)
+В директории `astrbot/api/` содержится в общей сложности 10 новых или измененных файлов, из которых 8 — функциональные модули, а 2 — вспомогательные файлы. Каждый функциональный модуль предоставляет функцию `available()`. В оригинальной апстрим-среде `available()` возвращает `False`.
 
-## Основные возможности
+| Модуль | Описание обязанностей | Основные интерфейсы |
+|---|---|---|
+| `api.turns` | Определение состояния диалогового хода, получение объединенного исходного текста и изображений | `is_current` / `merged_text` / `merged_image_urls` / `mark_sent` |
+| `api.proactive` | Генерация проактивных ответов с подключением персоны и цепочки памяти | `generate_with_persona` / `persona_available` |
+| `api.delivery` | Определение стратегии доставки, разграничение текстовых сообщений и доставки файлов | `resolve` / `has_code_delivery` / `code_task_spec` |
+| `api.permissions` | Определение авторизации выполнения, разграничение прав администратора и авторизации на текущее выполнение | `execution_denial` / `is_admin` |
+| `api.media` | Определение доступности визуального ввода и распознавание подписей к изображениям | `has_visual_input` / `image_input_available` / `has_image_caption` |
+| `api.content` | Определение типа сегмента сообщения | `is_text_part` / `is_image_part` |
+| `api.runtime` | Пути выполнения, форматирование времени, загрузка изображений и временной режим | `get_astrbot_data_path` / `download_image_by_url` / `hook_timing_mode` |
+| `api.embedding` | Определение провайдера эмбеддингов | `is_embedding_provider` |
+| `api.event.extras` | Носитель дополнительной информации о событии | См. протокол дополнительной информации о событиях |
+| `api._bridge` | Внутренний уровень моста для межмодульной координации; плагины не должны вызывать его напрямую | — |
 
-1. 💯 Бесплатно & Открытый исходный код.
-2. ✨ Диалоги с ИИ-моделями, мультимодальность, Agent, MCP, Skills, База знаний, Настройка личности, автоматическое сжатие диалогов.
-3. 🤖 Поддержка интеграции с платформами Agents, такими как Dify, Alibaba Cloud Bailian, Coze и др.
-4. 🌐 Мультиплатформенность: поддержка QQ, WeChat для предприятий, Feishu, DingTalk, публичных аккаунтов WeChat, Telegram, Slack и [других](#Поддерживаемые-платформы-обмена-сообщениями).
-5. 📦 Расширение плагинами: доступно более 1000 плагинов для установки в один клик.
-6. 🛡️  Изолированная среда[Agent Sandbox](https://docs.astrbot.app/use/astrbot-agent-sandbox.html): безопасное выполнение любого кода, вызов Shell, повторное использование ресурсов на уровне сессии.
-7. 💻 Поддержка WebUI.
-8. 🌈 Поддержка Web ChatUI: встроенная песочница агента, веб-поиск и др.
-9. 🌐 Поддержка интернационализации (i18n).
+В оригинальном апстриме `Context.llm_generate` напрямую вызывает нижележащего провайдера модели, минуя хук `on_llm_request`, из-за чего плагины персоны и памяти перестают работать. `generate_with_persona` сначала выполняет хук запроса, позволяя этим двум плагинам участвовать в процессе в обычном режиме.
 
-## Быстрый старт
+## Параметры конфигурации
 
-### Облачное развёртывание в один клик (RainYun)
+Добавлено 4 новых параметра конфигурации, значения по умолчанию для всех соответствуют официальному поведению апстрима.
 
-Пользователям, которые хотят развернуть AstrBot в один клик, обеспечить его круглосуточную работу и не управлять сервером самостоятельно, мы рекомендуем облачный сервис развёртывания в один клик от RainYun ☁️:
+| Ключ конфигурации | Значение по умолчанию | Описание |
+|---|---|---|
+| `execution_gate_mode` | `legacy` | Режим авторизации выполнения. По умолчанию совпадает с апстримом; при установке в `strict` требуется явный запрос на выполнение в сообщении |
+| `hook_timing_mode` | `legacy` | Тайминг срабатывания хука завершения. При установке в `enhanced` хук срабатывает до отправки ответа |
+| `direct_turn_quiet_sec` | `4` | Окно затишья агрегации сообщений QQ в секундах. При значении `0` агрегация отключается и обработка происходит немедленно |
+| `lightweight_proactive_tools` | Список (всего 29 элементов) | Белый список легковесных проактивных инструментов |
 
-[![Deploy on RainYun](https://rainyun-apps.cn-nb1.rains3.com/materials/deploy-on-rainyun-en.svg)](https://app.rainyun.com/apps/rca/store/5994?ref=NjU1ODg0)
+## Совместимость
 
-### Развёртывание в один клик
+Номер версии — `4.28.2+mtn1`. Часть `+mtn1` является локальным сегментом по PEP 440 и игнорируется при сравнении диапазонов версий.
 
-> [!NOTE]
-> Требуется установленный [uv](https://docs.astral.sh/uv/).
-> Для пользователей macOS: из-за проверок безопасности macOS первый запуск команды `astrbot` может занять больше времени (около 10-20 секунд).
+| Способ объявления | Пример | Решение о совместимости |
+|---|---|---|
+| Объявление диапазона | `>=4.16,<5` | Совместимо |
+| Соответствие базовой версии | `==4.28.2`, `~=4.28.0` | Совместимо |
+| Требование более высокой версии | `>=4.29` | Отклонено |
+| Строгое равенство | `===4.28.2` | Отклонено (по правилам PEP 440 требуется полное строковое совпадение) |
 
-Для пользователей, которые хотят быстро попробовать AstrBot, знакомы с командной строкой и могут самостоятельно установить окружение `uv`, мы рекомендуем использовать развёртывание в один клик через `uv` ⚡️:
+В тестах относительно базовой версии в поддерживаемой версии успешно пройдено 608 тестов; в тестах апстрима пройдено 2949 тестов, пропущено 6, зарегистрировано 2 xfail.
+
+## Установка и запуск
+
+Требуется Python 3.12 или выше.
+
+Пакет еще не опубликован на PyPI; `pip install astrbot-maintained` завершится ошибкой.
+
+Имя дистрибутивного пакета — `astrbot-maintained`, при этом имя импорта в Python — также `astrbot`. Перед установкой удалите официальную версию во избежание конфликта имен импорта.
+
+### Установка через wheel
+
+Загрузите файл `.whl` со страницы Releases. Имя файла содержит символ `+`, поэтому в некоторых командных оболочках требуются кавычки или экранирование:
 
 ```bash
-uv tool install astrbot --python 3.12
-astrbot init # Выполните эту команду только при первом запуске для инициализации окружения
+pip uninstall -y astrbot
+pip install ./astrbot_maintained-4.28.2+mtn1-py3-none-any.whl
 astrbot run
 ```
 
-Обновить `astrbot`:
+После установки запустите приложение и откройте `http://localhost:6185` в браузере для входа в панель управления.
+
+### Запуск из исходного кода
+
+Клонируйте репозиторий и запустите с помощью `uv`:
 
 ```bash
-uv tool upgrade astrbot --python 3.12
+uv sync && uv run main.py
 ```
 
-### Развёртывание Docker
+### Самостоятельная сборка wheel
 
-Для пользователей, знакомых с контейнерами и которым нужен более стабильный и подходящий для production способ, мы рекомендуем разворачивать AstrBot через Docker / Docker Compose.
-
-См. официальную документацию [Развёртывание AstrBot с Docker](https://docs.astrbot.app/deploy/astrbot/docker.html#%E4%BD%BF%E7%94%A8-docker-%E9%83%A8%E7%BD%B2-astrbot).
-
-### Развёртывание десктопного приложения
-
-Для пользователей, которые хотят использовать AstrBot на десктопе и в основном работают через ChatUI, мы рекомендуем AstrBot App.
-
-Перейдите в [AstrBot-desktop](https://github.com/AstrBotDevs/AstrBot-desktop), скачайте и установите приложение; этот вариант предназначен для десктопа и не рекомендуется для серверных сценариев.
-
-### Развёртывание через лаунчер
-
-Также на десктопе, для пользователей, которым нужен быстрый запуск и мультиинстанс с изоляцией окружений, мы рекомендуем AstrBot Launcher.
-
-Перейдите в [AstrBot Launcher](https://github.com/Raven95676/astrbot-launcher), чтобы скачать и установить.
-
-**Другие способы развёртывания**
-
-Если вам нужна панельная установка или более глубокая кастомизация, смотрите [Развёртывание BT-Panel](https://docs.astrbot.app/deploy/astrbot/btpanel.html) (установка через BT Panel), [Развёртывание 1Panel](https://docs.astrbot.app/deploy/astrbot/1panel.html) (развёртывание через маркетплейс 1Panel), [Развёртывание CasaOS](https://docs.astrbot.app/deploy/astrbot/casaos.html) (визуальный вариант для NAS и домашних серверов) и [Ручное развёртывание](https://docs.astrbot.app/deploy/astrbot/cli.html) (полностью настраиваемая установка из исходников через `uv`).
-
-## ❤️ Спонсоры
-
-Вы можете поддержать нас через [Afdian](https://afdian.com/a/astrbot_team) или [связаться с нами по электронной почте](mailto:community@astrbot.app).
-
-<p align="center">
-  <a target="_blank" href="https://astrbot.app/#/sponsors">
-    <img alt="sponsors" src="https://sponsors.astrbot.app/?v=1">
-  </a>
-</p>
-
-## Поддерживаемые платформы обмена сообщениями
-
-Подключите AstrBot к вашим любимым чат-платформам.
-
-| Платформа | Поддержка |
-|---------|---------------|
-| QQ | Официальная |
-| Реализация протокола OneBot v11 | Официальная |
-| Telegram | Официальная |
-| Приложение WeChat Work и интеллектуальный бот WeChat Work | Официальная |
-| Официальные аккаунты WeChat | Официальная |
-| Feishu (Lark) | Официальная |
-| DingTalk | Официальная |
-| Slack | Официальная |
-| Discord | Официальная |
-| LINE | Официальная |
-| Satori | Официальная |
-| KOOK | Официальная |
-| Misskey | Официальная |
-| Mattermost | Официальная |
-| WhatsApp (Скоро) | Официальная |
-| [Matrix](https://github.com/stevessr/astrbot_plugin_matrix_adapter) | Сообщество |
-| [Rocket.Chat](https://github.com/NET-Homeless/astrbot_plugin_rocket_chat_adapter) | Сообщество |
-| [VoceChat](https://github.com/HikariFroya/astrbot_plugin_vocechat) | Сообщество |
-
-## Поддерживаемые сервисы моделей
-
-| Сервис | Тип |
-|---------|---------------|
-| OpenAI и совместимые сервисы | Сервисы LLM |
-| Anthropic | Сервисы LLM |
-| Google Gemini | Сервисы LLM |
-| Moonshot AI | Сервисы LLM |
-| Zhipu AI | Сервисы LLM |
-| DeepSeek | Сервисы LLM |
-| Ollama (Самостоятельное размещение) | Сервисы LLM |
-| LM Studio (Самостоятельное размещение) | Сервисы LLM |
-| [MiraRouter](https://mirarouter.com/) | Сервисы LLM (API-шлюз, поддерживает все модели) |
-| [AIHubMix](https://aihubmix.com/?aff=4bfH) | Сервисы LLM (API-шлюз, поддерживает все модели) |
-| [CompShare](https://www.compshare.cn/?ytag=GPU_YY-gh_astrbot&referral_code=FV7DcGowN4hB5UuXKgpE74) | Сервисы LLM |
-| [302.AI](https://share.302.ai/rr1M3l) | Сервисы LLM |
-| [TokenPony](https://www.tokenpony.cn/3YPyf) | Сервисы LLM |
-| [SiliconFlow](https://docs.siliconflow.cn/cn/usercases/use-siliconcloud-in-astrbot) | Сервисы LLM |
-| [PPIO Cloud](https://ppio.com/user/register?invited_by=AIOONE) | Сервисы LLM |
-| ModelScope | Сервисы LLM |
-| OneAPI | Сервисы LLM |
-| Dify | Платформы LLMOps |
-| Приложения Alibaba Cloud Bailian | Платформы LLMOps |
-| Coze | Платформы LLMOps |
-| OpenAI Whisper | Сервисы распознавания речи |
-| SenseVoice | Сервисы распознавания речи |
-| Xiaomi MiMo Omni | Сервисы распознавания речи |
-| OpenAI TTS | Сервисы синтеза речи |
-| Gemini TTS | Сервисы синтеза речи |
-| GPT-Sovits-Inference | Сервисы синтеза речи |
-| GPT-Sovits | Сервисы синтеза речи |
-| FishAudio | Сервисы синтеза речи |
-| Edge TTS | Сервисы синтеза речи |
-| Alibaba Cloud Bailian TTS | Сервисы синтеза речи |
-| Azure TTS | Сервисы синтеза речи |
-| Minimax TTS | Сервисы синтеза речи |
-| Xiaomi MiMo TTS | Сервисы синтеза речи |
-| Volcano Engine TTS | Сервисы синтеза речи |
-
-## ❤️ Вклад в проект
-
-Issues и Pull Request всегда приветствуются! Не стесняйтесь отправлять свои изменения в этот проект :)
-
-### Как внести вклад
-
-Вы можете внести вклад, просматривая issues или помогая с ревью pull request. Любые issues или PR приветствуются для поощрения участия сообщества. Конечно, это лишь предложения — вы можете вносить вклад любым удобным для вас способом. Для добавления новых функций сначала обсудите это через Issue.
-
-### Среда разработки
-
-AstrBot использует `ruff` для форматирования и линтинга кода.
+При самостоятельной сборке wheel-пакета, включающего веб-панель WebUI, необходимо указать переменную окружения для сборки:
 
 ```bash
-git clone https://github.com/AstrBotDevs/AstrBot
-pip install pre-commit
-pre-commit install
+ASTRBOT_BUILD_DASHBOARD=1 uv build --wheel
 ```
 
-## 🌍 Сообщество
+Если эта переменная окружения не задана, собранный пакет не будет содержать статических файлов WebUI.
 
-### Группы QQ
+## Проверка обновлений и синхронизация с апстримом
 
-У нас более 15 групп для общения; подробности см. на странице [Сообщество](https://docs.astrbot.app/community.html).
+Проверка обновлений в панели по умолчанию направлена на Releases этого репозитория:
 
-### Сервер Discord
+- `update_source`: `https://api.github.com/repos/Chenamel/astrbot-maintained/releases`
+- `update_repository`: `https://github.com/Chenamel/astrbot-maintained`
 
-<a href="https://discord.gg/hAVk6tgV36"><img alt="Discord_community" src="https://img.shields.io/badge/Discord-AstrBot-purple?style=for-the-badge&color=76bad9"></a>
+В апстриме `v4.29+` архитектура изменилась, и добавленные здесь низкоуровневые API отсутствуют. При прямом обновлении до официальной версии из панели управления измененные файлы ядра будут перезаписаны, что приведет к отсутствию интерфейсов и ошибкам в работе.
 
-## ❤️ Особая благодарность
+При необходимости вернуться к официальным обновлениям измените в панели управления `update_source` на `https://api.soulter.top/releases`, а `update_repository` — на `https://github.com/AstrBotDevs/AstrBot`.
 
-Особая благодарность всем контрибьюторам и разработчикам плагинов за их вклад в AstrBot ❤️
+## Документация
 
-<a href="https://github.com/AstrBotDevs/AstrBot/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=AstrBotDevs/AstrBot&max=300&columns=15" />
-</a>
+- Подробности установки, развертывание в контейнерах, проверка того, что запущен именно этот форк: [`docs/maintained/install.md`](./docs/maintained/install.md)
+- Быстрый старт для авторов плагинов за 5 минут: [`docs/maintained/plugin-quickstart.md`](./docs/maintained/plugin-quickstart.md)
+- Параметры каждого API, возвращаемые значения и примеры вызова: [`docs/maintained/api-reference.md`](./docs/maintained/api-reference.md)
+- Ограничения дизайна API и механизмы деградации: [`docs/maintained/api-contract.md`](./docs/maintained/api-contract.md)
+- Почему выбрано такое разделение на слои: [`docs/maintained/design.md`](./docs/maintained/design.md)
+- Что изменилось по сравнению с апстримом: [`CHANGELOG.md`](./CHANGELOG.md)
+- Реестр изменений core (SHA-256, возможность проверки скриптом): [`maintained/installed_manifest.json`](./maintained/installed_manifest.json)
 
-Друзья из мира открытого исходного кода ❤️
+## Об исторических формулировках
 
-- [NapNeko/NapCatQQ](https://github.com/NapNeko/NapCatQQ) - Замечательный кошачий фреймворк
-- [Mai-with-u/MaiBot](https://github.com/Mai-with-u/MaiBot) - Мощная «цифровая жизнь» в QQ!
+На ранних этапах в этом README данный уровень интерфейсов назывался «бэкдором» (backdoor); сейчас используется единое обозначение — «интерфейс».
 
-## ⭐ История звёзд
+На зеркалах и в кэше поисковых систем могут оставаться старые формулировки, которые не отражают текущую позицию.
 
-> [!TIP]
-> Если этот проект помог вам в жизни или работе, или если вас интересует его будущее развитие, пожалуйста, поставьте проекту звезду. Это движущая сила поддержки этого проекта с открытым исходным кодом <3
+Данные модули являются открытыми, документированными и доступными для построчного аудита Python API и не содержат скрытых точек входа для обхода аутентификации.
 
+## Лицензия
 
-<div align="center">
+Проект распространяется с открытым исходным кодом по лицензии AGPL-3.0-or-later, аналогично апстриму. Подробности см. в файле LICENSE.
 
-[![Star History Chart](https://api.star-history.com/svg?repos=astrbotdevs/astrbot&type=Date)](https://star-history.com/#astrbotdevs/astrbot&Date)
-
-</div>
-
-<div align="center">
-
-_Сопровождение и способности никогда не должны быть противоположностями. Мы стремимся создать робота, который сможет как понимать эмоции, оказывать душевную поддержку, так и надёжно выполнять работу._
-
-_私は、高性能ですから!_
-
-<img src="https://files.astrbot.app/watashiwa-koseino-desukara.gif" width="100"/>
-
-</div>
+Проект является независимо поддерживаемой веткой и не имеет отношения к авторам апстрима.

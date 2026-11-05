@@ -2,7 +2,7 @@
 
 <div align="center">
 
-简体中文 ｜ <a href="./README_zh-TW.md">繁體中文</a> ｜ <a href="./README_ja.md">日本語</a> ｜ <a href="./README_fr.md">Français</a> ｜ <a href="./README_es.md">Español</a> ｜ <a href="./README_ru.md">Русский</a>
+English ｜ <a href="./README_zh.md">简体中文</a> ｜ <a href="./README_zh-TW.md">繁體中文</a> ｜ <a href="./README_ja.md">日本語</a> ｜ <a href="./README_fr.md">Français</a> ｜ <a href="./README_es.md">Español</a> ｜ <a href="./README_ru.md">Русский</a>
 
 <br>
 <br>
@@ -13,64 +13,64 @@
 
 </div>
 
-这是 AstrBot 的维护分支，基线锁定在上游 `v4.28.2` 版本。仓库独立维护，不在 GitHub 的 fork 网络里。分发包只包含 core 本体，不含插件。许可证是 AGPL-3.0-or-later，与上游作者无从属关系。
+This is a maintained branch of AstrBot, with its baseline locked to upstream version `v4.28.2`. The repository is maintained independently and is detached from GitHub's fork network. Distribution packages contain only core itself, with no plugins included. The license is AGPL-3.0-or-later, with no affiliation with the upstream authors.
 
-## 核心差异与新增 API
+## Core Differences and New APIs
 
-上游官方版本没有公开部分底层状态。这个 fork 在 `astrbot/api/**` 下补了接口，把这些状态开放出来。
+The upstream official release does not expose certain underlying states. This fork adds interfaces under `astrbot/api/**` to expose these states.
 
-`astrbot/api/` 下共有 10 个新增或变动文件，其中 8 个是功能模块，2 个是辅助文件。每个功能模块都提供 `available()` 函数。在上游原版环境中，`available()` 返回 `False`。
+There are 10 new or modified files under `astrbot/api/`, consisting of 8 functional modules and 2 helper files. Each functional module provides an `available()` function. In the original upstream environment, `available()` returns `False`.
 
-| 模块 | 职责说明 | 主要接口 |
+| Module | Description | Primary Interfaces |
 |---|---|---|
-| `api.turns` | 回合状态判定，获取合并后的原文与图片 | `is_current` / `merged_text` / `merged_image_urls` / `mark_sent` |
-| `api.proactive` | 接入人格与记忆链的主动回复生成 | `generate_with_persona` / `persona_available` |
-| `api.delivery` | 交付策略判定，区分文本消息与文件交付 | `resolve` / `has_code_delivery` / `code_task_spec` |
-| `api.permissions` | 执行授权判定，区分管理员身份与本次执行授权 | `execution_denial` / `is_admin` |
-| `api.media` | 视觉输入可用性判定与图片说明检测 | `has_visual_input` / `image_input_available` / `has_image_caption` |
-| `api.content` | 消息段类型判定 | `is_text_part` / `is_image_part` |
-| `api.runtime` | 运行路径、时间格式化、图片下载与时序模式 | `get_astrbot_data_path` / `download_image_by_url` / `hook_timing_mode` |
-| `api.embedding` | 向量化提供方判定 | `is_embedding_provider` |
-| `api.event.extras` | 事件附加信息载体 | 见事件附加协议 |
-| `api._bridge` | 内部桥接层，供模块间协调，插件不应直接调用 | — |
+| `api.turns` | Turn status evaluation, retrieving merged raw text and images | `is_current` / `merged_text` / `merged_image_urls` / `mark_sent` |
+| `api.proactive` | Proactive reply generation integrated with persona and memory chain | `generate_with_persona` / `persona_available` |
+| `api.delivery` | Delivery strategy evaluation, distinguishing text messages from file delivery | `resolve` / `has_code_delivery` / `code_task_spec` |
+| `api.permissions` | Execution authorization evaluation, distinguishing admin status from per-execution authorization | `execution_denial` / `is_admin` |
+| `api.media` | Visual input availability evaluation and image caption detection | `has_visual_input` / `image_input_available` / `has_image_caption` |
+| `api.content` | Message segment type evaluation | `is_text_part` / `is_image_part` |
+| `api.runtime` | Runtime paths, time formatting, image downloading, and timing mode | `get_astrbot_data_path` / `download_image_by_url` / `hook_timing_mode` |
+| `api.embedding` | Vectorization provider evaluation | `is_embedding_provider` |
+| `api.event.extras` | Carrier for event additional information | See event additional protocol |
+| `api._bridge` | Internal bridge layer for inter-module coordination; plugins should not call directly | — |
 
-上游原版的 `Context.llm_generate` 直接调用底层模型提供方，跳过了 `on_llm_request` 钩子，人格与记忆插件因此失效。`generate_with_persona` 会先执行请求钩子，让这两个插件照常参与进来。
+The original upstream `Context.llm_generate` directly calls the underlying model provider, bypassing the `on_llm_request` hook and causing persona and memory plugins to fail. `generate_with_persona` executes the request hook first, allowing both plugins to participate as expected.
 
-## 配置项
+## Configuration Options
 
-新增了 4 个配置项，默认值都与上游官方行为一致。
+Added 4 new configuration options, all defaulting to match upstream official behavior.
 
-| 配置键 | 默认值 | 说明 |
+| Config Key | Default | Description |
 |---|---|---|
-| `execution_gate_mode` | `legacy` | 执行授权模式。默认与上游一致；设为 `strict` 要求消息显式请求执行 |
-| `hook_timing_mode` | `legacy` | 完成钩子触发时序。设为 `enhanced` 时钩子在回复发出前触发 |
-| `direct_turn_quiet_sec` | `4` | QQ 消息聚合静默窗口秒数。设为 `0` 则关闭聚合立即处理 |
-| `lightweight_proactive_tools` | 列表（共 29 项） | 轻量主动工具集白名单列表 |
+| `execution_gate_mode` | `legacy` | Execution authorization mode. Defaults to match upstream; set to `strict` to require messages to explicitly request execution |
+| `hook_timing_mode` | `legacy` | Completion hook trigger timing. Set to `enhanced` to trigger the hook before the reply is sent |
+| `direct_turn_quiet_sec` | `4` | QQ message aggregation quiet window in seconds. Set to `0` to disable aggregation and process immediately |
+| `lightweight_proactive_tools` | List (29 items in total) | Whitelist for lightweight proactive tools |
 
-## 兼容性
+## Compatibility
 
-版本号是 `4.28.2+mtn1`。其中 `+mtn1` 是 PEP 440 的 local 段，在版本区间比较时会被忽略。
+The version number is `4.28.2+mtn1`. The `+mtn1` suffix is the local segment under PEP 440, which is ignored during version range comparisons.
 
-| 声明方式 | 示例 | 兼容判定 |
+| Declaration Style | Example | Compatibility Result |
 |---|---|---|
-| 区间声明 | `>=4.16,<5` | 兼容 |
-| 基线匹配 | `==4.28.2`、`~=4.28.0` | 兼容 |
-| 高版本要求 | `>=4.29` | 拒绝 |
-| 严格等号匹配 | `===4.28.2` | 拒绝（PEP 440 规则要求字符串全量相等） |
+| Range declaration | `>=4.16,<5` | Compatible |
+| Baseline matching | `==4.28.2`, `~=4.28.0` | Compatible |
+| Higher version requirement | `>=4.29` | Rejected |
+| Strict equal matching | `===4.28.2` | Rejected (PEP 440 rules require exact string equality) |
 
-针对基线的测试中，维护版测试通过 608 项；上游测试通过 2949 项，跳过 6 项，已登记 xfail 2 项。
+In tests against the baseline, 608 tests passed in the maintained version; in upstream tests, 2949 passed, 6 were skipped, and 2 registered xfail items.
 
-## 安装与运行
+## Installation and Running
 
-环境要求 Python 3.12 或更高版本。
+Requires Python 3.12 or higher.
 
-尚未发布到 PyPI，`pip install astrbot-maintained` 装不上。
+Not yet published to PyPI; `pip install astrbot-maintained` will not work.
 
-分发包名为 `astrbot-maintained`，Python 导入名同为 `astrbot`。安装前先卸官方版，避免导入名冲突。
+The distribution package name is `astrbot-maintained`, while the Python import name remains `astrbot`. Uninstall the official version before installing to prevent import name conflicts.
 
-### 使用 wheel 安装
+### Installing via wheel
 
-从 Releases 页面下载 `.whl` 文件。文件名带 `+` 字符，在部分 shell 中需要引号包裹或转义：
+Download the `.whl` file from the Releases page. The filename contains a `+` character, which requires quotes or escaping in some shells:
 
 ```bash
 pip uninstall -y astrbot
@@ -78,57 +78,57 @@ pip install ./astrbot_maintained-4.28.2+mtn1-py3-none-any.whl
 astrbot run
 ```
 
-安装后启动，浏览器访问 `http://localhost:6185` 进入管理面板。
+Start after installation, then visit `http://localhost:6185` in your browser to access the admin dashboard.
 
-### 源码运行
+### Running from Source
 
-克隆本仓库后使用 `uv` 运行：
+Clone this repository and run with `uv`:
 
 ```bash
 uv sync && uv run main.py
 ```
 
-### 自行构建 wheel
+### Building the wheel Yourself
 
-自行构建包含 WebUI 面板的 wheel 产物时，需要指定构建环境变量：
+When building a wheel distribution containing the WebUI dashboard yourself, specify the build environment variable:
 
 ```bash
 ASTRBOT_BUILD_DASHBOARD=1 uv build --wheel
 ```
 
-未设置该环境变量时，构建产物不会包含 WebUI 静态文件。
+If this environment variable is not set, the build output will not include WebUI static files.
 
-## 更新检查与上游同步
+## Update Checks and Upstream Syncing
 
-面板的更新检查默认指向本仓库 Releases：
+Dashboard update checks point to this repository's Releases by default:
 
 - `update_source`: `https://api.github.com/repos/Chenamel/astrbot-maintained/releases`
 - `update_repository`: `https://github.com/Chenamel/astrbot-maintained`
 
-上游 `v4.29+` 架构已变更，没有这里新增的底层 API。若从面板直接更新到官方版本，修改过的核心文件会被覆盖，导致接口缺失与运行异常。
+The upstream `v4.29+` architecture has changed and does not include the underlying APIs added here. Updating directly to the official version from the dashboard will overwrite modified core files, leading to missing interfaces and runtime errors.
 
-若需要恢复跟随官方更新，在管理面板中将 `update_source` 修改为 `https://api.soulter.top/releases`，将 `update_repository` 修改为 `https://github.com/AstrBotDevs/AstrBot`。
+To resume following official updates, change `update_source` to `https://api.soulter.top/releases` and `update_repository` to `https://github.com/AstrBotDevs/AstrBot` in the admin dashboard.
 
-## 文档
+## Documentation
 
-- 安装细节、容器部署、如何确认跑的是本 fork：[`docs/maintained/install.md`](./docs/maintained/install.md)
-- 插件作者 5 分钟入门：[`docs/maintained/plugin-quickstart.md`](./docs/maintained/plugin-quickstart.md)
-- 每个 API 的参数、返回值、调用示例：[`docs/maintained/api-reference.md`](./docs/maintained/api-reference.md)
-- API 设计约束与降级机制：[`docs/maintained/api-contract.md`](./docs/maintained/api-contract.md)
-- 为什么这样分层：[`docs/maintained/design.md`](./docs/maintained/design.md)
-- 相对上游改了什么：[`CHANGELOG.md`](./CHANGELOG.md)
-- core 改动台账（SHA-256，可脚本校验）：[`maintained/installed_manifest.json`](./maintained/installed_manifest.json)
+- Installation details, container deployment, and verifying you are running this fork: [`docs/maintained/install.md`](./docs/maintained/install.md)
+- 5-minute quickstart for plugin authors: [`docs/maintained/plugin-quickstart.md`](./docs/maintained/plugin-quickstart.md)
+- Parameters, return values, and call examples for each API: [`docs/maintained/api-reference.md`](./docs/maintained/api-reference.md)
+- API design constraints and fallback mechanisms: [`docs/maintained/api-contract.md`](./docs/maintained/api-contract.md)
+- Why layered this way: [`docs/maintained/design.md`](./docs/maintained/design.md)
+- What changed relative to upstream: [`CHANGELOG.md`](./CHANGELOG.md)
+- Core modification ledger (SHA-256, script-verifiable): [`maintained/installed_manifest.json`](./maintained/installed_manifest.json)
 
-## 关于历史表述
+## Regarding Historical Phrasing
 
-本 README 早期把这层接口叫过“后门”，现在统一叫“接口”。
+An early version of this README referred to this layer of interfaces as "backdoors"; they are now consistently referred to as "interfaces".
 
-镜像站和搜索缓存里可能还是旧说法，那不代表现在的立场。
+Mirror sites and search engine caches may still display the old phrasing, which does not reflect the current position.
 
-这些模块是公开、有文档、能逐行看的 Python API，不包含任何绕过鉴权的隐蔽入口。
+These modules are public, documented, and fully auditable Python APIs line by line, containing no hidden entry points that bypass authentication.
 
-## 许可证
+## License
 
-本项目依据 AGPL-3.0-or-later 协议开源，与上游一致。详见 LICENSE 文件。
+This project is open-sourced under the AGPL-3.0-or-later license, consistent with upstream. See the LICENSE file for details.
 
-本项目为独立维护分支，与上游作者无从属关系。
+This project is an independently maintained branch and has no affiliation with the upstream authors.
