@@ -4,8 +4,8 @@
 
 | 文件 | 用途 |
 |---|---|
-| `VERSION` | 本 fork 的维护版本号（形如 `4.28.2.m1`）。上游 `pyproject.toml` 与 `astrbot.__version__` 保持 `4.28.2` 不变。 |
-| `installed_manifest.json` | 受保护文件的 SHA-256 台账，**只含 core（`astrbot/**`，31 条** = 22 个 core 补丁 + 9 个新增 api 模块），另有 `proactive_must_remain_disabled` 字段。 |
+| `VERSION` | 本 fork 版本号的人类可读副本，与 `astrbot.__version__` 完全一致（当前 `4.28.2+mtn1`），由 `tests/maintained/test_version_marker.py` 校验；不是独立版本来源。 |
+| `installed_manifest.json` | 受保护文件的 SHA-256 台账，**只含 core**（`astrbot/**`；当前 **62 条** = 52 个 core + 10 个新增 api 文件），另有 `proactive_must_remain_disabled` 字段。 |
 | `tools/check_drift.py` | 漂移检测：比对实例（可选含本仓工作树）与台账，退出码 0/1/2。 |
 | `tools/apply_patches.py` | 一键重打：源校验 → 备份 → 写回 → 复核；**默认预演**，`--apply` 才写。 |
 
