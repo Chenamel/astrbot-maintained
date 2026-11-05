@@ -20,9 +20,9 @@ version: 0.1.0
 `main.py`：
 
 ```python
+from astrbot.api import turns
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star
-from astrbot.api.proactive import proactive_switch_is_disabled
 
 
 class HelloFork(Star):
@@ -34,14 +34,17 @@ class HelloFork(Star):
 
     @filter.command("forkhello")
     async def hello(self, event: AstrMessageEvent):
+        # turns.is_current: 本回合是否仍未回复（补丁缺席时 fail-open 返回 True）
+        already = not turns.is_current(event)
         yield event.plain_result(
-            f"主动回复开关恒关闭：{proactive_switch_is_disabled()}"
+            f"API 就位={turns.available()}，本回合已回复={already}"
         )
+        turns.mark_sent(event)
 ```
 
 重载插件后，在聊天里发 `/forkhello`，会收到一行回执。
-`proactive_switch_is_disabled()` **恒返回 `True`**，这是本 fork 不可让步的约束：
-主动回复在核心层强制关闭，不提供配置项，也不会实现该开关。
+每个模块都有 `available() -> bool`；返回 `False` 表示对应 core 能力未就位，
+此时该模块的其余函数按 [`api-contract.md`](./api-contract.md) 的「补丁缺席时」列降级，**不会抛异常**。
 
 > **唯一硬规则**：外部代码只允许 `import astrbot.api.*`。直接 import `astrbot.core.**`
 > 私有路径的插件，会在上游 core 覆盖补丁时因顶层 `ImportError` 整体无法加载。

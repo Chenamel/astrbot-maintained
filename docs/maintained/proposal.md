@@ -24,7 +24,7 @@
 ## 1. 背景与问题
 
 1. AstrBot 运行实例的 core 曾被打过 **26 个补丁（+1639 / -91 行）**；2026-10-08 启动器更新核心后，补丁被官方 core 覆盖丢失。
-2. 增强插件因顶层语句 `from astrbot.core.provider.entities import IMAGE_INPUT_UNAVAILABLE_NOTICE` 导入失败，导致整个 4316 行的 `main.py` **无法加载**（一处顶层 import 失败即全插件失效）。
+2. 当时的插件因顶层语句 `from astrbot.core.provider.entities import IMAGE_INPUT_UNAVAILABLE_NOTICE` 导入失败，导致其 `main.py` **整体无法加载**（一处顶层 import 失败即全插件失效）。
 3. **根因不是补丁错，是架构错**：插件硬依赖 core 私有路径且无降级兜底 → core 一动，插件全死。
 4. 现有维护仓 `maintenance_repos/astrbot_local` 是**快照式归档**（6 commit、无 remote、其中 `upstream/core` 为 depth=1 浅克隆），无法做三方合并、无法对外发布、无法复现基线。
 5. 需要的是一个**能长期演进、能回溯、能合规公开**的 fork 仓库，把补丁升格为「有稳定公开 API 的维护分支」。
@@ -44,7 +44,7 @@
 ## 3. 明确不做的事情
 
 - 不做 UI / 前端（不重写 `dashboard/`）。
-- **不把第三方增强插件源码放入公开仓**（该插件无任何许可证），只能进私有仓 `astrbot-extras`。
+- **本仓库只发布 core 本体，不包含任何插件**。插件不在本仓库的打包与发布范围内。
 - **不重命名、不删除** `astrbot.api.*` 现存符号，以及 core 中被插件事实依赖的 5 个路径。
 - 不做上游版本升级：**锁 v4.28.2**（`v4.29.0-beta.1` 暂不跟），升级走三方合并并单独立项。
 - **不开主动回复开关**（`proactive_must_remain_disabled` 恒为 true）。
@@ -74,7 +74,7 @@
 | maintained | 本 fork 主干分支 `maintained/v4.28.2`；锚点 tag `baseline/v4.28.2` |
 | api 层 | `astrbot/api/**`，对插件公开的唯一稳定面 |
 | core 内部 | `astrbot/core/**`，除已登记补丁外不得作为插件依赖面 |
-| extras | 私有仓 `Chenamel/astrbot-extras`（永远私有，无许可证） |
+| 插件 | 不在本仓库内；插件独立发布，与 core 分开打包 |
 
 **4.28.2 真实布局**：`astrbot/core/...`（非旧的 `astrbot/...`）。
 
@@ -90,7 +90,7 @@
 
 只覆盖 **core fork 与插件兼容层**。不含：部署运维、模型选型、dashboard 前端、上游功能开发。
 
-既有增强插件**只作为参考实现**（其"主动回复"等能力后续大概率重写）；本 fork 的代码范式以**类官方风格**为准，不迁就旧插件的写法。
+插件侧实现**不作为本仓库的一部分**；本 fork 的代码范式以**类官方风格**为准。
 
 ## 8. 验收标准（每条可命令验证）
 
@@ -99,7 +99,7 @@
 - **A3** `pyproject.toml` 为 `4.28.2`（PEP 440 严格可解析的基版本），
   `astrbot.__version__` 为 `4.28.2+mtn1`（带 fork 标记），二者的一致性由
   `tests/maintained/test_version_marker.py` 钉住；`python -c "import astrbot; print(astrbot.__version__)"` 应输出 `4.28.2+mtn1`。
-- **A4** 全仓 grep 无私有插件名、无第三方 fork 名、`git ls-files` 无 `data/plugins` 路径。
+- **A4** 全仓 grep 无具体插件目录名、无第三方 fork 名、`git ls-files` 无 `data/plugins` 路径。
   ✅ **已达成**：P2 改造已让 core 侧不再按插件目录名找插件（改走能力契约）；内部施工文档
   已移出公开树；守卫见 `tests/maintained/test_plugin_capability_lookup.py`（插件目录名白名单为空）。
 - **A5** `ruff check .` 相对基线**零新增**错误。
@@ -118,9 +118,9 @@ SSH 密钥 `id_ed25519_workbuddy`、GitHub 账号 `Chenamel`、Python 3.12 venv�
 | ID | 决策 |
 |---|---|
 | D1 | 锁 v4.28.2 为基线，不跟 v4.29.0-beta.1 |
-| D2 | 双仓：公开 `astrbot-maintained`（AGPL-3.0）+ 私有 `astrbot-extras`（无许可证） |
+| D2 | 单仓发布 core 本体（AGPL-3.0）；插件不进本仓 |
 | D3 | 先治理后止血（1→2→3→4→5→6→7） |
 | D4 | 兼容优先、最大化增强：对外冻结 + 内部加法 |
 | D5 | 建仓即私有，阶段 7 转公开 |
 | D6 | 不引入 open-source-license-check（许可证结论已核实，避免工具堆叠） |
-| D7 | 增强插件**仅作参考实现**，后续大概率重写；本 fork **优先完善 core 与 `astrbot/api/**`**，按类官方范式写代码 |
+| D7 | 本 fork **只做 core 与 `astrbot/api/**`**，按类官方范式写代码；插件不在本仓范围内 |

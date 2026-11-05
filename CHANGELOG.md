@@ -129,8 +129,6 @@
   - **core 零行为打磨**：P4 `IMAGE_CAPTION_MARKER` 下沉 core（4 处改引，`astrbot.api.media` 改为
     resolve + 同值兜底）；P5 `_proactive_delivery_deferred` 提升为 `__init__` 正式字段；
     P7 三文件 8 处「被取代回合」门禁补 `logger.debug`；P8 提取 9 个具名常量（值逐字节不变）。
-  - **插件**（私有仓）：删死导入 `is_image_part` 与只写不读的 `MAINTAINED_API_AVAILABLE`；
-    新增只读自检命令 `enhance api-status`（契约见 `api-contract.md` §7）。
   - **审计发现 P11**：维护版 core 相对纯基线打破上游 **17 项测试预期**（详见 `inventory.md` §4），
     故本阶段 core 打磨的验收标准为「不新增失败」而非「上游测试全绿」。
   - `tests/maintained/` 最终 **94 项**全绿。
@@ -166,7 +164,7 @@
 - **阶段 4 止血（实例侧）**：恢复 26 个 core 补丁 + 部署 6 个 `astrbot/api` 文件到运行实例；
   台账 28/28 SHA-256 一致，`capabilities()` 五项全 `True`，插件 `ImportError` 根因消除。
   机器人启动后已核验**插件加载成功**（插件自身 WebUI 监听 `127.0.0.1:6196`）。
-  另将 `active_reply.enable` 由 `true` 改为 `false`（防调试期误发，符合铁律 6）。
+  另在实例侧关闭了主动回复开关（防调试期误发，符合铁律 6）。
   备份位于 `<INST>/optimization_backups/20261009_124413_CST_premaintenance/` 与
   `..._142013_CST_proactive_off/`。详见 `docs/maintained/deploy-log.md`（维护者内部记录）。
 - `README.md` 替换为本 fork 说明（GitHub 首页渲染入口）。这是**唯一**被修改的上游既有文件：
@@ -175,13 +173,13 @@
   `AGENTS.md`、多语言 README 等，合计约 2.4MB 的 md）**保持原样不删**——
   它们已永久存在于 git 历史，删除不节省空间，只会制造三方合并冲突。
 - 台账脱敏：剔除 `data/plugins/**`（39 条）与 `dashboard/**`（4 条），只保留 `astrbot/**`（22 条）。
-  理由：本仓是 core 项目，第三方插件无许可证、其文件清单不宜公开；完整台账留在归档仓与私有仓。
-- 移除 `maintained/tools/update_local.py`：该脚本含 enhance/safety 分支与插件名，
-  属实例运维工具而非 core 本体；保留在归档仓与私有仓，阶段 6 按类官方范式重写工具链。
+  理由：本仓只发布 core 本体，插件相关条目不在台账范围内。
+- 移除 `maintained/tools/update_local.py`：该脚本属实例运维工具而非 core 本体，
+  保留在归档仓，阶段 6 按类官方范式重写工具链。
 
 ### 定位
 
-- 既有增强插件**仅作参考实现**（后续大概率重写）；本 fork 优先完善 core 与 `astrbot/api/**`。
+- 本 fork 只做 core 与 `astrbot/api/**`；插件不在本仓库范围内。
 
 ### 未做
 
