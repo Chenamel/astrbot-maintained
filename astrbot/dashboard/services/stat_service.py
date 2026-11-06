@@ -100,11 +100,34 @@ class StatService:
             username == "astrbot" and is_default_dashboard_password(password)
         ) and not DEMO_MODE
 
-    async def get_version(self) -> dict:
+    async def _effective_dashboard_version(
+        self,
+        dashboard_static_folder: str | Path | None,
+    ) -> str | None:
+        """Read the stamp of the dist the server is actually serving.
+
+        An explicitly configured WebUI directory can live outside ``data/dist``
+        (see ``--webui-dir`` / ``ASTRBOT_WEBUI_DIR``). The plain lookup only
+        inspects the managed and bundled dirs, so using it here would report a
+        stale version and trigger a spurious "WebUI has a new version" badge.
+        Fall back to it when the explicit directory has no readable stamp.
+        """
+        if dashboard_static_folder:
+            version = await get_dashboard_version(Path(dashboard_static_folder))
+            if version is not None:
+                return version
+        return await get_dashboard_version()
+
+    async def get_version(
+        self,
+        dashboard_static_folder: str | Path | None = None,
+    ) -> dict:
         if is_desktop_session_auth_enabled():
             return {
                 "version": VERSION,
-                "dashboard_version": await get_dashboard_version(),
+                "dashboard_version": await self._effective_dashboard_version(
+                    dashboard_static_folder
+                ),
                 "change_pwd_hint": False,
                 "md5_pwd_hint": False,
                 "password_upgrade_required": False,
@@ -121,7 +144,9 @@ class StatService:
         md5_pwd_hint = is_md5_dashboard_password(password)
         return {
             "version": VERSION,
-            "dashboard_version": await get_dashboard_version(),
+            "dashboard_version": await self._effective_dashboard_version(
+                dashboard_static_folder
+            ),
             "change_pwd_hint": await self.is_default_cred(),
             "md5_pwd_hint": md5_pwd_hint,
             "password_upgrade_required": not storage_upgraded,

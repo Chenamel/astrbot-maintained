@@ -25,13 +25,14 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / "maintained" / "installed_manifest.json"
 
 #: Number of protected files. Adding or removing entries requires updating this
-#: pin in the same commit -- that is the point of the pin.
-#: 65 = 55 core (incl. the start-up capability self-check, the maintained
-#: build marker and the two CLI entry modules) + 10 api modules.
+#: Keep this pin in the same commit -- that is the point of the pin.
+#: 68 = 58 core-side entries (incl. the start-up capability self-check, the
+#: maintained build marker, the CLI modules, builtin-plugin assets and the
+#: dashboard services) + 10 astrbot/api modules.
 #: Six of the 55 core entries are builtin-plugin assets (``bot_info`` and
 #: ``tool_react``: ``main.py`` + ``_conf_schema.json`` + ``metadata.yaml``),
 #: which ``apply_patches`` also has to ship.
-EXPECTED_ENTRY_COUNT = 66
+EXPECTED_ENTRY_COUNT = 68
 
 
 def _manifest() -> dict:

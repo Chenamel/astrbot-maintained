@@ -135,8 +135,8 @@ git rev-parse 'baseline/v4.28.2^{commit}'
 python -c "import hashlib,json,pathlib; f=json.load(open('maintained/installed_manifest.json',encoding='utf-8'))['files']; print('mismatch:', sum(hashlib.sha256(pathlib.Path(k).read_bytes()).hexdigest()!=v for k,v in f.items()))"
 ```
 
-期望输出 `mismatch: 0`。台账共 66 条（56 个 core 文件 + 10 个 `astrbot/api` 文件），
-逐条登记本 fork 改动过的文件；实例侧的双端校验见 [`tools.md`](./tools.md)。
+期望输出 `mismatch: 0`。台账共 68 条，逐条登记本 fork 改动过的 `astrbot/**`
+文件；实例侧的双端校验见 [`tools.md`](./tools.md)。
 
 ## 7. 配置与插件
 

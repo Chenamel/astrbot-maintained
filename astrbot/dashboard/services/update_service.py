@@ -5,6 +5,7 @@ import traceback
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from astrbot.core import logger, pip_installer
@@ -71,9 +72,33 @@ class UpdateService:
             )
         return UpdateServiceResult(data=progress)
 
-    async def check_update(self, update_type: str | None) -> UpdateServiceResult:
+    async def _effective_dashboard_version(
+        self,
+        dashboard_static_folder: str | Path | None,
+    ) -> str | None:
+        """Read the stamp of the dist the server is actually serving.
+
+        ``--webui-dir`` / ``ASTRBOT_WEBUI_DIR`` can point at a dist outside
+        ``data/dist``. ``get_dashboard_version()`` without arguments only
+        inspects the managed and bundled dirs, so reporting its stamp would
+        claim a WebUI update that does not exist. Fall back to the original
+        lookup when the explicit directory has no readable stamp.
+        """
+        if dashboard_static_folder:
+            version = await self.get_dashboard_version(Path(dashboard_static_folder))
+            if version is not None:
+                return version
+        return await self.get_dashboard_version()
+
+    async def check_update(
+        self,
+        update_type: str | None,
+        dashboard_static_folder: str | Path | None = None,
+    ) -> UpdateServiceResult:
         try:
-            dashboard_version = await self.get_dashboard_version()
+            dashboard_version = await self._effective_dashboard_version(
+                dashboard_static_folder
+            )
             if update_type == "dashboard":
                 return UpdateServiceResult(
                     data={

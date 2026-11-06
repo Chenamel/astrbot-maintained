@@ -65,8 +65,10 @@
     "astrbot/core/utils/direct_turns.py": "f75b82c4847f1b39c72f733f99310136a378a8de8d8c019cfe06e3a98647e469",
     "astrbot/core/utils/maintained_marker.py": "3ad6a5902257b70edc5406b0362b1f0840b31c2a49738ebeae39389c77a2b055",
     "astrbot/core/utils/self_identity.py": "31c6a3e8f4f960444b3809b111c0ae035b1518f24065e0e82e032a4d39e1813a",
-    "astrbot/dashboard/api/stats.py": "8b0faae073ec57e848ca258c9dd17d6f74c84974c267e9f81863d8987f9cb52a",
+    "astrbot/dashboard/api/stats.py": "6c452ed9a0d0dd0aa24ea601f77a74537e14bbb068a01849359cf2e135a5d3a6",
+    "astrbot/dashboard/api/updates.py": "788b1ab00fe4ab27bba7eba60ad9cce0149c14cd8ffb1e5e82ceea9605e78a86",
     "astrbot/dashboard/services/plugin_service.py": "3568f5a720f0c8f7490cc4a31d7cfcb68523b876e54e8d682a24dcc872b328fa",
-    "astrbot/dashboard/services/stat_service.py": "c87677b3599a4b1a67caf2b72251408600b71a36d88edd3c56a1edec2dd791c3"
+    "astrbot/dashboard/services/stat_service.py": "f7dd4bc0efd38d72b9863bc7461145ec10eda64c43eff243fe9cccfb0aee8af3",
+    "astrbot/dashboard/services/update_service.py": "7c7d128d686f73613aee4ec56a957eca64ef7dc92a920d770d4e562df0aca2b0"
   }
 }

@@ -126,10 +126,15 @@ async def get_provider_call_details(
 
 @router.get("/stats/version")
 async def get_version(
+    request: Request,
     _auth: AuthContext = Depends(require_system_scope),
     service: StatService = Depends(get_service),
 ):
-    return await _run(service.get_version())
+    return await _run(
+        service.get_version(
+            getattr(request.app.state, "dashboard_static_folder", None)
+        )
+    )
 
 
 @router.get("/stats/versions")
@@ -231,10 +236,15 @@ async def get_dashboard_provider_token_stats(
 
 @legacy_router.get("/version")
 async def get_dashboard_version(
+    request: Request,
     _username: str = Depends(require_dashboard_user),
     service: StatService = Depends(get_service),
 ):
-    return await _run(service.get_version())
+    return await _run(
+        service.get_version(
+            getattr(request.app.state, "dashboard_static_folder", None)
+        )
+    )
 
 
 @legacy_router.get("/versions")

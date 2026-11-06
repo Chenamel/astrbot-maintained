@@ -143,6 +143,18 @@ core 自己不是覆盖者：`ensure_dashboard()` 的版本比较会忽略 local
   `v4.28.2+mtn1`，**不要改成 `v4.28.2`**。core 的 `resolve_dashboard_dist()`
   会拿它和包版本比较。
 
+### 版本接口读的是实际服务的目录
+
+`/api/updates/check` 与 `/api/stats/version` 都要报告面板版本。早期实现调用
+`get_dashboard_version()` 不带参数，它只会读 `data/dist/assets/version`，
+不知道 `--webui-dir` / `ASTRBOT_WEBUI_DIR` 指定的目录。在上面的部署下就会
+出现「WebUI 有新版本！」并把当前版本显示成 `v4.28.2`：接口拿官方占位目录的
+戳记去和 core 的 `v4.28.2+mtn1` 做字符串比较，并不代表真有更新可装。
+
+现在两个接口都从 `app.state.dashboard_static_folder` 取实际服务的目录再读戳记；
+读不到时退回原来的优先级。因此启动器部署下显示 `v4.28.2+mtn1`，不再误报。
+普通 wheel / 源码安装没有显式目录，行为与之前一致。
+
 ## 红线边界
 
 改动仅限：语言包 JSON（纯新增词条）+ 构建产物（实例侧 `data/dist`，不入仓）。
