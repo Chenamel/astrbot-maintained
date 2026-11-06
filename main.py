@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import runtime_bootstrap
+import startup_args
 
 runtime_bootstrap.initialize_runtime_bootstrap()
 
@@ -159,22 +160,7 @@ async def main_async(webui_dir_arg: str | None) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="AstrBot")
-    parser.add_argument(
-        "--webui-dir",
-        type=str,
-        help="Specify the directory path for WebUI static files",
-        default=None,
-    )
-    parser.add_argument(
-        "--reset-password",
-        action="store_true",
-        help=(
-            "Reset the dashboard initial password on startup and print it in "
-            "startup logs"
-        ),
-    )
-    args = parser.parse_args()
+    args = startup_args.build_startup_parser().parse_args()
 
     check_env()
 

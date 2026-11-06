@@ -68,7 +68,7 @@ python -c "import zipfile,glob;z=zipfile.ZipFile(glob.glob('*.whl')[0]);print(su
    `resolve_dashboard_dist()` 按此逐字符比较；写成 `v4.28.2` 会被判为不匹配，
    进而触发重新下载官方面板，覆盖本 fork 的构建。
 
-4. **部署到实例**：
+4. **部署到实例**（不使用 AstrBot Launcher 时）：
 
    ```bash
    mv <instance>/core/data/dist <instance>/core/data/dist.bak-<时间戳>
@@ -77,6 +77,71 @@ python -c "import zipfile,glob;z=zipfile.ZipFile(glob.glob('*.whl')[0]);print(su
 
    面板静态资源是每次请求读盘的，**刷新浏览器即可生效，无需重启机器人**。
    验证：`grep -rl "<新词条>" <instance>/core/data/dist/assets/*.js`
+
+   ⚠️ 使用 AstrBot Launcher 时**不要这样做**，会被启动器回滚，见下一节。
+
+## 使用 AstrBot Launcher 时：面板必须放独立目录
+
+启动器每次启动都会跑一次部署预检（`launch_instance()` → `deploy_instance()`），
+其中 `ensure_webui_for_version()` 读取
+
+```text
+<instance>/core/data/dist/assets/version
+```
+
+并与实例清单里登记的版本比较。启动器登记的是上游版本号 `v4.28.2`，比较时
+只忽略大小写和 `v` 前缀，**不做 PEP 440 归一化**。因此本 fork 的戳记
+`v4.28.2+mtn1` 会被判为不匹配，启动器随后从上游下载 `dashboard.zip`
+并整体替换 `data/dist`。表现是启动时在 WebUI 阶段卡一会儿，日志里看不到
+下载记录（下载由启动器进程完成）。
+
+core 自己不是覆盖者：`ensure_dashboard()` 的版本比较会忽略 local 段，
+判定 `v4.28.2` 与 `4.28.2+mtn1` 兼容后直接返回。
+
+启动器没有自定义仓库或版本源的开关，仓库地址与面板下载地址都写在源码里；
+高级设置页只有代理和镜像源。能用的是 core 这一侧的目录选择。
+
+### 部署步骤
+
+1. `data/dist` **保持启动器给的官方版本**（`v4.28.2`），不要动。版本匹配时
+   启动器会直接跳过下载，启动也不会卡。
+
+2. 把本 fork 的面板放到启动器不管理的独立目录：
+
+   ```bash
+   mkdir -p <instance>/core/data/dist_maintained
+   cp -r dashboard/dist/. <instance>/core/data/dist_maintained/
+   ```
+
+3. 设 `ASTRBOT_WEBUI_DIR` 指向该目录。启动器启动的 python 子进程会继承
+   用户级环境变量，但**已运行的启动器不会重新读环境变量，需要重启启动器**。
+
+   Windows（PowerShell，用户级）：
+
+   ```powershell
+   [Environment]::SetEnvironmentVariable(
+       'ASTRBOT_WEBUI_DIR',
+       '<instance>\core\data\dist_maintained',
+       'User'
+   )
+   ```
+
+   撤销：`[Environment]::SetEnvironmentVariable('ASTRBOT_WEBUI_DIR', $null, 'User')`。
+
+4. 重启启动器并启动实例，日志里应出现 `Using WebUI directory: ...dist_maintained`。
+   浏览器强刷一次，确认配置页能显示新增配置项的说明文字而不是键路径。
+
+优先级：`--webui-dir` 命令行参数 > `ASTRBOT_WEBUI_DIR` > 默认目录。
+启动器不提供自定义启动参数，所以实际生效的是环境变量这一层。
+
+### 两点注意
+
+- 这个环境变量是**进程级的全局值**，同机其他 AstrBot 实例也会读到。
+  单机多实例时，要么都指向同一份 fork 面板，要么改用 `--webui-dir`
+  自行启动（启动器不支持传参）。
+- 从仓库重新同步面板后，`dist_maintained` 里的 `assets/version` 仍是
+  `v4.28.2+mtn1`，**不要改成 `v4.28.2`**。core 的 `resolve_dashboard_dist()`
+  会拿它和包版本比较。
 
 ## 红线边界
 
