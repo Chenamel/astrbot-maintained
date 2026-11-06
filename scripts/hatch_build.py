@@ -44,11 +44,24 @@ class CustomBuildHook(BuildHookInterface):
         # Only run when explicitly requested (e.g. during CI / release builds).
         # This prevents `uv sync` / editable installs from triggering npm.
         if os.environ.get("ASTRBOT_BUILD_DASHBOARD", "").strip() != "1":
-            print(
-                "[hatch_build] ASTRBOT_BUILD_DASHBOARD is not 1 -- the wheel will "
-                "contain no WebUI. Set it to 1 for a release build.",
-                file=sys.stderr,
-            )
+            # ``artifacts`` in pyproject.toml still ships whatever is already
+            # under astrbot/dashboard/dist. Telling the release builder that the
+            # wheel has no WebUI pushes them into an unnecessary npm rebuild --
+            # on a machine without Node that fails outright, and elsewhere it
+            # silently replaces assets that were verified for this release.
+            existing = Path(self.root) / "astrbot" / "dashboard" / "dist"
+            if existing.is_dir() and any(existing.iterdir()):
+                print(
+                    "[hatch_build] Reusing existing astrbot/dashboard/dist; "
+                    "no npm rebuild.",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    "[hatch_build] No dist found: the wheel will contain no WebUI. "
+                    "Set ASTRBOT_BUILD_DASHBOARD=1 for a release build.",
+                    file=sys.stderr,
+                )
             return
 
         root = Path(self.root)
