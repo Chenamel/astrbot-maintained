@@ -94,9 +94,25 @@ docker run -d --name astrbot -p 6185:6185 \
 
 ## 5. ⚠️ 不要点「升级到新版本」
 
-面板顶部若提示「AstrBot 有新版本」，**请勿升级**。该提示指向上游 `v4.29+`，升级会用
-上游 core 覆盖本 fork 的改动；受保护文件缺失时，实例侧会出现 `ImportError` 或能力静默失效。
+面板的更新检查默认指向本仓库的 Releases（`update_source` /
+`update_repository`），因此只会提示本维护版的版本，不会出现上游 `v4.29+`。
+把这两项改回官方地址（或运行尚未同步该配置的旧实例）后，面板才会出现
+「AstrBot 有新版本」，**此时请勿升级**：上游 core 会覆盖本 fork 的改动，
+受保护文件缺失时会出现 `ImportError` 或能力静默失效。
 需要跟进上游版本时，请在本仓库内做三方合并，而不是通过面板就地升级。
+
+## 5.1 AstrBot Launcher 不能用来安装本 fork
+
+官方的 AstrBot Launcher 把仓库地址写死为 `AstrBotDevs/AstrBot`，版本列表、
+面板下载地址同样写死；高级设置里只有代理和镜像源，没有自定义仓库或版本源
+的开关。用它新建实例，装出来的一定是**上游官方版**，不是本 fork。
+
+正确做法是改用 §2 的 wheel 或源码方式安装。若一定要保留启动器管理的实例，
+只能先用它装好官方 `v4.28.2`，再手工把本 fork 的 core 文件与面板覆盖进去；
+这类改造后面板会被启动器按版本校验回滚，需要把 fork 面板放到独立目录并用
+`ASTRBOT_WEBUI_DIR` 指定，步骤见 [`dashboard-build.md`](./dashboard-build.md)
+「使用 AstrBot Launcher 时」。注意该环境变量由启动入口 `main.py` 读取，
+通过 wheel 的 `astrbot run` 启动时不需要它（wheel 已内置面板）。
 
 ## 6. 怎么确认跑的是本 fork
 
@@ -138,6 +154,7 @@ python -c "import hashlib,json,pathlib; f=json.load(open('maintained/installed_m
 | 启动报错 / 能力失效 | `data/logs/astrbot.log`，再用 §6 的哈希命令核对受保护文件 |
 | 不知道某个 API 怎么用 | [`api-contract.md`](./api-contract.md)（唯一规格来源）、[`plugin-quickstart.md`](./plugin-quickstart.md) |
 | 想知道补丁被覆盖后怎么恢复 | [`tools.md`](./tools.md)（`check_drift.py` / `apply_patches.py`） |
+| 用启动器装出来的是官方版 / 面板被覆盖 | [`dashboard-build.md`](./dashboard-build.md)「使用 AstrBot Launcher 时」 |
 | 想知道相对上游改了什么 | [`CHANGELOG.md`](../../CHANGELOG.md)、[`fork-advantages.md`](./fork-advantages.md) |
 
 `CHANGELOG.md` 是逐阶段施工台账，其中提到的部分内部文档不随公开仓库分发；当前可查阅的
