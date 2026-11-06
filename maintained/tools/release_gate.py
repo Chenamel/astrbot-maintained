@@ -31,6 +31,7 @@ if __package__ in (None, ""):  # run directly: python maintained/tools/release_g
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tools.check_drift import DEFAULT_MANIFEST, compare, load_manifest  # noqa: E402
+from tools.check_readme_ring import FILES, check_ring  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = DEFAULT_MANIFEST
@@ -250,6 +251,14 @@ def gate_dashboard_stamp() -> tuple[str, str]:
     return PASS, "dist/assets/version matches the core"
 
 
+def gate_readme_ring() -> tuple[str, str]:
+    """All seven language READMEs stay symmetric and fact-identical."""
+    report = check_ring(REPO_ROOT)
+    if not report.ok:
+        return FAIL, report.summary()
+    return PASS, f"{len(FILES)} files in sync, language bar symmetric"
+
+
 def gate_drift(instance: Path | None) -> tuple[str, str]:
     """The live instance matches the repository."""
     if instance is None:
@@ -310,6 +319,7 @@ def main(argv: list[str] | None = None) -> int:
     rows.append(("lint", *gate_lint()))
     rows.append(("manifest", *gate_manifest()))
     rows.append(("dashboard", *gate_dashboard_stamp()))
+    rows.append(("readme ring", *gate_readme_ring()))
 
     status, detail, counts = gate_maintained()
     rows.append(("maintained", status, detail))
