@@ -131,9 +131,7 @@ async def get_version(
     service: StatService = Depends(get_service),
 ):
     return await _run(
-        service.get_version(
-            getattr(request.app.state, "dashboard_static_folder", None)
-        )
+        service.get_version(getattr(request.app.state, "dashboard_static_folder", None))
     )
 
 
@@ -241,9 +239,7 @@ async def get_dashboard_version(
     service: StatService = Depends(get_service),
 ):
     return await _run(
-        service.get_version(
-            getattr(request.app.state, "dashboard_static_folder", None)
-        )
+        service.get_version(getattr(request.app.state, "dashboard_static_folder", None))
     )
 
 
