@@ -39,7 +39,7 @@
 
 - 受保护文件台账 65 条 SHA-256（55 core + 10 api），`check_drift.py` 双端校验，
   `apply_patches.py` 一键重打。
-- `release_gate.py` 七项门禁。构建产物存在时，上游测试段会临时移走随包面板再跑，
+- `release_gate.py` 发布门禁（校验项随需求增加，项数以当次输出为准）。构建产物存在时，上游测试段会临时移走随包面板再跑，
   跑完恢复 —— 否则「先构建后验证」无法完成。
 - 测试：维护版 608 passed，上游全量 2949 passed / 6 skipped / 2 registered xfail。
 
