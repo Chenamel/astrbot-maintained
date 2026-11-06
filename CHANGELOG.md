@@ -34,6 +34,9 @@
 
 ### 工程
 
+> 本段数字是当时的施工快照，会随提交变化；当前数量以
+> `maintained/installed_manifest.json` 与 `release_gate.py` 输出为准。
+
 - 受保护文件台账 65 条 SHA-256（55 core + 10 api），`check_drift.py` 双端校验，
   `apply_patches.py` 一键重打。
 - `release_gate.py` 七项门禁。构建产物存在时，上游测试段会临时移走随包面板再跑，

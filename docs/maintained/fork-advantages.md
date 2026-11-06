@@ -20,7 +20,7 @@
 
 ## 2. 台账与漂移检测（最独特的一项）
 
-- `maintained/installed_manifest.json`：66 条受保护文件及其 SHA-256（56 core + 10 api）
+- `maintained/installed_manifest.json`：受保护文件的 SHA-256 台账（条数以该文件为准，由 `test_manifest_guard.py` 钉死）
 - `maintained/tools/check_drift.py`：双端校验（仓库工作树 + 实例），退出码 0/1/2
 - `maintained/tools/apply_patches.py`：一键重打（默认预演，`--apply` 才写）
 
@@ -71,20 +71,20 @@
 | 执行策略过滤器 | `apply_execution_policy` 尊重 gate 模式，legacy 下不删工具、不注入提示 |
 
 要点：默认行为与上游一致（`legacy`），收紧是可选配置，以保持与上游兼容。
-> ⚠️ 历史标注（2026-10-27）：以上是 T8 阶段为保上游测试的定调，不是当前总路线。当前路线为实用化分支：硬约束只是「上游插件不改也能跑」，允许改 core / WebUI，但要求每处改动可维护、动机可解释。
 
+> ⚠️ 历史标注（2026-10-27）：以上是 T8 阶段为保上游测试的定调，不是当前总路线。当前路线为实用化分支：硬约束只是「上游插件不改也能跑」，允许改 core / WebUI，但要求每处改动可维护、动机可解释。
 
 ## 5. 工程纪律（可复用，不只是自用）
 
 - 一改动一提交；改 core **必同步台账 SHA-256**
 - 入仓文件强制 LF；哈希按**磁盘字节**算
-- 测试门禁：`tests/maintained` **608 passed / 1 skipped**；上游全量 `pytest tests --ignore=tests/maintained` **2949 passed / 6 skipped / 2 xfailed**；含台账条数钉、api 契约、降级契约
+- 测试门禁：`release_gate.py` 同时跑维护版与上游全量两套测试，具体数量以当次输出为准；上游有意偏离登记在 `maintained/p11_deviations.py`；含台账条数钉、api 契约、降级契约
 - **本仓库只发布 core 本体，不包含任何插件**；插件不在打包与发布范围内
 
 ## 6. 诚实说明：有代价的 / 还不成熟的
 
-1. **维护成本**：65 个受保护文件，上游每发一版都要重打 + 处理冲突。
-   目前落后上游 **222 个提交**（v4.28.2 → v4.29.4；`git rev-list --count baseline/v4.28.2..v4.29.4`），追版本成本不低。
+1. **维护成本**：台账登记的全部受保护文件，上游每发一版都要重打 + 处理冲突。
+   基线锁定 `v4.28.2`，与上游的差距会持续增长；用 `git rev-list --count HEAD..upstream/master` 查当前值，追版本成本不低。
 2. **上游 2 项测试有意偏离**（`config` 组：fork 给 `agent_runner.config.misc` 加了两个默认键，
    上游用精确字典相等断言）。已登记 P11 并加 `xfail(strict=True)` 守卫：若某次上游合并把偏离
    覆盖掉，测试会 `XPASS(strict)` 判红，即**偏离被静默回退时有机械报警**。

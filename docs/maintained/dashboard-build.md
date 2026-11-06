@@ -143,6 +143,14 @@ core 自己不是覆盖者：`ensure_dashboard()` 的版本比较会忽略 local
   `v4.28.2+mtn1`，**不要改成 `v4.28.2`**。core 的 `resolve_dashboard_dist()`
   会拿它和包版本比较。
 
+### 环境变量的作用域
+
+`ASTRBOT_WEBUI_DIR` 设成**用户级环境变量**后，同一台机器上的其他 AstrBot 实例
+也会继承它。只有本 fork 的 `main.py` 入口会读（wheel 的 `astrbot run` 走 CLI，
+不受影响）；若某个实例没有它指向的目录，`check_dashboard_files()` 会打印
+`WebUI directory not found ... Using default.` 并回退到默认面板，不会启动失败。
+新增实例时检查这个变量是否仍指向正确目录，不用时按上面的命令撤销。
+
 ### 版本接口读的是实际服务的目录
 
 `/api/updates/check` 与 `/api/stats/version` 都要报告面板版本。早期实现调用

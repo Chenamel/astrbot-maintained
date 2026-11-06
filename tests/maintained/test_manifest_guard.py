@@ -122,3 +122,19 @@ def test_listed_files_are_only_deployed_when_they_exist():
     )
 
     assert not absent, "台账登记了不存在的文件：\n  " + "\n  ".join(absent)
+
+
+def test_manifest_uses_lf_line_endings():
+    """Hashes are computed from disk bytes, so CRLF would desync clones.
+
+    Writing the manifest with ``Path.write_text`` on Windows silently turns
+    every newline into CRLF. Git stores LF, so a fresh checkout hashes the
+    same entries differently and ``apply_patches`` / ``write_build_stamp``
+    start disagreeing across machines. Write it with ``write_bytes`` instead.
+    """
+    raw = MANIFEST_PATH.read_bytes()
+
+    assert b"\r" not in raw, (
+        "installed_manifest.json contains CRLF; rewrite it as LF so the "
+        "byte-level hashes stay identical on every checkout."
+    )

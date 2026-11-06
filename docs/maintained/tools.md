@@ -17,10 +17,10 @@
 
 ## 1. 共同约定
 
-- 真相源：`maintained/installed_manifest.json`（66 条：56 个 core 文件 + 10 个 `astrbot/api` 文件）
-  - 判定口径：凡是本 fork 改动过的 `astrbot/**` 文件都必须登记**，否则 `apply_patches` 不会部署它；
+- 真相源：`maintained/installed_manifest.json`（登记本 fork 改动过的 `astrbot/**` 文件，条数以该文件为准）。
+  - 判定口径：凡是本 fork 改动过的 `astrbot/**` 文件都必须登记，否则 `apply_patches` 不会部署它；
     若该文件又被别的已登记文件 import，就会在实例侧 `ImportError`（曾由此导致启动失败）。
-  + fork 仓的工作树。
+  - 双端校验：一端是实例的工作树，另一端是 fork 仓的工作树。
 - 哈希口径：文件磁盘字节的 SHA-256。仓内文件全部为 LF。
 - 目标根：`--instance <实例目录>`，工具自动定位其下的 `core/`。
 - 只碰台账内的文件：工具不会读写台账之外的任何文件（不动 `data/`、不动配置、不动插件）。

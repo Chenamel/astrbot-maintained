@@ -58,7 +58,7 @@ Le numéro de version est `4.28.2+mtn1`. La mention `+mtn1` correspond au segmen
 | Exigence de version supérieure | `>=4.29` | Rejetée |
 | Correspondance stricte d'égalité | `===4.28.2` | Rejetée (les règles de PEP 440 exigent l'égalité stricte des chaînes) |
 
-Lors des tests par rapport à la version de référence, 608 tests ont réussi pour la version maintenue ; pour les tests en amont, 2949 ont réussi, 6 ont été ignorés et 2 éléments ont été enregistrés comme xfail.
+Lors des tests par rapport à la version de référence, les deux suites (version maintenue et version amont) passent ; les quelques écarts connus en amont sont enregistrés séparément.
 
 ## Installation et exécution
 

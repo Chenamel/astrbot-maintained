@@ -4,7 +4,7 @@
 
 ## 1. 架构总览
 
-```
+```text
 upstream AstrBotDevs/AstrBot (master)
         │  git fetch / 三方合并
         ▼

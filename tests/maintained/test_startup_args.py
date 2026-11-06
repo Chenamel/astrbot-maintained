@@ -75,3 +75,15 @@ def test_variable_name_matches_the_restart_path() -> None:
     assert (REPO_ROOT / "main.py").read_text(encoding="utf-8").count(
         "startup_args.build_startup_parser()"
     ) == 1
+
+
+def test_an_unusable_env_dir_falls_back_to_the_default() -> None:
+    """A user-wide env var reaches every instance on the machine.
+
+    Only this fork's ``main.py`` entry point reads it, and another instance
+    may not have the directory it names. The entry point must check for the
+    path and fall back instead of failing the whole startup.
+    """
+    text = (REPO_ROOT / "main.py").read_text(encoding="utf-8")
+    assert "os.path.exists(webui_dir)" in text
+    assert "Using default." in text

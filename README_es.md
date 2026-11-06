@@ -58,7 +58,7 @@ El número de versión es `4.28.2+mtn1`. La parte `+mtn1` es el segmento local d
 | Requisito de versión superior | `>=4.29` | Rechazado |
 | Coincidencia estricta de igualdad | `===4.28.2` | Rechazado (las reglas de PEP 440 requieren igualdad total de cadenas) |
 
-En las pruebas frente a la línea base, la versión mantenida superó 608 pruebas; en las pruebas upstream, se superaron 2949 pruebas, se omitieron 6 y se registraron 2 elementos xfail.
+En las pruebas frente a la línea base, pasan tanto la suite de la versión mantenida como la de upstream; las pocas desviaciones conocidas se registran por separado.
 
 ## Instalación y ejecución
 

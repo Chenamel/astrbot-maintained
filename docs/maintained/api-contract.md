@@ -132,15 +132,17 @@ def capabilities() -> dict[str, bool]: ...
 | `available() -> bool` | 函数 | core 契约是否就位 |
 
 常量一致性要求（P1 修复的关键）：
+
 - core 侧存在时**必须原样转发** core 的值（插件有 `part.text != NOTICE` 的字符串比较，值不一致会失效）。
 - core 侧缺失时使用本地镜像常量，文本与 core 完全一致：
 
-  ```
+  ```python
   MESSAGE = "当前看不到图片，请重新发送。"
   NOTICE  = "[Image unavailable: no visual evidence was received. "
             "Do not infer or describe the image from history, filenames or surrounding text. "
             f"Reply only: {MESSAGE}]"
   ```
+
 - 常量解析在模块导入时完成（插件顶层 import 场景，必须导入即得值）。
 
 ### 3.2 `astrbot/api/turns/` — 直报回合
@@ -184,8 +186,9 @@ def capabilities() -> dict[str, bool]: ...
 
 > 安全语义：`execution_denial` 在补丁缺席时不降级为放行，而是回退到"仅管理员"这一上游既有强度。
 > 本函数返回 `None` 不构成授权。调用方（工具）仍须执行自身的权限闸门。
-
+>
 > 拒绝原因的两种口径：`execution_denial` 的返回值只是文本，不构成符号级契约。
+>
 > - `EXECUTION_NOT_AUTHORIZED`：确定的"未授权"（公开常量，可读、可断言）；
 > - 策略引擎在场但抛异常时，返回 fail-closed 的内部兜底文本
 >   （模块私有 `_EXECUTION_POLICY_UNAVAILABLE`；故意不导出、不进 `__all__`，
@@ -289,7 +292,7 @@ for mod in MODULES:
 
 **实测样例**（维护版实例，8 个模块全部就位）：
 
-```
+```text
 astrbot.api.content: installed
 astrbot.api.delivery: installed
 astrbot.api.embedding: installed

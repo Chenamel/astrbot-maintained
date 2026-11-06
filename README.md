@@ -58,7 +58,7 @@ The version number is `4.28.2+mtn1`. The `+mtn1` suffix is the local segment und
 | Higher version requirement | `>=4.29` | Rejected |
 | Strict equal matching | `===4.28.2` | Rejected (PEP 440 rules require exact string equality) |
 
-In tests against the baseline, 608 tests passed in the maintained version; in upstream tests, 2949 passed, 6 were skipped, and 2 registered xfail items.
+In tests against the baseline, both the maintained suite and the upstream suite pass; the few known upstream deviations are registered separately.
 
 ## Installation and Running
 
