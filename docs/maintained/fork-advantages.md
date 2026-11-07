@@ -99,6 +99,10 @@ python -c "import hashlib,json,pathlib; f=json.load(open('maintained/installed_m
 # 双端漂移检测（需要实例目录）
 python maintained/tools/check_drift.py --instance "<实例目录>" --check-repo
 # 测试（$TV = 装有项目依赖与 pytest 的 Python 3.12+ 解释器）
-TMP=/d/pytest_tmp TEMP=/d/pytest_tmp "$TV" -m pytest tests/maintained -q
+"$TV" -m pytest tests/maintained -q
 python maintained/proactive/replay.py --selftest     # 解析器 7 条，不调模型
 ```
+
+推送到 `maintained/v4.28.2` 后，`.github/workflows/maintained-ci.yml` 会在 GitHub
+托管 runner 上跑同一套 `tests/maintained`、ruff 双检和七语言 README 环校验。
+上游自带的 11 个 workflow 只监听 `master`，在本分支不会因推送触发，这里也不改动它们。
