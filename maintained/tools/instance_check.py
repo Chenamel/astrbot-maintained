@@ -4,11 +4,15 @@ Reloading a plugin only swaps one module; a full restart is the only way to
 prove the whole load chain still comes up clean -- which matters most right
 before something starts sending messages for real.
 
-This is deliberately read-only: it reports, it never changes anything.
+This is deliberately read-only: it reports, it never changes anything. It
+reviews ONE plugin's restart, not the health of the whole instance -- for the
+daily health report use ``daily_check.py`` instead.
 
 Usage::
 
-    python maintained/tools/instance_check.py --instance "<instance dir>"
+    python maintained/tools/instance_check.py --instance "<instance dir>" \
+        --plugin <plugin-dir-name> --since "2026-11-06 00:00" \
+        --until "2026-11-07 00:00"
 """
 
 from __future__ import annotations
@@ -20,15 +24,8 @@ import re
 import sqlite3
 from pathlib import Path
 
-#: The plugin under inspection, relative to the instance root. Kept out of the
-#: source: this repository distributes the core only, and a hard-coded plugin
-#: directory would name an artefact a reader cannot obtain here. Point it at
-#: whatever plugin you are checking with ``--plugin`` or ``ASTRBOT_CHECK_PLUGIN``.
-PLUGIN_NAME = os.environ.get("ASTRBOT_CHECK_PLUGIN", "my_plugin")
-PLUGIN_DIR = f"core/data/plugins/{PLUGIN_NAME}"
-CONFIG_PATH = f"core/data/config/{PLUGIN_NAME}_config.json"
-LOG_PATH = "core/data/logs/astrbot.log"
-SHADOW_LOG = f"core/data/plugins/{PLUGIN_NAME}/shadow_log.jsonl"
+LOG_DIR = "core/data/logs"
+LOG_GLOB = "astrbot*.log"
 DB_PATH = "core/data/data_v4.db"
 
 #: Recently means "after the process started"; used to tell new errors from old.
@@ -40,16 +37,22 @@ def _check(label: str, ok: bool, detail: str) -> bool:
     return ok
 
 
-def check_files(root: Path) -> bool:
+def check_files(root: Path, plugin: str = "") -> bool:
+    """Check the plugin's files, or skip them when no plugin was given."""
     print("① 文件与配置")
+    if not plugin:
+        print("        （未指定 --plugin，跳过插件目录与配置检查）")
+        return _check("data_v4.db", (root / DB_PATH).is_file(), "存在")
+    plugin_dir = f"core/data/plugins/{plugin}"
+    config_path = f"core/data/config/{plugin}_config.json"
     ok = True
-    for rel in (PLUGIN_DIR, CONFIG_PATH, DB_PATH):
+    for rel in (plugin_dir, config_path, DB_PATH):
         ok &= _check(
             rel.split("/")[-1],
             (root / rel).exists(),
             "存在" if (root / rel).exists() else "缺失",
         )
-    cfg = root / CONFIG_PATH
+    cfg = root / config_path
     if cfg.exists():
         try:
             data = json.loads(cfg.read_text(encoding="utf-8-sig"))
@@ -64,29 +67,30 @@ def check_files(root: Path) -> bool:
     return ok
 
 
-def check_log(root: Path, since: str = "") -> bool:
-    """Report errors, optionally only those logged after ``since``.
+def check_log(root: Path, since: str = "", until: str = "") -> bool:
+    """Report errors in the half-open window ``[since, until)``.
 
-    Without ``since`` this would keep re-reporting errors from before the
-    restart, which is exactly what a restart review is *not* interested in.
+    Every rotated ``astrbot*.log`` is scanned in full. Reading only the last
+    4000 lines of the current file used to hide most of the day's errors, and
+    a lower bound without an upper one pulled in errors from the next day.
     """
     print("\n② 日志")
-    if since:
-        print(f"        （只看 {since} 之后，之前的不算）")
-    log = root / LOG_PATH
-    if not log.exists():
+    if since or until:
+        print(f"        （只看 {since or '最早'} ~ {until or '现在'}）")
+    files = sorted((root / LOG_DIR).glob(LOG_GLOB))
+    if not files:
         return _check("日志文件", False, "缺失")
-    lines = log.read_text(encoding="utf-8", errors="replace").splitlines()[-4000:]
     errors = []
-    for line in lines:
-        if not ERROR_RE.search(line):
-            continue
-        if since:
-            # Lines start with "[", which would otherwise break the comparison.
-            stamp = line.lstrip("[").strip()[: len(since)]
-            if stamp and stamp < since:
+    for path in files:
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not ERROR_RE.search(line):
                 continue
-        errors.append(line)
+            stamp = line.lstrip("[").strip()[:19]
+            if since and stamp and stamp < since:
+                continue
+            if until and stamp and stamp >= until:
+                continue
+            errors.append(line)
     if not errors:
         return _check("错误数", True, "0")
     print(f"        最近 {len(errors)} 条，末尾 3 条：")
@@ -117,9 +121,13 @@ def check_switch(root: Path) -> bool:
     return _check("禁用列表可读", True, f"{len(disabled)} 个")
 
 
-def check_decisions(root: Path) -> bool:
+def check_decisions(root: Path, plugin: str = "") -> bool:
+    """Check the plugin's decision log; skip it when no plugin was given."""
     print("\n④ 判定是否还在产生")
-    path = root / SHADOW_LOG
+    if not plugin:
+        print("        （未指定 --plugin，跳过判定日志检查）")
+        return True
+    path = root / f"core/data/plugins/{plugin}/shadow_log.jsonl"
     if not path.exists():
         return _check("判定日志", False, "缺失")
     rows = [
@@ -149,21 +157,34 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="只读的实例重启复核")
     ap.add_argument("--instance", required=True, help="实例目录")
     ap.add_argument(
+        "--plugin",
+        default="",
+        help="要复核的插件目录名；留空则跳过插件相关检查（读 ASTRBOT_CHECK_PLUGIN）",
+    )
+    ap.add_argument(
         "--since",
         default="",
-        help="只统计该时刻之后的错误，如 '2026-10-25 01:05'；留空则看全部",
+        help="时间窗下界，如 '2026-10-25 01:05'；留空则不限",
+    )
+    ap.add_argument(
+        "--until",
+        default="",
+        help="时间窗上界（不含），如 '2026-10-26 00:00'；留空则不限",
     )
     args = ap.parse_args(argv)
+    plugin = args.plugin or os.environ.get("ASTRBOT_CHECK_PLUGIN", "")
+    since = args.since + ":00" if len(args.since) == 16 else args.since[:19]
+    until = args.until + ":00" if len(args.until) == 16 else args.until[:19]
     root = Path(args.instance)
     if not root.exists():
         print(f"实例目录不存在: {root}")
         return 2
     print(f"实例: {root}\n")
     results = [
-        check_files(root),
-        check_log(root, args.since),
+        check_files(root, plugin),
+        check_log(root, since, until),
         check_switch(root),
-        check_decisions(root),
+        check_decisions(root, plugin),
     ]
     print()
     if all(results):
