@@ -28,6 +28,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # The frozen-API and manifest guards run `git diff` against the
+          # baseline tag; a shallow checkout does not fetch that tag.
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up Python
         uses: actions/setup-python@v7

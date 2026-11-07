@@ -8,6 +8,7 @@ directory lacks the ``astrbot_plugin_`` prefix (``meme_manager`` is one).
 
 import contextvars
 import functools
+import os
 
 import pytest
 
@@ -33,13 +34,23 @@ def _handler_from(file_path: str):
     return namespace["handler"]
 
 
+# ``plugin_of_handler`` splits with ``pathlib.Path``: the Windows flavour
+# understands backslashes, the POSIX flavour does not. Those inputs never
+# occur on a POSIX host, so skip them there instead of weakening the
+# implementation to accept a path syntax it will never be given.
+_WINDOWS_PATHS = pytest.mark.skipif(
+    os.name != "nt", reason="backslash paths are only split on Windows"
+)
+
+
 @pytest.mark.parametrize(
     ("path", "expected"),
     [
         # Windows, the case that actually runs here.
-        (
+        pytest.param(
             r"C:\Users\x\.astrbot\core\data\plugins\sample_plugin\main.py",
             "sample_plugin",
+            marks=_WINDOWS_PATHS,
         ),
         # POSIX.
         (
@@ -47,11 +58,16 @@ def _handler_from(file_path: str):
             "astrbot_plugin_livingmemory",
         ),
         # No astrbot_plugin_ prefix: the prefix check used to miss this one.
-        (r"D:\astrbot\data\plugins\meme_manager\main.py", "meme_manager"),
+        pytest.param(
+            r"D:\astrbot\data\plugins\meme_manager\main.py",
+            "meme_manager",
+            marks=_WINDOWS_PATHS,
+        ),
         # An earlier "plugins" segment must not win over the real plugin root.
-        (
+        pytest.param(
             r"D:\plugins\astrbot\data\plugins\astrbot_plugin_x\core\helper.py",
             "astrbot_plugin_x",
+            marks=_WINDOWS_PATHS,
         ),
     ],
 )
