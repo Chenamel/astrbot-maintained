@@ -81,10 +81,10 @@ def test_no_plugin_skips_instead_of_reporting_a_false_failure(capsys, tmp_path):
 
 
 def test_explicit_plugin_is_checked(capsys, tmp_path):
-    root = _instance(tmp_path, plugin="astrbot_plugin_proactive_shadow")
+    root = _instance(tmp_path, plugin="sample_plugin")
 
-    assert instance_check.check_files(root, "astrbot_plugin_proactive_shadow")
-    assert instance_check.check_decisions(root, "astrbot_plugin_proactive_shadow")
+    assert instance_check.check_files(root, "sample_plugin")
+    assert instance_check.check_decisions(root, "sample_plugin")
     assert "shadow_log.jsonl" not in capsys.readouterr().out
 
 
@@ -92,7 +92,7 @@ def test_main_wires_the_new_arguments(tmp_path):
     root = _instance(
         tmp_path,
         log_files={"astrbot.log": ""},
-        plugin="astrbot_plugin_proactive_shadow",
+        plugin="sample_plugin",
     )
 
     code = instance_check.main(
@@ -100,7 +100,7 @@ def test_main_wires_the_new_arguments(tmp_path):
             "--instance",
             str(root),
             "--plugin",
-            "astrbot_plugin_proactive_shadow",
+            "sample_plugin",
             "--since",
             "2026-11-06 00:00",
             "--until",

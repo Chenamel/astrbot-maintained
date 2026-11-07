@@ -11,7 +11,7 @@ def _texts(chain: list) -> list[str]:
 
 
 def test_strips_quote_tag_and_keeps_sentence() -> None:
-    chain = [Plain(text='<quote id="1824373648"/>来了来了')]
+    chain = [Plain(text='<quote id="100000003"/>来了来了')]
     assert strip_control_tags(chain) == 1
     assert _texts(chain) == ["来了来了"]
 

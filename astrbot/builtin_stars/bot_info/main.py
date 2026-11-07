@@ -62,7 +62,7 @@ class BotInfo(Star):
         # in its own words; the shape is deliberately plain text so the model
         # does not echo JSON back at the group.
         lines: list[str] = [
-            "名字：hesder",
+            "名字：sample_bot",
             "身份：跑在 AstrBot 上的群聊机器人。AstrBot 是一个开源的聊天机器人框架，"
             "靠插件扩展能力，不是某个大厂产品",
         ]

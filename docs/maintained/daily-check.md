@@ -25,7 +25,7 @@ python maintained/tools/daily_check.py --instance "<实例目录>"
 python maintained/tools/daily_check.py --instance "<实例目录>" --date 2026-11-06
 ```
 
-`--date` 省略时取本地昨天；`--focus-group` 可换重点群（默认 `1105248343`）。
+`--date` 省略时取本地昨天；重点群用 `--focus-group` 传，或用环境变量 `ASTRBOT_FOCUS_GROUP`，都没设时不摘录发送样本。
 **只读**：不写实例、不重启服务。退出码只表示脚本能否运行（0 成功 / 2 目录不对），
 **不表示健康等级** —— 有事也在报告里说，不用退出码报警。
 
@@ -34,7 +34,7 @@ python maintained/tools/daily_check.py --instance "<实例目录>" --date 2026-1
 | 用途 | 路径（相对实例根） | 时间字段 | 注意 |
 |---|---|---|---|
 | 错误与静默 | `core/data/logs/astrbot*.log` | 行首 `[YYYY-MM-DD HH:MM:SS.mmm]`，本地 | 扫全部轮转文件，逐行按时间戳过滤，不按文件名、不截断末 4000 行 |
-| 判定统计 | `core/data/plugins/astrbot_plugin_proactive_shadow/shadow_log.jsonl` | `ts`，本地 | 每行一个 JSON；`source=replay` 跳过（兼容旧文件） |
+| 判定统计 | `core/data/plugins/*/shadow_log.jsonl`（按实例实际插件目录匹配） | `ts`，本地 | 每行一个 JSON；`source=replay` 跳过（兼容旧文件） |
 | 真发送 | 同上 | 同上 | 仅 `sent=true` 计入；重点群摘录 `persona_text` 前 60 字 |
 | 成本 | `core/data/data_v4.db` 的 `provider_stats` | `created_at`，**UTC naive** | 只统计 `token_input_other` 与请求数；按 `agent_type` 分组 |
 
@@ -45,10 +45,8 @@ python maintained/tools/daily_check.py --instance "<实例目录>" --date 2026-1
 - 日志行不满足窗口就丢弃；窗口两端也计入静默时长，所以"全天无日志"能被发现。
 - 若报告日就是今天，静默只算到当前时刻——**尚未到来的时间不算停机**。
 
-> **口径修正（2026-11-07）**：此前的晨检记录把「UTC 日历日」当成「昨天」。
-> 例如 11-06 记成 1118 请求 / 258.4 万 input_other，按本地日等价窗口实际是
-> **1023 请求 / 222.0 万**。旧数字混了 8 小时时区，不要用历史记录里的成本数
-> 校验本脚本；判定、日志、成本的窗口现在完全一致。
+> **口径修正（2026-11-07）**：此前把「UTC 日历日」当成「昨天」，成本数混了 8 小时时区。
+> 判定、日志、成本现在统一用本地日等价窗口；历史记录里的旧数字不要拿来校验本脚本。
 
 ## 健康分级
 
@@ -78,7 +76,7 @@ meme 图片解析失败、点赞/下载失败。这些都是执行记录里反�
 
 ## 与自动化任务的契约
 
-「Hesder 每日晨检」（每天 09:00）只做一件事：运行脚本，把不超过 8 行的输出
+本机自动化任务（每天固定时间）只做一件事：运行脚本，把不超过 8 行的输出
 原样贴出。它**不自行读日志或数据库、不改写数字、不自行加异常标记**。
 需要人话解读时可以补一句，但不得改动报告里的数值与级别。
 

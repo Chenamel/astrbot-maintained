@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sqlite3
 import sys
@@ -25,7 +26,7 @@ from pathlib import Path
 
 #: The instance and its logs use GMT+8; ``provider_stats.created_at`` is UTC.
 LOCAL_UTC_OFFSET = timedelta(hours=8)
-FOCUS_GROUP_DEFAULT = "1105248343"
+FOCUS_GROUP_DEFAULT = os.environ.get("ASTRBOT_FOCUS_GROUP", "").strip()
 INCIDENT_GAP_MINUTES = 240
 NOTICE_GAP_MINUTES = 60
 NOISE_LIMIT = 50
@@ -33,7 +34,7 @@ ERROR_RATE_LIMIT = 0.10
 
 LOG_DIR = "core/data/logs"
 LOG_GLOB = "astrbot*.log"
-SHADOW_LOG = "core/data/plugins/astrbot_plugin_proactive_shadow/shadow_log.jsonl"
+SHADOW_LOG_GLOB = "core/data/plugins/*/shadow_log.jsonl"
 DB_PATH = "core/data/data_v4.db"
 
 STAMP_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})")
@@ -138,9 +139,10 @@ def _decisions(
     decisions: Counter[str] = Counter()
     sends: list[dict] = []
     groups: Counter[str] = Counter()
-    path = root / SHADOW_LOG
-    if not path.is_file():
+    candidates = sorted(root.glob(SHADOW_LOG_GLOB))
+    if not candidates:
         return decisions, sends, groups
+    path = candidates[0]
     with path.open("r", encoding="utf-8", errors="replace") as handle:
         for line in handle:
             line = line.strip()

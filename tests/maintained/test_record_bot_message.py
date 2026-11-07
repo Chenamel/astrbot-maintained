@@ -16,7 +16,7 @@ pytestmark = pytest.mark.asyncio
 
 
 class _Event:
-    unified_msg_origin = "default:GroupMessage:1039252505"
+    unified_msg_origin = "default:GroupMessage:100000002"
 
     def get_platform_id(self):
         return "default"
@@ -51,7 +51,7 @@ async def test_the_conversation_key_matches_the_reader(monkeypatch):
 
     await proactive.record_bot_message(None, _Event(), "一句话")
 
-    assert stub.calls[0]["user_id"] == "default:GroupMessage:1039252505"
+    assert stub.calls[0]["user_id"] == "default:GroupMessage:100000002"
 
 
 async def test_empty_text_is_not_recorded(monkeypatch):
@@ -75,7 +75,7 @@ async def test_a_failed_write_is_not_fatal(monkeypatch):
 class _UserEvent:
     """Carries the sender fields a user message has."""
 
-    unified_msg_origin = "default:GroupMessage:1039252505"
+    unified_msg_origin = "default:GroupMessage:100000002"
 
     def get_platform_id(self):
         return "default"
@@ -100,7 +100,7 @@ async def test_user_message_records_sender(monkeypatch):
     assert row["sender_id"] == "3231558257"
     assert row["sender_name"] == "镜花水月"
     assert row["content"]["type"] == "user"
-    assert row["user_id"] == "default:GroupMessage:1039252505"
+    assert row["user_id"] == "default:GroupMessage:100000002"
 
 
 async def test_empty_user_text_is_skipped(monkeypatch):

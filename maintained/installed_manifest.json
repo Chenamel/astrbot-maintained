@@ -14,7 +14,7 @@
     "astrbot/api/runtime/__init__.py": "c8f4ebd9c092b88a8e37a3de97904ba51d2e7eb540f969bd925721bff495978f",
     "astrbot/api/turns/__init__.py": "26fe891ef89fe2414ec42350f27fc78ad5829d3195ab54008a5ed77db2aecedd",
     "astrbot/builtin_stars/bot_info/_conf_schema.json": "daf186bf2b5033d04683fb44d35ec2a03d83ace097c980f38fa1d86d918d275d",
-    "astrbot/builtin_stars/bot_info/main.py": "c400dcbf9964029bedb29df5610cdfb84d6e613f27c1181bccd30a9ac1239474",
+    "astrbot/builtin_stars/bot_info/main.py": "f4bfd6939cb81ea2fe954c6eaf60b2f1cbb5d3046a67c1f98ed3b3d51e3a17c5",
     "astrbot/builtin_stars/bot_info/metadata.yaml": "bfd40cd800464856bfef3cf9c544b3e80b3c228f230e797db1e16e1789c20200",
     "astrbot/builtin_stars/tool_react/_conf_schema.json": "8f8bfe19aa6f048fa6c417668069da89553efb43e7150ddae1a7492e782587d5",
     "astrbot/builtin_stars/tool_react/main.py": "ea934a142badbb7969de92bc30a00ab601636297029856a8459373182f219038",

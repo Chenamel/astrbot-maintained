@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta
 from tools import daily_check
 
 DAY = date(2026, 11, 6)
-FOCUS = "1105248343"
+FOCUS = "100000000"
 
 
 def _line(stamp: str, text: str = "ordinary", level: str = "INFO") -> str:
@@ -30,7 +30,7 @@ def _instance(tmp_path, *, log_files=None, decisions=(), costs=()):
     logdir.mkdir(parents=True)
     for name, content in (log_files or {"astrbot.log": _background()}).items():
         (logdir / name).write_text(content, encoding="utf-8")
-    shadow = tmp_path / "core/data/plugins/astrbot_plugin_proactive_shadow"
+    shadow = tmp_path / "core/data/plugins/sample_plugin"
     shadow.mkdir(parents=True)
     (shadow / "shadow_log.jsonl").write_text(
         "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in decisions),

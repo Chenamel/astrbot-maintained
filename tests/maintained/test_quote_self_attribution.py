@@ -37,20 +37,20 @@ def _reply(sender_id: str, nickname: str, text: str) -> Reply:
 
 
 def test_our_own_quoted_message_is_attributed_to_me():
-    chain = [_reply(BOT_ID, "hesder", "管理命令仅管理员可用。")]
+    chain = [_reply(BOT_ID, "sample_bot", "管理命令仅管理员可用。")]
 
     outline = _View(BOT_ID)._outline_chain(chain)
 
     assert "我" in outline
-    assert "hesder" not in outline
+    assert "sample_bot" not in outline
 
 
 def test_someone_elses_quoted_message_keeps_their_name():
-    chain = [_reply("428653410", "卤管王", "这个你可以关掉吗")]
+    chain = [_reply("100000001", "群友A", "这个你可以关掉吗")]
 
     outline = _View(BOT_ID)._outline_chain(chain)
 
-    assert "卤管王" in outline
+    assert "群友A" in outline
     assert "我" not in outline
 
 
@@ -62,14 +62,14 @@ def test_an_unnamed_author_is_not_left_blank():
 
 def test_a_missing_self_id_never_claims_authorship():
     """Without a self id there is nothing to compare, so nobody becomes "我"."""
-    chain = [_reply(BOT_ID, "hesder", "内容")]
+    chain = [_reply(BOT_ID, "sample_bot", "内容")]
 
-    assert "hesder" in _View("")._outline_chain(chain)
+    assert "sample_bot" in _View("")._outline_chain(chain)
 
 
 @pytest.mark.parametrize("text", ["", None])
 def test_a_quote_without_text_still_renders(text):
-    reply = _reply(BOT_ID, "hesder", text or "")
+    reply = _reply(BOT_ID, "sample_bot", text or "")
     reply.message_str = text
 
     assert _View(BOT_ID)._outline_chain([reply]) == "[引用消息]"
