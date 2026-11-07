@@ -186,9 +186,11 @@ def test_a_partial_day_does_not_invent_a_future_outage(tmp_path) -> None:
     """Reporting today must stop the silence clock at the injected now."""
     noon = datetime(2026, 11, 6, 12, 0, 0)
     lines = "".join(
-        _line((datetime(2026, 11, 6) + timedelta(minutes=30 * i)).strftime(
-            "%Y-%m-%d %H:%M:%S"
-        ))
+        _line(
+            (datetime(2026, 11, 6) + timedelta(minutes=30 * i)).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+        )
         for i in range(24)
     )
     root = _instance(tmp_path, log_files={"astrbot.log": lines})
@@ -197,4 +199,20 @@ def test_a_partial_day_does_not_invent_a_future_outage(tmp_path) -> None:
 
     assert report["gap_minutes"] <= 30
     assert not any("日志静默" in reason for reason in report["reasons"])
+    assert report["level"] == "ok"
+
+
+def test_known_plugin_noise_does_not_fill_the_watch_line(tmp_path) -> None:
+    """A recurring plugin failure is noise, not a new thing to investigate."""
+    line = _line(
+        "2026-11-06 05:00:00",
+        "[ContentSafetyGuard] LLM组合审查调用失败: connection reset",
+        "ERRO",
+    )
+    root = _instance(tmp_path, log_files={"astrbot.log": _background() + line})
+
+    report = daily_check.collect_report(root, DAY)
+
+    assert report["errors"]["noise"] == 1
+    assert report["watch"] == []
     assert report["level"] == "ok"

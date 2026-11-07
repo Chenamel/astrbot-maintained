@@ -47,7 +47,9 @@ INCIDENT_RE = re.compile(
 NOISE_RE = re.compile(
     r"Failed to download file from https URL|获取 @ 用户信息失败"
     r"|InternalServerError|\b(?:429|502|503)\b|timeout|timed out"
-    r"|asyncio\.run\(\) shutdown|unhandled exception during asyncio",
+    r"|asyncio\.run\(\) shutdown|unhandled exception during asyncio"
+    r"|ActionFailed|接口返回错误代码|LLM组合审查调用失败"
+    r"|自动收集处理图片失败|Expecting value|执行点赞操作时出错|下载失败",
     re.I,
 )
 
