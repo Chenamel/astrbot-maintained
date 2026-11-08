@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, Depends, Query, Request
 
 from astrbot.dashboard.async_utils import run_maybe_async
 from astrbot.dashboard.responses import ApiError, ok
-from astrbot.dashboard.schemas import GhProxyTestRequest, StorageCleanupRequest
+from astrbot.dashboard.schemas import (
+    GhProxyTestRequest,
+    PypiIndexTestRequest,
+    StorageCleanupRequest,
+)
 from astrbot.dashboard.services.stat_service import StatService, StatServiceError
 
 from .auth import AuthContext, require_dashboard_user, require_scope
@@ -68,71 +70,12 @@ async def get_provider_token_stats(
     return await _run(service.get_provider_token_stats(days))
 
 
-def _parse_aware_datetime(value: str | None, name: str):
-    """Parse an ISO-8601 query parameter into an aware UTC datetime.
-
-    Args:
-        value: Raw query value; ``None``/empty means "no bound".
-        name: Parameter name used in error messages.
-
-    Returns:
-        The parsed datetime converted to UTC, or ``None`` when absent.
-
-    Raises:
-        ApiError: When the value is present but not valid ISO-8601.
-    """
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(value)
-    except ValueError as exc:
-        raise ApiError(f"{name} must be an ISO-8601 datetime") from exc
-    if parsed.tzinfo is None:
-        # Naive input is interpreted in the dashboard's local timezone so the
-        # UI can send plain "2026-10-27T00:00:00" strings.
-        parsed = parsed.astimezone()
-    return parsed.astimezone(timezone.utc)
-
-
-@router.get("/stats/provider-calls")
-async def get_provider_call_details(
-    start: str | None = Query(default=None),
-    end: str | None = Query(default=None),
-    provider_model: str | None = Query(default=None),
-    agent_type: str | None = Query(default=None),
-    caller: str | None = Query(default=None),
-    umo: str | None = Query(default=None),
-    status: str | None = Query(default=None),
-    page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=50, ge=1, le=200),
-    _auth: AuthContext = Depends(require_system_scope),
-    service: StatService = Depends(get_service),
-):
-    """Return one record per persisted LLM call with filters and a summary."""
-    return await _run(
-        service.list_provider_calls(
-            start=_parse_aware_datetime(start, "start"),
-            end=_parse_aware_datetime(end, "end"),
-            provider_model=provider_model or None,
-            agent_type=agent_type or None,
-            caller=caller or None,
-            umo=umo or None,
-            status=status or None,
-            page=page,
-            page_size=page_size,
-        )
-    )
-
-
 @router.get("/stats/version")
 async def get_version(
-    request: Request,
     _auth: AuthContext = Depends(require_system_scope),
     service: StatService = Depends(get_service),
 ):
-    return await _run(
-        service.get_version(getattr(request.app.state, "dashboard_static_folder", None))
-    )
+    return await _run(service.get_version())
 
 
 @router.get("/stats/versions")
@@ -163,6 +106,33 @@ async def test_ghproxy_connection(
     service: StatService = Depends(get_service),
 ):
     return await _run(service.test_ghproxy_connection(payload.proxy_url))
+
+
+@router.post("/stats/pypi-index/test")
+async def test_pypi_index_connection(
+    payload: PypiIndexTestRequest,
+    _auth: AuthContext = Depends(require_system_scope),
+    service: StatService = Depends(get_service),
+):
+    return await _run(service.test_pypi_index_connection(payload.index_url))
+
+
+@router.post("/stats/pypi-index/speed")
+async def measure_pypi_index_speed(
+    payload: PypiIndexTestRequest,
+    _auth: AuthContext = Depends(require_system_scope),
+    service: StatService = Depends(get_service),
+):
+    return await _run(service.measure_pypi_index_speed(payload.index_url))
+
+
+@router.post("/stats/ghproxy/speed")
+async def measure_ghproxy_speed(
+    payload: GhProxyTestRequest,
+    _auth: AuthContext = Depends(require_system_scope),
+    service: StatService = Depends(get_service),
+):
+    return await _run(service.measure_ghproxy_speed(payload.proxy_url))
 
 
 @router.get("/changelogs")
@@ -234,13 +204,10 @@ async def get_dashboard_provider_token_stats(
 
 @legacy_router.get("/version")
 async def get_dashboard_version(
-    request: Request,
     _username: str = Depends(require_dashboard_user),
     service: StatService = Depends(get_service),
 ):
-    return await _run(
-        service.get_version(getattr(request.app.state, "dashboard_static_folder", None))
-    )
+    return await _run(service.get_version())
 
 
 @legacy_router.get("/versions")

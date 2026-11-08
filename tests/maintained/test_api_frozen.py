@@ -13,7 +13,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-BASELINE = "baseline/v4.28.2"
+BASELINE = "baseline/v4.29.4"
 
 #: Modules this fork added under astrbot/api/. Everything else must be
 #: byte-identical to the baseline.

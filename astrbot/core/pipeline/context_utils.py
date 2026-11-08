@@ -1,4 +1,3 @@
-import asyncio
 import inspect
 import traceback
 import typing as T
@@ -6,19 +5,8 @@ import typing as T
 from astrbot import logger
 from astrbot.core.message.message_event_result import CommandResult, MessageEventResult
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
-from astrbot.core.plugin_attribution import (
-    plugin_of_handler,
-    plugin_of_module,
-    reset_current_plugin,
-    set_current_plugin,
-)
 from astrbot.core.star.star import star_map
 from astrbot.core.star.star_handler import EventType, star_handlers_registry
-from astrbot.core.utils.direct_turns import is_current
-
-#: Diagnostic latch: log the first successful attribution once per process,
-#: so a silent failure is distinguishable from "the entry point never ran".
-_attribution_logged = False
 
 
 async def call_handler(
@@ -41,63 +29,50 @@ async def call_handler(
         AsyncGenerator[None, None]: 异步生成器，用于在管道中传递控制流
 
     """
-    global _attribution_logged
-    # File path first: every plugin's entry module is named "main", so the
-    # module name alone cannot tell two plugins apart.
-    plugin = plugin_of_handler(handler) or plugin_of_module(
-        getattr(handler, "__module__", "")
-    )
-    token = set_current_plugin(plugin)
-    if plugin and not _attribution_logged:
-        _attribution_logged = True
-        logger.info(f"[plugin-attribution] handler marked: {plugin}")
+    ready_to_call = None  # 一个协程或者异步生成器
+
+    trace_ = None
+
     try:
-        ready_to_call = None  # 一个协程或者异步生成器
+        ready_to_call = handler(event, *args, **kwargs)
+    except TypeError:
+        logger.error(
+            "Plugin Handler arguments do not match its definition.",
+            exc_info=True,
+        )
 
-        trace_ = None
+    if not ready_to_call:
+        return
 
+    if inspect.isasyncgen(ready_to_call):
+        _has_yielded = False
         try:
-            ready_to_call = handler(event, *args, **kwargs)
-        except TypeError:
-            logger.error(
-                "Plugin Handler arguments do not match its definition.",
-                exc_info=True,
-            )
-
-        if not ready_to_call:
-            return
-
-        if inspect.isasyncgen(ready_to_call):
-            _has_yielded = False
-            try:
-                async for ret in ready_to_call:
-                    # 这里逐步执行异步生成器, 对于每个 yield 返回的 ret, 执行下面的代码
-                    # 返回值只能是 MessageEventResult 或者 None（无返回值）
-                    _has_yielded = True
-                    if isinstance(ret, MessageEventResult | CommandResult):
-                        # 如果返回值是 MessageEventResult, 设置结果并继续
-                        event.set_result(ret)
-                        yield
-                    else:
-                        # 如果返回值是 None, 则不设置结果并继续
-                        # 继续执行后续阶段
-                        yield ret
-                if not _has_yielded:
-                    # 如果这个异步生成器没有执行到 yield 分支
+            async for ret in ready_to_call:
+                # 这里逐步执行异步生成器, 对于每个 yield 返回的 ret, 执行下面的代码
+                # 返回值只能是 MessageEventResult 或者 None（无返回值）
+                _has_yielded = True
+                if isinstance(ret, MessageEventResult | CommandResult):
+                    # 如果返回值是 MessageEventResult, 设置结果并继续
+                    event.set_result(ret)
                     yield
-            except Exception as e:
-                logger.error(f"Previous Error: {trace_}")
-                raise e
-        elif inspect.iscoroutine(ready_to_call):
-            # 如果只是一个协程, 直接执行
-            ret = await ready_to_call
-            if isinstance(ret, MessageEventResult | CommandResult):
-                event.set_result(ret)
+                else:
+                    # 如果返回值是 None, 则不设置结果并继续
+                    # 继续执行后续阶段
+                    yield ret
+            if not _has_yielded:
+                # 如果这个异步生成器没有执行到 yield 分支
                 yield
-            else:
-                yield ret
-    finally:
-        reset_current_plugin(token)
+        except Exception as e:
+            logger.error(f"Previous Error: {trace_}")
+            raise e
+    elif inspect.iscoroutine(ready_to_call):
+        # 如果只是一个协程, 直接执行
+        ret = await ready_to_call
+        if isinstance(ret, MessageEventResult | CommandResult):
+            event.set_result(ret)
+            yield
+        else:
+            yield ret
 
 
 async def call_event_hook(
@@ -118,44 +93,66 @@ async def call_event_hook(
         plugins_name=event.plugins_name,
     )
     for handler in handlers:
-        if hook_type in {
-            EventType.OnLLMResponseEvent,
-            EventType.OnDecoratingResultEvent,
-        } and not is_current(event):
-            logger.debug(
-                "hook dropped: turn no longer current | hook=%s handler=%s",
-                hook_type.name,
-                handler.handler_name,
-            )
-            event.stop_event()
-            return True
+        plugin = star_map.get(handler.handler_module_path)
+        plugin_name = plugin.name if plugin else handler.handler_module_path
+        plugin_display_name = plugin.display_name if plugin else None
+        handler_category = (
+            "llm_tool" if hook_type == EventType.OnCallingFuncToolEvent else "hook"
+        )
+        event.trace.record(
+            "handler_start",
+            kind="plugin_handler",
+            status="running",
+            plugin=plugin_name,
+            plugin_display_name=plugin_display_name or plugin_name,
+            handler=handler.handler_name,
+            handler_full_name=handler.handler_full_name,
+            handler_type=handler.event_type.name,
+            handler_category=handler_category,
+            hook=hook_type.name,
+        )
         try:
             assert inspect.iscoroutinefunction(handler.handler)
             logger.debug(
-                f"hook({hook_type.name}) -> {star_map[handler.handler_module_path].name} - {handler.handler_name}",
+                f"hook({hook_type.name}) -> {plugin_name} - {handler.handler_name}",
             )
             await handler.handler(event, *args, **kwargs)
-        except asyncio.CancelledError:
-            raise
         except BaseException:
             logger.error(traceback.format_exc())
-
-        if hook_type in {
-            EventType.OnLLMResponseEvent,
-            EventType.OnDecoratingResultEvent,
-        } and not is_current(event):
-            logger.debug(
-                "hook dropped after execution: turn no longer current | hook=%s handler=%s",
-                hook_type.name,
-                handler.handler_name,
+            event.trace.record(
+                "handler_end",
+                kind="plugin_handler",
+                status="error",
+                plugin=plugin_name,
+                plugin_display_name=plugin_display_name or plugin_name,
+                handler=handler.handler_name,
+                handler_full_name=handler.handler_full_name,
+                handler_type=handler.event_type.name,
+                handler_category=handler_category,
+                hook=hook_type.name,
             )
-            event.stop_event()
-            return True
+        else:
+            event.trace.record(
+                "handler_end",
+                kind="plugin_handler",
+                status="success",
+                plugin=plugin_name,
+                plugin_display_name=plugin_display_name or plugin_name,
+                handler=handler.handler_name,
+                handler_full_name=handler.handler_full_name,
+                handler_type=handler.event_type.name,
+                handler_category=handler_category,
+                hook=hook_type.name,
+            )
+
         if event.is_stopped():
             logger.info(
-                f"{star_map[handler.handler_module_path].name} - "
-                f"{handler.handler_name} stopped event propagation.",
+                f"{plugin_name} - {handler.handler_name} stopped event propagation.",
             )
             return True
 
     return event.is_stopped()
+
+
+# --- fork additive extensions (4.28.2+mtn1) ---
+_attribution_logged = False

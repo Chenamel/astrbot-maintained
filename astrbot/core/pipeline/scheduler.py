@@ -2,13 +2,14 @@ from collections.abc import AsyncGenerator
 from typing import cast
 
 from astrbot.core import logger
+from astrbot.core.log import log_context
 from astrbot.core.platform import AstrMessageEvent
+from astrbot.core.platform.astr_message_event import event_context
 from astrbot.core.platform.sources.webchat.webchat_event import WebChatMessageEvent
 from astrbot.core.platform.sources.wecom_ai_bot.wecomai_event import (
     WecomAIBotMessageEvent,
 )
-from astrbot.core.utils.active_event_registry import active_event_registry
-from astrbot.core.utils.direct_turns import coordinator
+from astrbot.core.utils.trace import trace_execution
 
 from .bootstrap import ensure_builtin_stages_registered
 from .context import PipelineContext
@@ -87,24 +88,15 @@ class PipelineScheduler:
             event (AstrMessageEvent): 事件对象
 
         """
-        active_event_registry.register(event)
-        # Keyed by conversation: a process can serve several bots, and their
-        # profiles may disagree about the window. Without the origin the last
-        # message's profile would decide for everyone.
-        origin = getattr(event, "unified_msg_origin", "") or ""
-        coordinator.configure(
-            self.ctx.astrbot_config.get("direct_turn_quiet_sec"), origin
-        )
-        coordinator.observe(event, self.ctx.astrbot_config.get("wake_prefix", []))
-        try:
+        with (
+            log_context(event.get_platform_id(), event.get_platform_name()),
+            event_context(event),
+            trace_execution(event.trace),
+        ):
             await self._process_stages(event)
 
-            # 发送一个空消息, 以便于后续的处理
+            # Send the closing frame before the event is marked complete.
             if isinstance(event, WebChatMessageEvent | WecomAIBotMessageEvent):
                 await event.send(None)
 
             logger.debug("pipeline execution completed.")
-        finally:
-            coordinator.finish(event)
-            event.cleanup_temporary_local_files()
-            active_event_registry.unregister(event)

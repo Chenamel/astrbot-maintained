@@ -41,7 +41,7 @@ def _manifest() -> dict:
 
 def _base_ref() -> str:
     """Return the upstream reference the fork's changes are measured against."""
-    return str(_manifest().get("base_ref") or "baseline/v4.28.2")
+    return str(_manifest().get("base_ref") or "baseline/v4.29.4")
 
 
 def _git(*args: str) -> str:

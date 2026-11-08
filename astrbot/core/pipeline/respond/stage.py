@@ -7,13 +7,37 @@ import astrbot.core.message.components as Comp
 from astrbot.core import logger
 from astrbot.core.message.components import BaseMessageComponent, ComponentType
 from astrbot.core.message.message_event_result import MessageChain, ResultContentType
-from astrbot.core.platform.astr_message_event import AstrMessageEvent
+from astrbot.core.platform.astr_message_event import (
+    AstrMessageEvent,
+    streaming_response_event,
+)
 from astrbot.core.star.star_handler import EventType
-from astrbot.core.utils.direct_turns import is_current, mark_sent
 from astrbot.core.utils.path_util import path_Mapping
+from astrbot.core.utils.telemetry import bounded_text
 
 from ..context import PipelineContext, call_event_hook
 from ..stage import Stage, register_stage
+
+DEFAULT_LOG_BASE = 2.6
+
+
+def _resolve_log_base(value: float | str | None) -> float:
+    """Return a log base that math.log accepts, or the documented default."""
+    try:
+        log_base = float(value)
+    except (TypeError, ValueError) as e:
+        logger.error(f"Failed to parse the segmented-reply log base: {e}")
+        return DEFAULT_LOG_BASE
+    if not math.isfinite(log_base) or log_base <= 1:
+        # math.log(words, 1) raises ZeroDivisionError and a non-positive base
+        # raises ValueError; both escape from _calc_comp_interval before the
+        # first send, so the whole reply is dropped.
+        logger.error(
+            f"Unusable segmented-reply log base: {log_base}, "
+            f"using the default {DEFAULT_LOG_BASE} instead.",
+        )
+        return DEFAULT_LOG_BASE
+    return log_base
 
 
 @register_stage
@@ -73,7 +97,7 @@ class RespondStage(Stage):
         self.interval_method = ctx.astrbot_config["platform_settings"][
             "segmented_reply"
         ]["interval_method"]
-        self.log_base = float(
+        self.log_base = _resolve_log_base(
             ctx.astrbot_config["platform_settings"]["segmented_reply"]["log_base"],
         )
         self.interval = [1.5, 3.5]
@@ -171,13 +195,6 @@ class RespondStage(Stage):
         self,
         event: AstrMessageEvent,
     ) -> None | AsyncGenerator[None, None]:
-        if not is_current(event):
-            logger.debug(
-                "respond stage dropped a superseded turn | message_id=%s",
-                getattr(getattr(event, "message_obj", None), "message_id", "unknown"),
-            )
-            event.clear_result()
-            return
         result = event.get_result()
         if result is None:
             return
@@ -221,7 +238,6 @@ class RespondStage(Stage):
             f"Prepare to send - {event.get_sender_name()}/{event.get_sender_id()}: {event._outline_chain(result.chain)}",
             extra={"category": "user_chat"},
         )
-
         if result.result_content_type == ResultContentType.STREAMING_RESULT:
             if result.async_stream is None:
                 logger.warning("async_stream is empty; skipping delivery.")
@@ -235,10 +251,61 @@ class RespondStage(Stage):
                 == "realtime_segmenting"
             )
             logger.info(f"Applying streaming output ({event.get_platform_id()}).")
-            if not is_current(event):
-                return
-            await event.send_streaming(result.async_stream, realtime_segmenting)
-            mark_sent(event)
+            stream = result.async_stream
+            stream_outline: list[str] = []
+            outline_bytes = 0
+            outline_truncated = False
+
+            async def traced_stream() -> AsyncGenerator[MessageChain, None]:
+                """Collect response outlines as the platform consumes the stream.
+
+                Yields:
+                    Original message chunks for platform delivery.
+                """
+                nonlocal outline_bytes, outline_truncated
+                iterator = stream.__aiter__()
+                while True:
+                    # Tool/plugin sends during generation are independent responses.
+                    generation_token = streaming_response_event.set(None)
+                    try:
+                        chain = await iterator.__anext__()
+                    except StopAsyncIteration:
+                        break
+                    finally:
+                        streaming_response_event.reset(generation_token)
+                    if chain.type not in {
+                        "break",
+                        "reasoning",
+                        "audio_chunk",
+                        "tool_call",
+                        "agent_stats",
+                    }:
+                        fragment = event._outline_chain(chain.chain)
+                        remaining = 4096 - outline_bytes
+                        if remaining >= 16:
+                            preview = bounded_text(fragment, remaining)
+                            stream_outline.append(preview)
+                            outline_bytes += len(preview.encode())
+                            outline_truncated |= preview != fragment
+                        elif fragment:
+                            outline_truncated = True
+                    yield chain
+
+            # Adapter chunks and protocol closing frames share one final trace.
+            stream_token = streaming_response_event.set(event)
+            try:
+                await event.send_streaming(traced_stream(), realtime_segmenting)
+            finally:
+                streaming_response_event.reset(stream_token)
+            outline = "".join(stream_outline)
+            if outline.strip():
+                event.trace.record(
+                    "response_sent",
+                    kind="response",
+                    message=outline,
+                    streaming=True,
+                    **({"truncated": True} if outline_truncated else {}),
+                )
             return
         if len(result.chain) > 0:
             # 检查路径映射
@@ -287,15 +354,12 @@ class RespondStage(Stage):
                 for comp in result.chain:
                     i = await self._calc_comp_interval(comp)
                     await asyncio.sleep(i)
-                    if not is_current(event):
-                        return
                     try:
                         if comp.type in need_separately:
                             await event.send(result.derive([comp]))
                         else:
                             await event.send(result.derive([*header_comps, comp]))
                             header_comps.clear()
-                        mark_sent(event)
                     except Exception as e:
                         logger.error(
                             "Failed to send the message chain: "
@@ -319,12 +383,9 @@ class RespondStage(Stage):
                     modify_raw_chain=True,
                 )
                 for comp in sep_comps:
-                    if not is_current(event):
-                        return
                     chain = result.derive([comp])
                     try:
                         await event.send(chain)
-                        mark_sent(event)
                     except Exception as e:
                         logger.error(
                             f"Failed to send the message chain: chain = {chain}, "
@@ -333,11 +394,8 @@ class RespondStage(Stage):
                         )
                 chain = result.derive(result.chain)
                 if result.chain and len(result.chain) > 0:
-                    if not is_current(event):
-                        return
                     try:
                         await event.send(chain)
-                        mark_sent(event)
                     except Exception as e:
                         logger.error(
                             f"Failed to send the message chain: chain = {chain}, "

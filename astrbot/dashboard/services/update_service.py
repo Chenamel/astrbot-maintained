@@ -51,6 +51,7 @@ class UpdateService:
         pip_install_func: Callable[..., Awaitable[Any]],
         demo_mode: bool,
         clear_site_data_headers: dict,
+        dashboard_static_folder: str | None = None,
     ) -> None:
         self._updater = astrbot_updater
         self.core_lifecycle = core_lifecycle
@@ -58,6 +59,7 @@ class UpdateService:
         self.pip_install = pip_install_func
         self.demo_mode = demo_mode
         self.clear_site_data_headers = clear_site_data_headers
+        self.dashboard_static_folder = dashboard_static_folder
         self.update_progress: dict[str, dict] = {}
         self._update_tasks: dict[str, asyncio.Task] = {}
 
@@ -72,32 +74,10 @@ class UpdateService:
             )
         return UpdateServiceResult(data=progress)
 
-    async def _effective_dashboard_version(
-        self,
-        dashboard_static_folder: str | Path | None,
-    ) -> str | None:
-        """Read the stamp of the dist the server is actually serving.
-
-        ``--webui-dir`` / ``ASTRBOT_WEBUI_DIR`` can point at a dist outside
-        ``data/dist``. ``get_dashboard_version()`` without arguments only
-        inspects the managed and bundled dirs, so reporting its stamp would
-        claim a WebUI update that does not exist. Fall back to the original
-        lookup when the explicit directory has no readable stamp.
-        """
-        if dashboard_static_folder:
-            version = await self.get_dashboard_version(Path(dashboard_static_folder))
-            if version is not None:
-                return version
-        return await self.get_dashboard_version()
-
-    async def check_update(
-        self,
-        update_type: str | None,
-        dashboard_static_folder: str | Path | None = None,
-    ) -> UpdateServiceResult:
+    async def check_update(self, update_type: str | None) -> UpdateServiceResult:
         try:
-            dashboard_version = await self._effective_dashboard_version(
-                dashboard_static_folder
+            dashboard_version = await self.get_dashboard_version(
+                self.dashboard_static_folder
             )
             if update_type == "dashboard":
                 return UpdateServiceResult(
@@ -238,7 +218,10 @@ class UpdateService:
             )
             logger.info("Updating dependencies...")
             try:
-                await self.pip_install(requirements_path="requirements.txt")
+                await self.pip_install(
+                    requirements_path="requirements.txt",
+                    bypass_core_constraints=True,
+                )
             except Exception as exc:
                 logger.error(f"Failed to update dependencies: {exc}")
             self._set_update_stage(
@@ -366,3 +349,21 @@ class UpdateService:
         progress["stages"][stage]["status"] = status
         if overall_percent is not None:
             progress["overall_percent"] = overall_percent
+
+    async def _effective_dashboard_version(
+        self,
+        dashboard_static_folder: str | Path | None,
+    ) -> str | None:
+        """Read the stamp of the dist the server is actually serving.
+
+        ``--webui-dir`` / ``ASTRBOT_WEBUI_DIR`` can point at a dist outside
+        ``data/dist``. ``get_dashboard_version()`` without arguments only
+        inspects the managed and bundled dirs, so reporting its stamp would
+        claim a WebUI update that does not exist. Fall back to the original
+        lookup when the explicit directory has no readable stamp.
+        """
+        if dashboard_static_folder:
+            version = await self.get_dashboard_version(Path(dashboard_static_folder))
+            if version is not None:
+                return version
+        return await self.get_dashboard_version()

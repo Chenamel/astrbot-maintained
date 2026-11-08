@@ -141,8 +141,8 @@ class AstrBotUpdater(_RepoZipUpdater):
         """Turn a release tag into the version string the panel compares.
 
         Tags carry transport details the version does not. Upstream tags look
-        like ``v4.29.4``; this fork's look like ``maintained/v4.28.2-r2``, where
-        ``-r2`` counts builds of the same ``4.28.2+mtn1`` release and is *not* a
+        like ``v4.29.4``; this fork's look like ``maintained/v4.29.4-r2``, where
+        ``-r2`` counts builds of the same ``4.29.4+mtn1`` release and is *not* a
         version. Feeding a raw tag to :meth:`VersionComparator.compare_version`
         fails to parse, and mapping the build number onto the version would
         invent a release that does not exist -- the panel would then offer an
@@ -153,7 +153,7 @@ class AstrBotUpdater(_RepoZipUpdater):
 
         Returns:
             The numeric release with its branch prefix and build suffix removed,
-            e.g. ``4.28.2`` for ``maintained/v4.28.2-r2``, or the input unchanged
+            e.g. ``4.29.4`` for ``maintained/v4.29.4-r2``, or the input unchanged
             when it does not match that shape.
         """
         bare = tag_name.rsplit("/", 1)[-1]
@@ -164,7 +164,7 @@ class AstrBotUpdater(_RepoZipUpdater):
     def _is_newer(current: str, candidate: str) -> bool:
         """Whether ``candidate`` should be offered over ``current``.
 
-        Semver ignores build metadata, so ``4.28.2+mtn1`` and ``4.28.2+mtn2``
+        Semver ignores build metadata, so ``4.29.4+mtn1`` and ``4.29.4+mtn2``
         compare equal. For a fork that ships successive builds on the same
         upstream base that is wrong: publishing the second build would never
         reach anyone already on the first. Compare the numeric part first, and
@@ -232,7 +232,7 @@ class AstrBotUpdater(_RepoZipUpdater):
             ):
                 continue
             # Compare on the release's version shape, not the tag: a tag may carry
-            # a branch prefix ("maintained/v4.28.2-r1") that the version does not.
+            # a branch prefix ("maintained/v4.29.4-r1") that the version does not.
             if self._is_newer(VERSION, self._release_tag_to_version(release.version)):
                 return release
             return None

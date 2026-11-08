@@ -47,6 +47,7 @@ from astrbot.core.utils.network_utils import (
 )
 from astrbot.core.utils.string_utils import normalize_and_dedupe_strings
 
+from ..headers import build_conversation_headers
 from ..register import register_provider_adapter
 from .request_retry import retry_provider_request
 
@@ -153,44 +154,6 @@ class ProviderOpenAIOfficial(Provider):
                 }:
                     return True
         return False
-
-    @staticmethod
-    def _context_has_unavailable_image(contexts: list[dict]) -> bool:
-        # A failed image in stored history must not cancel a later text request.
-        for context in reversed(contexts):
-            if context.get("role") != "user":
-                continue
-            content = context.get("content")
-            if not isinstance(content, list):
-                return False
-            if any(
-                isinstance(part, dict)
-                and (
-                    part.get("type") == "image_url"
-                    or (
-                        part.get("type") == "text"
-                        and IMAGE_CAPTION_MARKER in part.get("text", "")
-                    )
-                )
-                for part in content
-            ):
-                return False
-            return any(
-                isinstance(part, dict)
-                and part.get("type") == "text"
-                and part.get("text") == IMAGE_INPUT_UNAVAILABLE_NOTICE
-                for part in content
-            )
-        return False
-
-    @staticmethod
-    def _unavailable_image_response(usage: TokenUsage | None = None) -> LLMResponse:
-        return LLMResponse(
-            role="assistant",
-            completion_text=IMAGE_INPUT_UNAVAILABLE_MESSAGE,
-            image_input_unavailable=True,
-            usage=usage,
-        )
 
     def _is_invalid_attachment_error(self, error: Exception) -> bool:
         body = getattr(error, "body", None)
@@ -375,20 +338,14 @@ class ProviderOpenAIOfficial(Provider):
             reason,
         )
         new_contexts = await self._remove_image_from_context(context_query)
-        new_contexts.append(
-            {"role": "system", "content": IMAGE_INPUT_UNAVAILABLE_NOTICE}
-        )
         payloads["messages"] = new_contexts
-        payloads.pop("tools", None)
-        payloads.pop("tool_choice", None)
-        payloads.pop("parallel_tool_calls", None)
         return (
             False,
             chosen_key,
             available_api_keys,
             payloads,
             new_contexts,
-            None,
+            func_tool,
             image_fallback_used,
         )
 
@@ -422,6 +379,9 @@ class ProviderOpenAIOfficial(Provider):
                 default_headers=self.custom_headers,
                 base_url=provider_config.get("api_base") or None,
                 timeout=self.timeout,
+                # Retry is handled by retry_provider_request(); disable the
+                # SDK built-in retry to avoid stacking request attempts.
+                max_retries=0,
                 http_client=self._create_http_client(provider_config),
             )
         else:
@@ -431,6 +391,9 @@ class ProviderOpenAIOfficial(Provider):
                 base_url=provider_config.get("api_base") or None,
                 default_headers=self.custom_headers,
                 timeout=self.timeout,
+                # Retry is handled by retry_provider_request(); disable the
+                # SDK built-in retry to avoid stacking request attempts.
+                max_retries=0,
                 http_client=self._create_http_client(provider_config),
             )
 
@@ -579,6 +542,7 @@ class ProviderOpenAIOfficial(Provider):
         tools: ToolSet | None,
         *,
         request_max_retries: int | None = None,
+        conversation_id: str | None = None,
     ) -> LLMResponse:
         if tools:
             model = payloads.get("model", "").lower()
@@ -616,6 +580,7 @@ class ProviderOpenAIOfficial(Provider):
                 **payloads,
                 stream=False,
                 extra_body=extra_body,
+                extra_headers=build_conversation_headers(conversation_id),
             ),
             max_attempts=request_max_retries,
         )
@@ -637,6 +602,7 @@ class ProviderOpenAIOfficial(Provider):
         tools: ToolSet | None,
         *,
         request_max_retries: int | None = None,
+        conversation_id: str | None = None,
     ) -> AsyncGenerator[LLMResponse, None]:
         """流式查询API，逐步返回结果"""
         if tools:
@@ -674,6 +640,7 @@ class ProviderOpenAIOfficial(Provider):
                 **payloads,
                 stream=True,
                 extra_body=extra_body,
+                extra_headers=build_conversation_headers(conversation_id),
                 stream_options={"include_usage": True},
             ),
             max_attempts=request_max_retries,
@@ -899,17 +866,19 @@ class ProviderOpenAIOfficial(Provider):
         # parse the text completion
         if choice.message.content is not None:
             completion_text = self._normalize_content(choice.message.content)
-            # specially, some providers may set <think> tags around reasoning content in the completion text,
+            # Some compatible providers wrap reasoning in <think> or <thinking> tags.
             # we use regex to remove them, and store then in reasoning_content field
-            reasoning_pattern = re.compile(r"<think>(.*?)</think>", re.DOTALL)
+            reasoning_pattern = re.compile(r"<(think|thinking)>(.*?)</\1>", re.DOTALL)
             matches = reasoning_pattern.findall(completion_text)
             if matches:
                 llm_response.reasoning_content = "\n".join(
-                    [match.strip() for match in matches],
+                    [match[1].strip() for match in matches],
                 )
                 completion_text = reasoning_pattern.sub("", completion_text).strip()
-            # Also clean up orphan </think> tags that may leak from some models
-            completion_text = re.sub(r"</think>\s*$", "", completion_text).strip()
+            # Also clean up trailing reasoning closing tags from some models.
+            completion_text = re.sub(
+                r"</(?:think|thinking)>\s*$", "", completion_text
+            ).strip()
             llm_response.result_chain = MessageChain().message(completion_text)
         elif refusal := getattr(choice.message, "refusal", None):
             refusal_text = self._normalize_content(refusal)
@@ -1040,13 +1009,6 @@ class ProviderOpenAIOfficial(Provider):
         payloads = {"messages": context_query, "model": model}
 
         self._finally_convert_payload(payloads)
-
-        # Additive: a single call may carry extra API fields without touching
-        # the provider config. ``extra_body`` is merged last so a caller can
-        # override defaults (e.g. disable thinking) for this request only.
-        call_extra_body = kwargs.pop("extra_body", None)
-        if isinstance(call_extra_body, dict):
-            payloads.update(call_extra_body)
 
         return payloads, context_query
 
@@ -1250,6 +1212,7 @@ class ProviderOpenAIOfficial(Provider):
         request_max_retries: int | None = None,
         **kwargs,
     ) -> LLMResponse:
+        conversation_id = kwargs.pop("conversation_id", None)
         payloads, context_query = await self._prepare_chat_payload(
             prompt,
             image_urls,
@@ -1261,8 +1224,6 @@ class ProviderOpenAIOfficial(Provider):
             extra_user_content_parts=extra_user_content_parts,
             **kwargs,
         )
-        if self._context_has_unavailable_image(context_query):
-            return self._unavailable_image_response()
         if func_tool and not func_tool.empty():
             payloads["tool_choice"] = tool_choice
 
@@ -1277,10 +1238,14 @@ class ProviderOpenAIOfficial(Provider):
         for retry_cnt in range(max_retries):
             try:
                 self.client.api_key = chosen_key
+                query_kwargs = {}
+                if conversation_id:
+                    query_kwargs["conversation_id"] = conversation_id
                 llm_response = await self._query(
                     payloads,
                     func_tool,
                     request_max_retries=request_max_retries,
+                    **query_kwargs,
                 )
                 break
             except Exception as e:
@@ -1312,8 +1277,6 @@ class ProviderOpenAIOfficial(Provider):
             if last_exception is None:
                 raise Exception("未知错误")
             raise last_exception
-        if image_fallback_used:
-            return self._unavailable_image_response(llm_response.usage)
         return llm_response
 
     async def text_chat_stream(
@@ -1332,6 +1295,7 @@ class ProviderOpenAIOfficial(Provider):
         **kwargs,
     ) -> AsyncGenerator[LLMResponse, None]:
         """流式对话，与服务商交互并逐步返回结果"""
+        conversation_id = kwargs.pop("conversation_id", None)
         payloads, context_query = await self._prepare_chat_payload(
             prompt,
             image_urls,
@@ -1342,9 +1306,6 @@ class ProviderOpenAIOfficial(Provider):
             model=model,
             **kwargs,
         )
-        if self._context_has_unavailable_image(context_query):
-            yield self._unavailable_image_response()
-            return
         if func_tool and not func_tool.empty():
             payloads["tool_choice"] = tool_choice
 
@@ -1358,30 +1319,16 @@ class ProviderOpenAIOfficial(Provider):
         for retry_cnt in range(max_retries):
             try:
                 self.client.api_key = chosen_key
-                buffered_responses = []
-                buffer_images = image_fallback_used or self._context_contains_image(
-                    context_query
-                )
+                query_kwargs = {}
+                if conversation_id:
+                    query_kwargs["conversation_id"] = conversation_id
                 async for response in self._query_stream(
                     payloads,
                     func_tool,
                     request_max_retries=request_max_retries,
+                    **query_kwargs,
                 ):
-                    if buffer_images:
-                        # _query_stream reuses its chunk object. Capture each state
-                        # until image processing succeeds, including the final result.
-                        buffered_responses.append(copy.deepcopy(response))
-                    else:
-                        yield response
-                if image_fallback_used:
-                    usage = next(
-                        (r.usage for r in reversed(buffered_responses) if r.usage),
-                        None,
-                    )
-                    yield self._unavailable_image_response(usage)
-                else:
-                    for response in buffered_responses:
-                        yield response
+                    yield response
                 break
             except Exception as e:
                 last_exception = e
@@ -1417,7 +1364,7 @@ class ProviderOpenAIOfficial(Provider):
         """从上下文中删除所有带有 image 的记录"""
         new_contexts = []
 
-        for context in copy.deepcopy(contexts):
+        for context in contexts:
             if "content" in context and isinstance(context["content"], list):
                 # continue
                 new_content = []
@@ -1427,9 +1374,7 @@ class ProviderOpenAIOfficial(Provider):
                     new_content.append(item)
                 if not new_content:
                     # 用户只发了图片
-                    new_content = [
-                        {"type": "text", "text": IMAGE_INPUT_UNAVAILABLE_NOTICE}
-                    ]
+                    new_content = [{"type": "text", "text": "[图片]"}]
                 context["content"] = new_content
             new_contexts.append(context)
         return new_contexts
@@ -1454,9 +1399,6 @@ class ProviderOpenAIOfficial(Provider):
 
         # 构建内容块列表
         content_blocks = []
-        image_requested = bool(image_urls) or any(
-            isinstance(part, ImageURLPart) for part in extra_user_content_parts or []
-        )
 
         # 1. 用户原始发言（OpenAI 建议：用户发言在前）
         if text:
@@ -1501,13 +1443,6 @@ class ProviderOpenAIOfficial(Provider):
                 if audio_part:
                     content_blocks.append(audio_part)
 
-        if image_requested and not any(
-            part.get("type") == "image_url" for part in content_blocks
-        ):
-            content_blocks.append(
-                {"type": "text", "text": IMAGE_INPUT_UNAVAILABLE_NOTICE}
-            )
-
         # 如果只有主文本且没有额外内容块和图片，返回简单格式以保持向后兼容
         if (
             text
@@ -1534,3 +1469,41 @@ class ProviderOpenAIOfficial(Provider):
     async def terminate(self):
         if self.client:
             await self.client.close()
+
+    @staticmethod
+    def _context_has_unavailable_image(contexts: list[dict]) -> bool:
+        # A failed image in stored history must not cancel a later text request.
+        for context in reversed(contexts):
+            if context.get("role") != "user":
+                continue
+            content = context.get("content")
+            if not isinstance(content, list):
+                return False
+            if any(
+                isinstance(part, dict)
+                and (
+                    part.get("type") == "image_url"
+                    or (
+                        part.get("type") == "text"
+                        and IMAGE_CAPTION_MARKER in part.get("text", "")
+                    )
+                )
+                for part in content
+            ):
+                return False
+            return any(
+                isinstance(part, dict)
+                and part.get("type") == "text"
+                and part.get("text") == IMAGE_INPUT_UNAVAILABLE_NOTICE
+                for part in content
+            )
+        return False
+
+    @staticmethod
+    def _unavailable_image_response(usage: TokenUsage | None = None) -> LLMResponse:
+        return LLMResponse(
+            role="assistant",
+            completion_text=IMAGE_INPUT_UNAVAILABLE_MESSAGE,
+            image_input_unavailable=True,
+            usage=usage,
+        )

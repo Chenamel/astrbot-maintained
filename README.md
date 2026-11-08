@@ -7,13 +7,13 @@ English ｜ <a href="./README_zh.md">简体中文</a> ｜ <a href="./README_zh-T
 <br>
 <br>
 
-[![version](https://img.shields.io/badge/version-4.28.2%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
+[![version](https://img.shields.io/badge/version-4.29.4%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green)](./LICENSE)
 [![python](https://img.shields.io/badge/python-3.12%2B-blue)](./pyproject.toml)
 
 </div>
 
-This is a maintained branch of AstrBot, with its baseline locked to upstream version `v4.28.2`. The repository is maintained independently and is detached from GitHub's fork network. Distribution packages contain only core itself, with no plugins included. The license is AGPL-3.0-or-later, with no affiliation with the upstream authors.
+This is a maintained branch of AstrBot, with its baseline locked to upstream version `v4.29.4`. The repository is maintained independently and is detached from GitHub's fork network. Distribution packages contain only core itself, with no plugins included. The license is AGPL-3.0-or-later, with no affiliation with the upstream authors.
 
 ## Core Differences and New APIs
 
@@ -49,14 +49,14 @@ Added 4 new configuration options, all defaulting to match upstream official beh
 
 ## Compatibility
 
-The version number is `4.28.2+mtn1`. The `+mtn1` suffix is the local segment under PEP 440, which is ignored during version range comparisons.
+The version number is `4.29.4+mtn1`. The `+mtn1` suffix is the local segment under PEP 440, which is ignored during version range comparisons.
 
 | Declaration Style | Example | Compatibility Result |
 |---|---|---|
 | Range declaration | `>=4.16,<5` | Compatible |
-| Baseline matching | `==4.28.2`, `~=4.28.0` | Compatible |
+| Baseline matching | `==4.29.4`, `~=4.28.0` | Compatible |
 | Higher version requirement | `>=4.29` | Rejected |
-| Strict equal matching | `===4.28.2` | Rejected (PEP 440 rules require exact string equality) |
+| Strict equal matching | `===4.29.4` | Rejected (PEP 440 rules require exact string equality) |
 
 In tests against the baseline, both the maintained suite and the upstream suite pass; the few known upstream deviations are registered separately.
 
@@ -74,7 +74,7 @@ Download the `.whl` file from the Releases page. The filename contains a `+` cha
 
 ```bash
 pip uninstall -y astrbot
-pip install ./astrbot_maintained-4.28.2+mtn1-py3-none-any.whl
+pip install ./astrbot_maintained-4.29.4+mtn1-py3-none-any.whl
 astrbot run
 ```
 

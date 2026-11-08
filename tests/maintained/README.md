@@ -61,7 +61,7 @@ PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 | `test_tool_capability_declaration.py` | P3 工具能力自声明：执行类声明者未授权即移除（含「名字不在任何名单里」的反回归断言）、轻量主动＝声明或配置名单、默认名单兜底、persona 权限仍收窄、旧硬编码名单不许复活 |
 | `test_tool_permission_entry.py` | P6 权限单一入口：身份/意图两级别各自的行为、**级别互不叠加**、`check_admin_permission` 无自有逻辑、旧并行入口已消失、15 个调点的级别映射不漂移 |
 | `test_maintenance_gate.py` | P9 本地维护保护闸门：名单缺失**必告警**后放行、命中插件名/目录名拒绝、五种损坏形态 **fail-closed**、卸载两入口默认被拦且 `force=True` 可绕过 |
-| `test_api_frozen.py` | 上游 api 相对 `baseline/v4.28.2` 零改动（白名单=`ALLOWED_ADDITIONS`，当前 10 个新增文件） |
+| `test_api_frozen.py` | 上游 api 相对 `baseline/v4.29.4` 零改动（白名单=`ALLOWED_ADDITIONS`，当前 10 个新增文件） |
 | `test_tools_check_drift.py` | 漂移检测：ok/mismatch/missing、退出码、JSON 输出、路径解析 |
 | `test_tools_apply_patches.py` | 源校验中止、预演不写、备份收据、写回后复核、端到端修复 |
 

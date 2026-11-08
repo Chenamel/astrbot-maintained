@@ -7,13 +7,13 @@
 <br>
 <br>
 
-[![version](https://img.shields.io/badge/version-4.28.2%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
+[![version](https://img.shields.io/badge/version-4.29.4%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green)](./LICENSE)
 [![python](https://img.shields.io/badge/python-3.12%2B-blue)](./pyproject.toml)
 
 </div>
 
-Esta es una rama mantenida de AstrBot, con su línea base fijada en la versión `v4.28.2` upstream. El repositorio se mantiene de forma independiente y no forma parte de la red de forks de GitHub. Los paquetes de distribución contienen únicamente el core en sí, sin plugins. La licencia es AGPL-3.0-or-later, sin afiliación alguna con los autores upstream.
+Esta es una rama mantenida de AstrBot, con su línea base fijada en la versión `v4.29.4` upstream. El repositorio se mantiene de forma independiente y no forma parte de la red de forks de GitHub. Los paquetes de distribución contienen únicamente el core en sí, sin plugins. La licencia es AGPL-3.0-or-later, sin afiliación alguna con los autores upstream.
 
 ## Diferencias principales y nuevas API
 
@@ -49,14 +49,14 @@ Se han añadido 4 nuevas opciones de configuración, cuyos valores predeterminad
 
 ## Compatibilidad
 
-El número de versión es `4.28.2+mtn1`. La parte `+mtn1` es el segmento local de PEP 440, que se ignora al comparar rangos de versiones.
+El número de versión es `4.29.4+mtn1`. La parte `+mtn1` es el segmento local de PEP 440, que se ignora al comparar rangos de versiones.
 
 | Método de declaración | Ejemplo | Criterio de compatibilidad |
 |---|---|---|
 | Declaración de rango | `>=4.16,<5` | Compatible |
-| Coincidencia con línea base | `==4.28.2`, `~=4.28.0` | Compatible |
+| Coincidencia con línea base | `==4.29.4`, `~=4.28.0` | Compatible |
 | Requisito de versión superior | `>=4.29` | Rechazado |
-| Coincidencia estricta de igualdad | `===4.28.2` | Rechazado (las reglas de PEP 440 requieren igualdad total de cadenas) |
+| Coincidencia estricta de igualdad | `===4.29.4` | Rechazado (las reglas de PEP 440 requieren igualdad total de cadenas) |
 
 En las pruebas frente a la línea base, pasan tanto la suite de la versión mantenida como la de upstream; las pocas desviaciones conocidas se registran por separado.
 
@@ -74,7 +74,7 @@ Descargue el archivo `.whl` desde la página de Releases. El nombre del archivo 
 
 ```bash
 pip uninstall -y astrbot
-pip install ./astrbot_maintained-4.28.2+mtn1-py3-none-any.whl
+pip install ./astrbot_maintained-4.29.4+mtn1-py3-none-any.whl
 astrbot run
 ```
 

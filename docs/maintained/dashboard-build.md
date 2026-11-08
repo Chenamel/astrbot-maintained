@@ -54,8 +54,8 @@ python -c "import zipfile,glob;z=zipfile.ZipFile(glob.glob('*.whl')[0]);print(su
 3. **版本标记**（已自动化，通常无需手动处理）：
 
    `pnpm build` 末尾已接 `npm run stamp`，会调用
-   `scripts/stamp_dashboard_version.py` 把 `astrbot.__version__`（当前 `4.28.2+mtn1`）
-   加 `v` 前缀后写入 `dashboard/dist/assets/version`（当前 `v4.28.2+mtn1`）。
+   `scripts/stamp_dashboard_version.py` 把 `astrbot.__version__`（当前 `4.29.4+mtn1`）
+   加 `v` 前缀后写入 `dashboard/dist/assets/version`（当前 `v4.29.4+mtn1`）。
 
    单独补写或校验时：
 
@@ -65,7 +65,7 @@ python -c "import zipfile,glob;z=zipfile.ZipFile(glob.glob('*.whl')[0]);print(su
    ```
 
    ⚠️ **不要手写该文件**。戳记内容是 `v` + `astrbot.__version__`（含 `+mtnN` 后缀），
-   `resolve_dashboard_dist()` 按此逐字符比较；写成 `v4.28.2` 会被判为不匹配，
+   `resolve_dashboard_dist()` 按此逐字符比较；写成 `v4.29.4` 会被判为不匹配，
    进而触发重新下载官方面板，覆盖本 fork 的构建。
 
 4. **部署到实例**（不使用 AstrBot Launcher 时）：
@@ -89,21 +89,21 @@ python -c "import zipfile,glob;z=zipfile.ZipFile(glob.glob('*.whl')[0]);print(su
 <instance>/core/data/dist/assets/version
 ```
 
-并与实例清单里登记的版本比较。启动器登记的是上游版本号 `v4.28.2`，比较时
+并与实例清单里登记的版本比较。启动器登记的是上游版本号 `v4.29.4`，比较时
 只忽略大小写和 `v` 前缀，**不做 PEP 440 归一化**。因此本 fork 的戳记
-`v4.28.2+mtn1` 会被判为不匹配，启动器随后从上游下载 `dashboard.zip`
+`v4.29.4+mtn1` 会被判为不匹配，启动器随后从上游下载 `dashboard.zip`
 并整体替换 `data/dist`。表现是启动时在 WebUI 阶段卡一会儿，日志里看不到
 下载记录（下载由启动器进程完成）。
 
 core 自己不是覆盖者：`ensure_dashboard()` 的版本比较会忽略 local 段，
-判定 `v4.28.2` 与 `4.28.2+mtn1` 兼容后直接返回。
+判定 `v4.29.4` 与 `4.29.4+mtn1` 兼容后直接返回。
 
 启动器没有自定义仓库或版本源的开关，仓库地址与面板下载地址都写在源码里；
 高级设置页只有代理和镜像源。能用的是 core 这一侧的目录选择。
 
 ### 部署步骤
 
-1. `data/dist` **保持启动器给的官方版本**（`v4.28.2`），不要动。版本匹配时
+1. `data/dist` **保持启动器给的官方版本**（`v4.29.4`），不要动。版本匹配时
    启动器会直接跳过下载，启动也不会卡。
 
 2. 把本 fork 的面板放到启动器不管理的独立目录：
@@ -140,7 +140,7 @@ core 自己不是覆盖者：`ensure_dashboard()` 的版本比较会忽略 local
   单机多实例时，要么都指向同一份 fork 面板，要么改用 `--webui-dir`
   自行启动（启动器不支持传参）。
 - 从仓库重新同步面板后，`dist_maintained` 里的 `assets/version` 仍是
-  `v4.28.2+mtn1`，**不要改成 `v4.28.2`**。core 的 `resolve_dashboard_dist()`
+  `v4.29.4+mtn1`，**不要改成 `v4.29.4`**。core 的 `resolve_dashboard_dist()`
   会拿它和包版本比较。
 
 ### 环境变量的作用域
@@ -156,11 +156,11 @@ core 自己不是覆盖者：`ensure_dashboard()` 的版本比较会忽略 local
 `/api/updates/check` 与 `/api/stats/version` 都要报告面板版本。早期实现调用
 `get_dashboard_version()` 不带参数，它只会读 `data/dist/assets/version`，
 不知道 `--webui-dir` / `ASTRBOT_WEBUI_DIR` 指定的目录。在上面的部署下就会
-出现「WebUI 有新版本！」并把当前版本显示成 `v4.28.2`：接口拿官方占位目录的
-戳记去和 core 的 `v4.28.2+mtn1` 做字符串比较，并不代表真有更新可装。
+出现「WebUI 有新版本！」并把当前版本显示成 `v4.29.4`：接口拿官方占位目录的
+戳记去和 core 的 `v4.29.4+mtn1` 做字符串比较，并不代表真有更新可装。
 
 现在两个接口都从 `app.state.dashboard_static_folder` 取实际服务的目录再读戳记；
-读不到时退回原来的优先级。因此启动器部署下显示 `v4.28.2+mtn1`，不再误报。
+读不到时退回原来的优先级。因此启动器部署下显示 `v4.29.4+mtn1`，不再误报。
 普通 wheel / 源码安装没有显式目录，行为与之前一致。
 
 ## 红线边界

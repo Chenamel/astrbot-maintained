@@ -18,7 +18,7 @@ import astrbot
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-#: ``4.28.2+mtn1`` -- an upstream base version plus a local pre-release suffix.
+#: ``4.29.4+mtn1`` -- an upstream base version plus a local pre-release suffix.
 #: PEP 440 allows ``+<local>``, so tooling that parses the version still works.
 FORK_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+\+mtn\d+$")
 

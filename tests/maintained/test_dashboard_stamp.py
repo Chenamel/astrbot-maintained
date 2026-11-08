@@ -8,7 +8,7 @@ exist:
 
     Failed to download file from ... host='astrbot-registry.soulter.top' ... 404
     Failed to download file from ... host='github.com'
-        file='AstrBot-4.28.2+mtn1-dashboard.zip' 404
+        file='AstrBot-4.29.4+mtn1-dashboard.zip' 404
 
 The dashboard still worked, because it falls back to the local copy -- which is
 why this went unnoticed while the log collected two errors per boot. These tests

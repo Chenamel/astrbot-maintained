@@ -84,32 +84,20 @@ async def _run(operation) -> JSONResponse:
 
 @router.get("/updates/check")
 async def check_updates(
-    request: Request,
     update_type: str | None = Query(default=None, alias="type"),
     _auth: AuthContext = Depends(require_system_scope),
     service: UpdateService = Depends(get_service),
 ):
-    return await _run(
-        lambda: service.check_update(
-            update_type,
-            getattr(request.app.state, "dashboard_static_folder", None),
-        )
-    )
+    return await _run(lambda: service.check_update(update_type))
 
 
 @legacy_router.get("/check")
 async def check_dashboard_updates(
-    request: Request,
     update_type: str | None = Query(default=None, alias="type"),
     _username: str = Depends(require_dashboard_user),
     service: UpdateService = Depends(get_service),
 ):
-    return await _run(
-        lambda: service.check_update(
-            update_type,
-            getattr(request.app.state, "dashboard_static_folder", None),
-        )
-    )
+    return await _run(lambda: service.check_update(update_type))
 
 
 @router.get("/updates/releases")

@@ -1,6 +1,6 @@
 # 相比 AstrBot 基线，这个 fork 多了什么
 
-> 2026-10-24。基线 = 上游 `v4.28.2`（`3c7adafa`）。
+> 2026-10-24。基线 = 上游 `v4.29.4`（`3c7adafa`）。
 > 本文只列有证据的差异，并单列「有代价 / 还不成熟」的部分，客观陈述。
 
 ## 0. 一句话
@@ -84,7 +84,7 @@
 ## 6. 诚实说明：有代价的 / 还不成熟的
 
 1. **维护成本**：台账登记的全部受保护文件，上游每发一版都要重打 + 处理冲突。
-   基线锁定 `v4.28.2`，与上游的差距会持续增长；用 `git rev-list --count HEAD..upstream/master` 查当前值，追版本成本不低。
+   基线锁定 `v4.29.4`，与上游的差距会持续增长；用 `git rev-list --count HEAD..upstream/master` 查当前值，追版本成本不低。
 2. **上游 2 项测试有意偏离**（`config` 组：fork 给 `agent_runner.config.misc` 加了两个默认键，
    上游用精确字典相等断言）。已登记 P11 并加 `xfail(strict=True)` 守卫：若某次上游合并把偏离
    覆盖掉，测试会 `XPASS(strict)` 判红，即**偏离被静默回退时有机械报警**。
@@ -103,6 +103,6 @@ python maintained/tools/check_drift.py --instance "<实例目录>" --check-repo
 python maintained/proactive/replay.py --selftest     # 解析器 7 条，不调模型
 ```
 
-推送到 `maintained/v4.28.2` 后，`.github/workflows/maintained-ci.yml` 会在 GitHub
+推送到 `maintained/v4.29.4` 后，`.github/workflows/maintained-ci.yml` 会在 GitHub
 托管 runner 上跑同一套 `tests/maintained`、ruff 双检和七语言 README 环校验。
 上游自带的 11 个 workflow 只监听 `master`，在本分支不会因推送触发，这里也不改动它们。

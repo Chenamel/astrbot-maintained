@@ -6,7 +6,7 @@
 ## 1. 设计原则
 
 1. 薄再导出 + 显式 `__all__`：与官方 `astrbot/api/{event,star,provider,util}` 风格一致。
-2. 安全降级：core 侧补丁模块在基线 4.28.2 上不存在（阶段 4 才恢复）。
+2. 安全降级：core 侧补丁模块在基线 4.29.4 上不存在（阶段 4 才恢复）。
    api 层必须在"补丁缺席"时可导入、可调用、返回安全默认值，补丁就位后自动生效，无需改 api 代码。
 3. 零新增依赖：只用标准库 + 既有 core。
 4. 不改变既有行为：api 层只读/转发，不注册钩子、不改全局状态（`reset*` 除外，见 §3.2）。
@@ -23,7 +23,7 @@ def capabilities() -> dict[str, bool]: ...
 - `resolve` 惰性导入 core 侧符号；模块或属性缺失 → 返回 `default`，并一次性 `logger.info` 记录能力缺失（不刷屏）。
 - `capabilities()` 返回能力清单，供诊断与阶段 5 插件自检使用。
 
-| 能力键 | 依赖的 core 符号 | 基线 4.28.2 上 | 阶段 4 后 |
+| 能力键 | 依赖的 core 符号 | 基线 4.29.4 上 | 阶段 4 后 |
 |---|---|---|---|
 | `turns.direct_turn` | `astrbot.core.utils.direct_turns.coordinator` | ❌ False | ✅ True |
 | `delivery.code_policy` | `astrbot.core.code_delivery_policy` | ❌ False | ✅ True |
@@ -52,7 +52,7 @@ def capabilities() -> dict[str, bool]: ...
 | `astrbot.core.utils.quoted_message_parser.extract_quoted_message_images` | `astrbot.api.runtime` | 引用消息图片提取 |
 | `astrbot.core.provider.provider.EmbeddingProvider` | `astrbot.api.embedding` | 嵌入提供者类型 |
 
-取舍说明：这 5 个 core 路径在干净的 4.28.2 上都存在（不属"必须修"），
+取舍说明：这 5 个 core 路径在干净的 4.29.4 上都存在（不属"必须修"），
 本阶段把它们也纳入公开面，是为了满足铁律 1 并给插件一个统一且可降级的依赖面。
 本层对它们只做转发（经 `_bridge.resolve`），暂不提供替代实现；
 若将来上游改名，再由本层补 fallback（届时属加法，不破坏契约）。
@@ -258,7 +258,7 @@ core 自己也写群历史（`persist_group_message`），只是优先级最低�
 | `test_api_runtime.py` | 数据目录为绝对路径；缺席时下载**响亮失败**、引用图返回空表 |
 | `test_api_embedding.py` | 缺席时 `is_embedding_provider → False`；容错 |
 | `test_manifest_guard.py` | 仓工作树↔台账自洽；台账只含 core、`proactive_must_remain_disabled` 为 `True`、条数钉 |
-| `test_api_frozen.py` | 上游 api 文件相对 `baseline/v4.28.2` 零改动（白名单=`ALLOWED_ADDITIONS`，当前 10 个新增文件） |
+| `test_api_frozen.py` | 上游 api 文件相对 `baseline/v4.29.4` 零改动（白名单=`ALLOWED_ADDITIONS`，当前 10 个新增文件） |
 | `test_tools_check_drift.py` / `test_tools_apply_patches.py` | 工具链：漂移检测、预演不写、写前备份、源损坏中止、退出码 |
 
 **测试不依赖运行中的 AstrBot**：用 `SimpleNamespace` 伪造 event / request / part。

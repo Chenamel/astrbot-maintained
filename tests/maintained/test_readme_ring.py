@@ -38,7 +38,7 @@ def test_a_drifting_technical_number_is_detected(tmp_path: Path) -> None:
     root = _fixture(tmp_path)
     path = root / "README_fr.md"
     text = path.read_text(encoding="utf-8")
-    path.write_bytes(text.replace("4.28.2", "4.28.3", 1).encode("utf-8"))
+    path.write_bytes(text.replace("4.29.4", "4.29.5", 1).encode("utf-8"))
 
     problems = check_ring(root).problems
     assert any("code/URL/number" in p for p in problems)

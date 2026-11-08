@@ -8,10 +8,10 @@
 upstream AstrBotDevs/AstrBot (master)
         │  git fetch / 三方合并
         ▼
-baseline/v4.28.2  (锚点 tag, = 3c7adafa)
+baseline/v4.29.4  (锚点 tag, = 3c7adafa)
         │
         ▼
-maintained/v4.28.2  (长期主干)
+maintained/v4.29.4  (长期主干)
         │
         ├── astrbot/api/**        ← 新增能力的唯一落点（插件可见）
         ├── astrbot/core/**       ← 仅已登记补丁，最小侵入
@@ -70,7 +70,7 @@ maintained/v4.28.2  (长期主干)
 | `astrbot/api/embedding/` | 嵌入提供者类型 | 阶段 5 追加 |
 
 **关键约束**：以上模块均为**新增文件**，**不修改**任何既有 api 文件（由 `tests/maintained/test_api_frozen.py` 守护）；
-core 侧补丁在基线 4.28.2 上不存在，api 层必须降级可用、补丁就位后自动生效。
+core 侧补丁在基线 4.29.4 上不存在，api 层必须降级可用、补丁就位后自动生效。
 
 ## 5. core 内部改动策略
 
@@ -98,7 +98,7 @@ def old_name(*args, **kwargs):
 | 新钩子注册失败 | `logger.warning` 后跳过，主流程不受影响 |
 | 新可选参数为 `None` | 走旧代码路径 |
 | 主动回复相关异常 | 默认关闭（`proactive_must_remain_disabled` 恒 true） |
-| 三方合并冲突 | 回退到 `baseline/v4.28.2`，按 `maintained/` 台账重放 |
+| 三方合并冲突 | 回退到 `baseline/v4.29.4`，按 `maintained/` 台账重放 |
 | 台账 SHA 不匹配 | 比对脚本非零退出，阻断发布 |
 
 ## 9. 配置与开关设计
@@ -115,13 +115,13 @@ def old_name(*args, **kwargs):
 
 ## 12. 版本与发布策略
 
-- **单一版本来源**：`astrbot/__init__.py` 的 `__version__`，形如 `4.28.2+mtn1`。
+- **单一版本来源**：`astrbot/__init__.py` 的 `__version__`，形如 `4.29.4+mtn1`。
   `+mtnN` 后缀是 PEP 440 允许的本地版本标记，用于区分维护版与官方发布。
-- `pyproject.toml` 的 `version` 保持基版本 `4.28.2`（不带后缀）：严格 `Version()` 调用方
+- `pyproject.toml` 的 `version` 保持基版本 `4.29.4`（不带后缀）：严格 `Version()` 调用方
   需要可解析的纯发布号。二者关系由 `tests/maintained/test_version_marker.py` 钉住。
 - `maintained/VERSION` 是同一版本号的人类可读副本，必须与 `__version__` 完全一致，
   由 `test_version_marker.py` 校验；不是独立版本来源。
-- 发布 tag：`maintained/v4.28.2-rN`（N 从 1 起）；阶段 7 转公开满足 AGPL §13。
+- 发布 tag：`maintained/v4.29.4-rN`（N 从 1 起）；阶段 7 转公开满足 AGPL §13。
 
 ## 13. 风险登记表
 
@@ -132,4 +132,4 @@ def old_name(*args, **kwargs):
 | R3 | 启动器持续覆盖 core | 🟠 | 台账 `--check` + 一键重打 | 4、6 |
 | R4 | 多份状态脱节 | 🟠 | 单一真相源 + 同步哈希 | 全阶段 |
 | R5 | 主动回复被误开启 | 🟡 | 铁律 6 + 降级默认关闭 | 3、4 |
-| R6 | 上游 v4.29+ 语义不兼容 | 🟠 | 锁 v4.28.2，升级走三方合并 | 全阶段 |
+| R6 | 上游 v4.29+ 语义不兼容 | 🟠 | 锁 v4.29.4，升级走三方合并 | 全阶段 |

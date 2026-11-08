@@ -7,13 +7,13 @@
 <br>
 <br>
 
-[![version](https://img.shields.io/badge/version-4.28.2%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
+[![version](https://img.shields.io/badge/version-4.29.4%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green)](./LICENSE)
 [![python](https://img.shields.io/badge/python-3.12%2B-blue)](./pyproject.toml)
 
 </div>
 
-Il s'agit d'une branche maintenue d'AstrBot, dont la référence est verrouillée sur la version amont `v4.28.2`. Le dépôt est maintenu de manière indépendante et ne fait pas partie du réseau de forks de GitHub. Les paquets de distribution ne contiennent que le core lui-même, sans aucun plugin. La licence est AGPL-3.0-or-later, sans aucune affiliation avec les auteurs amont.
+Il s'agit d'une branche maintenue d'AstrBot, dont la référence est verrouillée sur la version amont `v4.29.4`. Le dépôt est maintenu de manière indépendante et ne fait pas partie du réseau de forks de GitHub. Les paquets de distribution ne contiennent que le core lui-même, sans aucun plugin. La licence est AGPL-3.0-or-later, sans aucune affiliation avec les auteurs amont.
 
 ## Différences fondamentales et nouvelles API
 
@@ -49,14 +49,14 @@ Dans la version originale en amont, `Context.llm_generate` appelle directement l
 
 ## Compatibilité
 
-Le numéro de version est `4.28.2+mtn1`. La mention `+mtn1` correspond au segment local de PEP 440, qui est ignoré lors des comparaisons d'intervalles de versions.
+Le numéro de version est `4.29.4+mtn1`. La mention `+mtn1` correspond au segment local de PEP 440, qui est ignoré lors des comparaisons d'intervalles de versions.
 
 | Style de déclaration | Exemple | Décision de compatibilité |
 |---|---|---|
 | Déclaration d'intervalle | `>=4.16,<5` | Compatible |
-| Correspondance de référence | `==4.28.2`, `~=4.28.0` | Compatible |
+| Correspondance de référence | `==4.29.4`, `~=4.28.0` | Compatible |
 | Exigence de version supérieure | `>=4.29` | Rejetée |
-| Correspondance stricte d'égalité | `===4.28.2` | Rejetée (les règles de PEP 440 exigent l'égalité stricte des chaînes) |
+| Correspondance stricte d'égalité | `===4.29.4` | Rejetée (les règles de PEP 440 exigent l'égalité stricte des chaînes) |
 
 Lors des tests par rapport à la version de référence, les deux suites (version maintenue et version amont) passent ; les quelques écarts connus en amont sont enregistrés séparément.
 
@@ -74,7 +74,7 @@ Téléchargez le fichier `.whl` depuis la page Releases. Le nom de fichier conti
 
 ```bash
 pip uninstall -y astrbot
-pip install ./astrbot_maintained-4.28.2+mtn1-py3-none-any.whl
+pip install ./astrbot_maintained-4.29.4+mtn1-py3-none-any.whl
 astrbot run
 ```
 

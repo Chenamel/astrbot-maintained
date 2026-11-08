@@ -7,13 +7,13 @@
 <br>
 <br>
 
-[![version](https://img.shields.io/badge/version-4.28.2%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
+[![version](https://img.shields.io/badge/version-4.29.4%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green)](./LICENSE)
 [![python](https://img.shields.io/badge/python-3.12%2B-blue)](./pyproject.toml)
 
 </div>
 
-これは AstrBot のメンテナンスブランチであり、ベースラインは上流の `v4.28.2` バージョンに固定されています。リポジトリは独立してメンテナンスされており、GitHub の fork ネットワークには含まれません。配布パッケージには core 本体のみが含まれ、プラグインは含まれません。ライセンスは AGPL-3.0-or-later であり、上流の作者とはいかなる提携関係もありません。
+これは AstrBot のメンテナンスブランチであり、ベースラインは上流の `v4.29.4` バージョンに固定されています。リポジトリは独立してメンテナンスされており、GitHub の fork ネットワークには含まれません。配布パッケージには core 本体のみが含まれ、プラグインは含まれません。ライセンスは AGPL-3.0-or-later であり、上流の作者とはいかなる提携関係もありません。
 
 ## コアの相違点と新規 API
 
@@ -49,14 +49,14 @@
 
 ## 互換性
 
-バージョン番号は `4.28.2+mtn1` です。`+mtn1` は PEP 440 の local セグメントであり、バージョン範囲の比較時には無視されます。
+バージョン番号は `4.29.4+mtn1` です。`+mtn1` は PEP 440 の local セグメントであり、バージョン範囲の比較時には無視されます。
 
 | 宣言方法 | 例 | 互換性判定 |
 |---|---|---|
 | 範囲宣言 | `>=4.16,<5` | 互換 |
-| ベースライン一致 | `==4.28.2`、`~=4.28.0` | 互換 |
+| ベースライン一致 | `==4.29.4`、`~=4.28.0` | 互換 |
 | 上位バージョン要求 | `>=4.29` | 拒否 |
-| 厳密な等号一致 | `===4.28.2` | 拒否（PEP 440 の規則により文字列の完全一致が必要） |
+| 厳密な等号一致 | `===4.29.4` | 拒否（PEP 440 の規則により文字列の完全一致が必要） |
 
 ベースラインに対するテストでは、メンテナンス版と上流の両スイートが合格しました。既知の上流側の差異は別途登録されています。
 
@@ -74,7 +74,7 @@ Releases ページから `.whl` ファイルをダウンロードします。フ
 
 ```bash
 pip uninstall -y astrbot
-pip install ./astrbot_maintained-4.28.2+mtn1-py3-none-any.whl
+pip install ./astrbot_maintained-4.29.4+mtn1-py3-none-any.whl
 astrbot run
 ```
 

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import logging
-import sys
-import time
 from asyncio import Queue
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any, Protocol
@@ -10,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 from deprecated import deprecated
 
 from astrbot.core.agent.hooks import BaseAgentRunHooks
-from astrbot.core.agent.message import Message
+from astrbot.core.agent.message import ContentPart, Message
 from astrbot.core.agent.runners.tool_loop_agent_runner import ToolLoopAgentRunner
 from astrbot.core.agent.tool import ToolSet
 from astrbot.core.astrbot_config_mgr import AstrBotConfigManager
@@ -18,21 +16,24 @@ from astrbot.core.config.astrbot_config import AstrBotConfig
 from astrbot.core.conversation_mgr import ConversationManager
 from astrbot.core.db import BaseDatabase
 from astrbot.core.knowledge_base.kb_mgr import KnowledgeBaseManager
+from astrbot.core.llm_error_messages import LLM_ERROR_MESSAGES
 from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.persona_mgr import PersonaManager
 from astrbot.core.platform import Platform
-from astrbot.core.platform.astr_message_event import AstrMessageEvent, MessageSesion
+from astrbot.core.platform.astr_message_event import (
+    AstrMessageEvent,
+    MessageSesion,
+    current_message_event,
+    streaming_response_event,
+)
 from astrbot.core.platform.message_type import MessageType
 from astrbot.core.platform_message_history_mgr import PlatformMessageHistoryManager
-from astrbot.core.plugin_attribution import (
-    PLUGIN_MODULE_PREFIX,
-    current_plugin,
-    plugins_for_provider,
-)
+from astrbot.core.provider.decision import DecisionService
 from astrbot.core.provider.entities import LLMResponse, ProviderRequest, ProviderType
 from astrbot.core.provider.func_tool_manager import FunctionTool, FunctionToolManager
 from astrbot.core.provider.manager import ProviderManager
 from astrbot.core.provider.provider import (
+    DecisionProvider,
     EmbeddingProvider,
     Provider,
     RerankProvider,
@@ -45,7 +46,6 @@ from astrbot.core.star.filter.platform_adapter_type import (
 )
 from astrbot.core.subagent_orchestrator import SubAgentOrchestrator
 from astrbot.core.utils.astrbot_path import get_astrbot_system_tmp_path
-from astrbot.core.utils.control_tags import strip_control_tags
 
 from ..exceptions import ProviderNotFoundError
 from .filter.command import CommandFilter
@@ -57,6 +57,7 @@ logger = logging.getLogger("astrbot")
 
 if TYPE_CHECKING:
     from astrbot.core.cron.manager import CronJobManager
+    from astrbot.core.utils.t2i.renderer import HtmlRenderer
 
 WebApiHandler = Callable[..., Awaitable[Any]]
 RegisteredWebApi = tuple[str, WebApiHandler, list[str], str]
@@ -132,6 +133,8 @@ class Context:
     """暴露给插件的接口上下文。"""
 
     registered_web_apis: list[RegisteredWebApi] = []
+    html_renderer: HtmlRenderer
+    """Text-to-image renderer, injected by the core lifecycle after creation."""
 
     # 向后兼容的变量
     _register_tasks: list[Awaitable] = []
@@ -175,6 +178,8 @@ class Context:
         self.cron_manager = cron_manager
         """Cron job manager, initialized by core lifecycle."""
         self.subagent_orchestrator = subagent_orchestrator
+        self.decision = DecisionService(provider_manager)
+        """Decision service backed by the configured decision provider."""
 
     async def llm_generate(
         self,
@@ -186,7 +191,6 @@ class Context:
         tools: ToolSet | None = None,
         system_prompt: str | None = None,
         contexts: list[Message] | None = None,
-        umo: str | None = None,
         **kwargs: Any,
     ) -> LLMResponse:
         """Call the LLM to generate a response. The method will not automatically execute tool calls. If you want to use tool calls, please use `tool_loop_agent()`.
@@ -210,26 +214,6 @@ class Context:
         prov = await self.provider_manager.get_provider_by_id(chat_provider_id)
         if not prov or not isinstance(prov, Provider):
             raise ProviderNotFoundError(f"Provider {chat_provider_id} not found")
-
-        # Community plugins follow the upstream API and never announce
-        # themselves. The dispatcher marks the plugin on the context, which
-        # survives the task hop that asyncio.wait_for creates -- the stack does
-        # not, hence the fallback for paths that bypass the dispatcher.
-        plugin_name = current_plugin()
-        if not plugin_name:
-            frame = sys._getframe(0)
-            while frame is not None:
-                module_name = frame.f_globals.get("__name__", "") or ""
-                if module_name.startswith(PLUGIN_MODULE_PREFIX):
-                    plugin_name = module_name.split(".", 1)[0]
-                    break
-                frame = frame.f_back
-        if not plugin_name:
-            # Last resort: whichever plugins configured this provider for their
-            # own calls. Covers dispatchers that never run the marking hook, and
-            # keeps every owner when several plugins share one provider.
-            plugin_name = "|".join(plugins_for_provider(chat_provider_id or "")[:3])
-        start_time = time.time()
         llm_resp = await prov.text_chat(
             prompt=prompt,
             image_urls=image_urls,
@@ -239,49 +223,6 @@ class Context:
             system_prompt=system_prompt,
             **kwargs,
         )
-        end_time = time.time()
-        # The agent-runner path already persists usage stats; this direct path
-        # did not, which is why dashboard usage looked incomplete. Opt-in via
-        # umo so callers without a session context stay untouched.
-        if umo:
-            try:
-                from astrbot.core import db_helper
-
-                await db_helper.insert_provider_stat(
-                    umo=umo,
-                    conversation_id=None,
-                    provider_id=chat_provider_id,
-                    provider_model=prov.get_model(),
-                    status="completed" if llm_resp.role != "err" else "error",
-                    # LLMResponse carries its usage on .usage (a TokenUsage);
-                    # it has no .stats, so the old lookup raised on every call
-                    # and dropped this path from the dashboard totals.
-                    stats=(
-                        {
-                            "token_usage": {
-                                "input_other": llm_resp.usage.input_other,
-                                "input_cached": llm_resp.usage.input_cached,
-                                "output": llm_resp.usage.output,
-                            },
-                            # Without these the call log showed "-" for duration
-                            # on every plugin-driven call.
-                            "start_time": start_time,
-                            "end_time": end_time,
-                        }
-                        if llm_resp.usage
-                        else {
-                            "start_time": start_time,
-                            "end_time": end_time,
-                        }
-                    ),
-                    # Kept in agent_type instead of a new column: no schema
-                    # migration, and no upstream db module to diverge from.
-                    agent_type=(
-                        f"llm_generate:{plugin_name}" if plugin_name else "llm_generate"
-                    ),
-                )
-            except Exception as e:  # noqa: BLE001 - stats must not break callers
-                logger.warning("Persist llm_generate stats failed: %s", e)
         return llm_resp
 
     async def tool_loop_agent(
@@ -292,10 +233,11 @@ class Context:
         prompt: str | None = None,
         image_urls: list[str] | None = None,
         audio_urls: list[str] | None = None,
+        extra_user_content_parts: list[ContentPart] | None = None,
         tools: ToolSet | None = None,
         system_prompt: str | None = None,
         contexts: list[Message] | None = None,
-        max_steps: int = 30,
+        max_steps: int = 128,
         tool_call_timeout: int = 120,
         **kwargs: Any,
     ) -> LLMResponse:
@@ -309,6 +251,7 @@ class Context:
             prompt: The prompt to send to the LLM, if `contexts` and `prompt` are both provided, `prompt` will be appended as the last user message
             image_urls: List of image URLs to include in the prompt, if `contexts` and `prompt` are both provided, `image_urls` will be appended to the last user message
             audio_urls: List of audio URLs or local paths to include in the prompt, if `contexts` and `prompt` are both provided, `audio_urls` will be appended to the last user message
+            extra_user_content_parts: Extra content parts appended to the user message. Use this for per-turn context that must not be persisted into the conversation history (e.g. `TextPart(text=...).mark_as_temp()`)
             tools: ToolSet of tools available to the LLM
             system_prompt: System prompt to guide the LLM's behavior, if provided, it will always insert as the first system message in the context
             contexts: context messages for the LLM
@@ -333,6 +276,11 @@ class Context:
             AstrAgentContext,
         )
         from astrbot.core.astr_agent_tool_exec import FunctionToolExecutor
+        from astrbot.core.tools.computer_tools.util import (
+            LOCAL_NETWORK_POLICY_NOTICE,
+            get_local_permission_policy,
+            is_local_runtime,
+        )
 
         prov = await self.provider_manager.get_provider_by_id(chat_provider_id)
         if not prov or not isinstance(prov, Provider):
@@ -352,6 +300,7 @@ class Context:
             prompt=prompt,
             image_urls=image_urls or [],
             audio_urls=audio_urls or [],
+            extra_user_content_parts=extra_user_content_parts or [],
             func_tool=tools,
             contexts=context_,
             system_prompt=system_prompt or "",
@@ -361,6 +310,29 @@ class Context:
                 context=self,
                 event=event,
             )
+        run_context = AgentContextWrapper(
+            context=agent_context,
+            tool_call_timeout=tool_call_timeout,
+        )
+        if (
+            tools
+            and any(
+                (tool := tools.get_tool(name)) is not None and tool.active
+                for name in (
+                    "astrbot_execute_shell",
+                    "astrbot_shell_session",
+                    "astrbot_execute_python",
+                )
+            )
+            and is_local_runtime(run_context)
+        ):
+            local_policy = get_local_permission_policy(run_context)
+            if (
+                local_policy.allow_execution
+                and not local_policy.allow_network
+                and LOCAL_NETWORK_POLICY_NOTICE not in request.system_prompt
+            ):
+                request.system_prompt += f"\n{LOCAL_NETWORK_POLICY_NOTICE}\n"
         agent_runner = ToolLoopAgentRunner()
         tool_executor = FunctionToolExecutor()
 
@@ -382,10 +354,7 @@ class Context:
         await agent_runner.reset(
             provider=prov,
             request=request,
-            run_context=AgentContextWrapper(
-                context=agent_context,
-                tool_call_timeout=tool_call_timeout,
-            ),
+            run_context=run_context,
             tool_executor=tool_executor,
             agent_hooks=agent_hooks,
             streaming=streaming,
@@ -488,7 +457,13 @@ class Context:
         self,
         provider_id: str,
     ) -> (
-        Provider | TTSProvider | STTProvider | EmbeddingProvider | RerankProvider | None
+        Provider
+        | TTSProvider
+        | STTProvider
+        | EmbeddingProvider
+        | RerankProvider
+        | DecisionProvider
+        | None
     ):
         """通过 ID 获取对应的 LLM Provider。
 
@@ -554,11 +529,14 @@ class Context:
     async def get_using_provider_async(
         self,
         umo: str | None = None,
+        *,
+        locale: str = "zh-CN",
     ) -> Provider | None:
         """Asynchronously get the current text-generation provider.
 
         Args:
             umo: Unified message origin used for session-specific preferences.
+            locale: Language for the built-in provider type error.
 
         Returns:
             Current chat provider, or None if no provider is available.
@@ -573,8 +551,9 @@ class Context:
         if prov is None:
             return None
         if not isinstance(prov, Provider):
+            messages = LLM_ERROR_MESSAGES.get(locale, LLM_ERROR_MESSAGES["zh-CN"])
             raise ValueError(
-                f"该会话来源的对话模型（提供商）的类型不正确: {type(prov)}"
+                messages["invalidSessionProviderType"].format(provider_type=type(prov))
             )
         return prov
 
@@ -710,19 +689,27 @@ class Context:
             except BaseException as e:
                 raise ValueError("不合法的 session 字符串: " + str(e))
 
-        # Proactive sends bypass the pipeline's decorate stage, so the same
-        # control-tag sweep has to happen here too.
-        if message_chain is not None and message_chain.chain:
-            stripped = strip_control_tags(message_chain.chain)
-            if stripped:
-                logger.warning(
-                    "Removed leftover control tags from %d component(s) before proactive send",
-                    stripped,
-                )
-
         for platform in self.platform_manager.platform_insts:
             if platform.meta().id == session.platform_name:
                 await platform.send_by_session(session, message_chain)
+                event = current_message_event.get()
+                if (
+                    event is not None
+                    and event._execution_active
+                    and message_chain.chain
+                    and streaming_response_event.get() is not event
+                ):
+                    event.trace.record(
+                        "response_sent",
+                        kind="response",
+                        message=event._outline_chain(message_chain.chain),
+                        component_types=[
+                            str(component.type) for component in message_chain.chain
+                        ],
+                        component_count=len(message_chain.chain),
+                        message_type=message_chain.type,
+                        target_umo=str(session),
+                    )
                 settings = self.get_config(umo=str(session)).get(
                     "provider_ltm_settings",
                     {},

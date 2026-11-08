@@ -33,7 +33,7 @@
 
 | ID | 目标 | 度量方式 |
 |---|---|---|
-| G1 | 基线可复现 | 任意机器 clone 后 `git rev-parse baseline/v4.28.2` 可达 `3c7adafa`，且工作区字节与上游一致（CRLF 计数为 0） |
+| G1 | 基线可复现 | 任意机器 clone 后 `git rev-parse baseline/v4.29.4` 可达 `3c7adafa`，且工作区字节与上游一致（CRLF 计数为 0） |
 | G2 | 对外兼容 | 原版插件**零改动**可用；`astrbot.api.*` 与事实公开符号全部冻结 |
 | G3 | 只做加法 | 新增能力一律落 `astrbot/api/**`，不触碰既有对外可见路径 |
 | G4 | 合规 | 满足 AGPL §13：公开仓库 + `NOTICE` + 同源可获取 |
@@ -46,7 +46,7 @@
 - 不做 UI / 前端（不重写 `dashboard/`）。
 - **本仓库只发布 core 本体，不包含任何插件**。插件不在本仓库的打包与发布范围内。
 - **不重命名、不删除** `astrbot.api.*` 现存符号，以及 core 中被插件事实依赖的 5 个路径。
-- 不做上游版本升级：**锁 v4.28.2**（`v4.29.0-beta.1` 暂不跟），升级走三方合并并单独立项。
+- 不做上游版本升级：**锁 v4.29.4**（`v4.29.0-beta.1` 暂不跟），升级走三方合并并单独立项。
 - **不开主动回复开关**（`proactive_must_remain_disabled` 恒为 true）。
 - 不新增运行时依赖、不引入新 CI 平台。
 - 不批量格式化既有代码（不 `git add --renormalize .`、不全局 reformat）。
@@ -70,13 +70,13 @@
 | 术语 | 含义 |
 |---|---|
 | upstream | `AstrBotDevs/AstrBot`，AGPL-3.0，默认分支 `master` |
-| baseline | tag `v4.28.2` → commit `3c7adafa1397e182d60b1016bf88759265113c8a` |
-| maintained | 本 fork 主干分支 `maintained/v4.28.2`；锚点 tag `baseline/v4.28.2` |
+| baseline | tag `v4.29.4` → commit `3c7adafa1397e182d60b1016bf88759265113c8a` |
+| maintained | 本 fork 主干分支 `maintained/v4.29.4`；锚点 tag `baseline/v4.29.4` |
 | api 层 | `astrbot/api/**`，对插件公开的唯一稳定面 |
 | core 内部 | `astrbot/core/**`，除已登记补丁外不得作为插件依赖面 |
 | 插件 | 不在本仓库内；插件独立发布，与 core 分开打包 |
 
-**4.28.2 真实布局**：`astrbot/core/...`（非旧的 `astrbot/...`）。
+**4.29.4 真实布局**：`astrbot/core/...`（非旧的 `astrbot/...`）。
 
 ## 6. 方案概述（七阶段）
 
@@ -94,11 +94,11 @@
 
 ## 8. 验收标准（每条可命令验证）
 
-- **A1** `git rev-parse baseline/v4.28.2` = `3c7adafa…`（锚点标签永久指向基线，主干 HEAD 随维护推进而前进），`git status --porcelain` 为空，本地无 `master` 分支。
+- **A1** `git rev-parse baseline/v4.29.4` = `3c7adafa…`（锚点标签永久指向基线，主干 HEAD 随维护推进而前进），`git status --porcelain` 为空，本地无 `master` 分支。
 - **A2** `git remote -v`：`upstream` 禁推、`origin` 为 SSH `Chenamel/astrbot-maintained`；`ssh -T git@github.com` 返回 Chenamel。
-- **A3** `pyproject.toml` 为 `4.28.2`（PEP 440 严格可解析的基版本），
-  `astrbot.__version__` 为 `4.28.2+mtn1`（带 fork 标记），二者的一致性由
-  `tests/maintained/test_version_marker.py` 钉住；`python -c "import astrbot; print(astrbot.__version__)"` 应输出 `4.28.2+mtn1`。
+- **A3** `pyproject.toml` 为 `4.29.4`（PEP 440 严格可解析的基版本），
+  `astrbot.__version__` 为 `4.29.4+mtn1`（带 fork 标记），二者的一致性由
+  `tests/maintained/test_version_marker.py` 钉住；`python -c "import astrbot; print(astrbot.__version__)"` 应输出 `4.29.4+mtn1`。
 - **A4** 全仓 grep 无具体插件目录名、无第三方 fork 名、`git ls-files` 无 `data/plugins` 路径。
   ✅ **已达成**：P2 改造已让 core 侧不再按插件目录名找插件（改走能力契约）；内部施工文档
   已移出公开树；守卫见 `tests/maintained/test_plugin_capability_lookup.py`（插件目录名白名单为空）。
@@ -117,7 +117,7 @@ SSH 密钥 `id_ed25519_workbuddy`、GitHub 账号 `Chenamel`、Python 3.12 venv�
 
 | ID | 决策 |
 |---|---|
-| D1 | 锁 v4.28.2 为基线，不跟 v4.29.0-beta.1 |
+| D1 | 锁 v4.29.4 为基线，不跟 v4.29.0-beta.1 |
 | D2 | 单仓发布 core 本体（AGPL-3.0）；插件不进本仓 |
 | D3 | 先治理后止血（1→2→3→4→5→6→7） |
 | D4 | 兼容优先、最大化增强：对外冻结 + 内部加法 |

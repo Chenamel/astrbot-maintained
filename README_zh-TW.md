@@ -7,13 +7,13 @@
 <br>
 <br>
 
-[![version](https://img.shields.io/badge/version-4.28.2%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
+[![version](https://img.shields.io/badge/version-4.29.4%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green)](./LICENSE)
 [![python](https://img.shields.io/badge/python-3.12%2B-blue)](./pyproject.toml)
 
 </div>
 
-這是 AstrBot 的維護分支，基準鎖定在上游 `v4.28.2` 版本。倉庫獨立維護，不在 GitHub 的 fork 網絡裡。分發包只包含 core 本體，不含插件。許可證是 AGPL-3.0-or-later，與上游作者無從屬關係。
+這是 AstrBot 的維護分支，基準鎖定在上游 `v4.29.4` 版本。倉庫獨立維護，不在 GitHub 的 fork 網絡裡。分發包只包含 core 本體，不含插件。許可證是 AGPL-3.0-or-later，與上游作者無從屬關係。
 
 ## 核心差異與新增 API
 
@@ -49,14 +49,14 @@
 
 ## 兼容性
 
-版本號是 `4.28.2+mtn1`。其中 `+mtn1` 是 PEP 440 的 local 段，在版本區間比較時會被忽略。
+版本號是 `4.29.4+mtn1`。其中 `+mtn1` 是 PEP 440 的 local 段，在版本區間比較時會被忽略。
 
 | 聲明方式 | 示例 | 兼容判定 |
 |---|---|---|
 | 區間聲明 | `>=4.16,<5` | 兼容 |
-| 基準匹配 | `==4.28.2`、`~=4.28.0` | 兼容 |
+| 基準匹配 | `==4.29.4`、`~=4.28.0` | 兼容 |
 | 高版本要求 | `>=4.29` | 拒絕 |
-| 嚴格等號匹配 | `===4.28.2` | 拒絕（PEP 440 規則要求字符串全量相等） |
+| 嚴格等號匹配 | `===4.29.4` | 拒絕（PEP 440 規則要求字符串全量相等） |
 
 針對基準的測試中，維護版與上游兩套測試均通過；少數已知的上游偏差另行登記。
 
@@ -74,7 +74,7 @@
 
 ```bash
 pip uninstall -y astrbot
-pip install ./astrbot_maintained-4.28.2+mtn1-py3-none-any.whl
+pip install ./astrbot_maintained-4.29.4+mtn1-py3-none-any.whl
 astrbot run
 ```
 
