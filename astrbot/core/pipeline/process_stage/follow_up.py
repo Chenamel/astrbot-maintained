@@ -4,7 +4,6 @@ import asyncio
 from dataclasses import dataclass
 
 from astrbot import logger
-from astrbot.api.event.extras import is_active_reply
 from astrbot.core.agent.runners.tool_loop_agent_runner import FollowUpTicket
 from astrbot.core.astr_agent_run_util import AgentRunner
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
@@ -42,6 +41,11 @@ def register_active_runner(umo: str, runner: AgentRunner) -> None:
     _ACTIVE_AGENT_RUNNERS[umo] = runner
     runner_event = getattr(getattr(runner.run_context, "context", None), "event", None)
     if runner_event is not None:
+        # Imported lazily: loading astrbot.api at module scope initialises the
+        # star package while this module is still being imported, which races
+        # the session-lock singleton used by the pipeline stage.
+        from astrbot.api.event.extras import is_active_reply
+
         # Events arrive duck-typed: only real platform events are guaranteed to
         # A runner event is only sometimes a real event; the reader handles
         # the doubles that do not expose get_extra().

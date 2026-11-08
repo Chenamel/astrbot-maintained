@@ -168,6 +168,11 @@ async def test_background_wake_passes_misc_runtime_modes(
     event = MagicMock()
     event.unified_msg_origin = SESSION_STR
     event.role = "member"
+    # Upstream 4.29.x added a per-event background stop signal. A bare MagicMock
+    # makes every extra truthy, which the new code reads as "already stopped"
+    # and returns before building the config. A real event with no signal has
+    # get_extra() -> None; keep the runtime-mode assertions unchanged.
+    event.get_extra = lambda _key: None
     ctx = MagicMock()
     ctx.get_config.return_value = _config(misc)
     run_context = MagicMock()

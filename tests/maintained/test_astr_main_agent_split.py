@@ -166,12 +166,23 @@ def test_build_config_is_still_built_in_initialize():
 
 
 def test_build_config_keywords_are_unchanged():
-    """Every keyword passed to the config survives the split."""
+    """Every fork-relevant keyword survives the upstream 4.29.4 rewrite."""
     tree = ast.parse(INTERNAL_PATH.read_text(encoding="utf-8"))
     call, _, _ = _find_build_config_call(tree)
     keywords = {keyword.arg for keyword in call.keywords if keyword.arg}
 
-    assert keywords == EXPECTED_BUILD_KEYWORDS
+    # Upstream added its own fields (timezone, request_max_retries, ...). Assert
+    # the capability that matters -- the fork's runtime-mode keys and the core
+    # build inputs must still be passed -- instead of pinning the exact set.
+    required = {
+        "tool_call_timeout",
+        "tool_schema_mode",
+        "llm_safety_mode",
+        "safety_mode_strategy",
+        "provider_settings",
+        "sanitize_context_by_modalities",
+    }
+    assert required <= keywords, sorted(required - keywords)
 
 
 def test_new_modules_declare_their_public_surface():
@@ -191,27 +202,42 @@ def test_moved_symbols_stay_reachable_from_astr_main_agent():
 
 
 def test_citation_constants_are_reexported():
-    """Upstream assertions read both citation constants by attribute."""
-    assert (
-        astr_main_agent.WEB_SEARCH_CITATION_PROMPT
-        is astr_main_agent_proactive.WEB_SEARCH_CITATION_PROMPT
-    )
-    assert (
-        astr_main_agent.WEB_SEARCH_CITATION_TOOL_NAMES
-        is astr_main_agent_proactive.WEB_SEARCH_CITATION_TOOL_NAMES
-    )
+    """Both names resolve to the same citation text and tool set.
+
+    Upstream 4.29.4 defines these constants in ``astr_main_agent`` itself while
+    the fork still ships its proactive helper module. Object identity is no
+    longer the contract; equal, non-empty content is.
+    """
+    for name in ("WEB_SEARCH_CITATION_PROMPT", "WEB_SEARCH_CITATION_TOOL_NAMES"):
+        on_main = getattr(astr_main_agent, name)
+        on_helper = getattr(astr_main_agent_proactive, name)
+        assert on_main and on_helper, name
+        # Upstream ships a superset of citation tools (added finance/image/news/
+        # scholar/deepseek/serpapi). Adopt upstream: the fork's helper set must
+        # remain covered, and the prompt text must still be part of it.
+        if isinstance(on_main, (set, frozenset)):
+            assert set(on_helper) <= set(on_main), name
+        else:
+            assert on_helper in on_main or on_main == on_helper, name
 
 
 def test_internal_stage_imports_the_quote_module():
-    """The pipeline stage resolves the quote helpers from #38."""
-    tree = ast.parse(INTERNAL_PATH.read_text(encoding="utf-8"))
-    modules = {
-        node.module
-        for node in ast.walk(tree)
-        if isinstance(node, ast.ImportFrom) and node.module
-    }
+    """The pipeline stage still resolves quoted-message attachments.
 
-    assert "astrbot.core.astr_main_agent_quote" in modules
+    Upstream 4.29.4 folded quote handling into ``internal.py`` instead of
+    importing the fork's helper module. Assert the capability (Reply components
+    are walked for attached files) rather than the import spelling.
+    """
+    tree = ast.parse(INTERNAL_PATH.read_text(encoding="utf-8"))
+    names = {
+        node.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)
+    }
+    assert "Reply" in names
+    source = INTERNAL_PATH.read_text(encoding="utf-8")
+    assert "max_quoted_fallback_images" in source
+    assert "isinstance(reply_component" in source
 
 
 @pytest.mark.parametrize(

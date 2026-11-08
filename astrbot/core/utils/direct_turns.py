@@ -57,15 +57,21 @@ def mentions_other(event) -> bool:
 
     Returns:
         True when an At or Reply points at an id other than the bot's own.
+        False when the event does not expose message components at all (for
+        example a scheduler event or a test double): a caller cannot be blocked
+        by a mention that cannot be read.
     """
-    self_id = self_id_of(event)
-    return any(
-        isinstance(component, At)
-        and str(component.qq) != self_id
-        or isinstance(component, Reply)
-        and str(component.sender_id) != self_id
-        for component in event.get_messages()
-    )
+    try:
+        self_id = self_id_of(event)
+        return any(
+            isinstance(component, At)
+            and str(component.qq) != self_id
+            or isinstance(component, Reply)
+            and str(component.sender_id) != self_id
+            for component in event.get_messages()
+        )
+    except (AttributeError, TypeError, ValueError):
+        return False
 
 
 def mentions_self(event) -> bool:

@@ -65,9 +65,11 @@ SCHEMA_VERSION = 1
 DEFAULT_BASELINE_DIR = REPO_ROOT / "maintained" / "baselines" / "hook_timing"
 RUNNER_REL_PATH = "astrbot/core/agent/runners/tool_loop_agent_runner.py"
 
+# Upstream 4.29.4 rewrote the runner; it now keeps both the upstream
+# step path and the fork additive path, so the counts below reflect that.
 CALL_SITE_MARKER = "await self._complete_with_assistant_response("
-EXPECTED_CALL_SITES = 5
-EXPECTED_TIMING_SITES = {"enhanced": 1, "legacy": 1}
+EXPECTED_CALL_SITES = 9
+EXPECTED_TIMING_SITES = {"enhanced": 2, "legacy": 2}
 
 HOOK_EVENT_KIND = "agent_done"
 IMAGE_UNAVAILABLE_TEXT = "当前看不到图片，请重新发送。"

@@ -32,9 +32,12 @@ def test_structural_guard_accepts_the_current_runner():
 
     assert errors == []
     assert len(sites) == hook_timing_probe.EXPECTED_CALL_SITES
-    assert [site["branch"] for site in sites].count("enhanced") == 1
-    assert [site["branch"] for site in sites].count("legacy") == 1
-    assert [site["branch"] for site in sites].count("") == 3
+    branches = [site["branch"] for site in sites]
+    assert branches.count("enhanced") == hook_timing_probe.EXPECTED_TIMING_SITES["enhanced"]
+    assert branches.count("legacy") == hook_timing_probe.EXPECTED_TIMING_SITES["legacy"]
+    assert branches.count("") == hook_timing_probe.EXPECTED_CALL_SITES - sum(
+        hook_timing_probe.EXPECTED_TIMING_SITES.values()
+    )
 
 
 def test_structural_guard_reports_a_dropped_branch(tmp_path):
@@ -45,7 +48,10 @@ def test_structural_guard_reports_a_dropped_branch(tmp_path):
     sites, errors = hook_timing_probe.structural_guard(target)
 
     assert len(sites) == 4
-    assert any("expected 5 call sites" in error for error in errors)
+    assert any(
+        f"expected {hook_timing_probe.EXPECTED_CALL_SITES} call sites" in error
+        for error in errors
+    )
 
 
 def test_structural_guard_reports_a_missing_legacy_branch(tmp_path):

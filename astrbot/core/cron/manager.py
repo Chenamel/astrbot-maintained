@@ -13,7 +13,10 @@ from apscheduler.triggers.date import DateTrigger
 from astrbot import logger
 from astrbot.core.agent.runners.base import AgentState
 from astrbot.core.agent.tool import ToolSet
-from astrbot.core.config.agent_runner import resolve_context_compression_config
+from astrbot.core.config.agent_runner import (
+    normalize_hook_timing_mode,
+    resolve_context_compression_config,
+)
 from astrbot.core.cron.events import CronMessageEvent
 from astrbot.core.db import BaseDatabase
 from astrbot.core.db.po import CronJob
@@ -547,7 +550,15 @@ class CronJobManager:
                 min_value=1,
                 field_name="agent_runner.config.misc.max_steps",
             )
+            _misc = cfg.get("agent_runner", {}).get("config", {}).get("misc", {})
+            tool_schema_mode = _misc.get("tool_schema_mode", "full")
+            if tool_schema_mode not in ("full", "skills_like"):
+                tool_schema_mode = "full"
             config = MainAgentBuildConfig(
+                tool_schema_mode=tool_schema_mode,
+                hook_timing_mode=normalize_hook_timing_mode(
+                    _misc.get("hook_timing_mode")
+                ),
                 tool_call_timeout=tool_call_timeout,
                 fallback_provider_ids=cfg.get("agent_runner", {})
                 .get("config", {})

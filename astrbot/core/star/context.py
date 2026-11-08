@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import sys
+import time
 from asyncio import Queue
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any, Protocol
@@ -28,6 +30,11 @@ from astrbot.core.platform.astr_message_event import (
 )
 from astrbot.core.platform.message_type import MessageType
 from astrbot.core.platform_message_history_mgr import PlatformMessageHistoryManager
+from astrbot.core.plugin_attribution import (
+    PLUGIN_MODULE_PREFIX,
+    current_plugin,
+    plugins_for_provider,
+)
 from astrbot.core.provider.decision import DecisionService
 from astrbot.core.provider.entities import LLMResponse, ProviderRequest, ProviderType
 from astrbot.core.provider.func_tool_manager import FunctionTool, FunctionToolManager
@@ -191,6 +198,7 @@ class Context:
         tools: ToolSet | None = None,
         system_prompt: str | None = None,
         contexts: list[Message] | None = None,
+        umo: str | None = None,
         **kwargs: Any,
     ) -> LLMResponse:
         """Call the LLM to generate a response. The method will not automatically execute tool calls. If you want to use tool calls, please use `tool_loop_agent()`.
@@ -214,6 +222,26 @@ class Context:
         prov = await self.provider_manager.get_provider_by_id(chat_provider_id)
         if not prov or not isinstance(prov, Provider):
             raise ProviderNotFoundError(f"Provider {chat_provider_id} not found")
+
+        # Community plugins follow the upstream API and never announce
+        # themselves. The dispatcher marks the plugin on the context, which
+        # survives the task hop that asyncio.wait_for creates -- the stack does
+        # not, hence the fallback for paths that bypass the dispatcher.
+        plugin_name = current_plugin()
+        if not plugin_name:
+            frame = sys._getframe(0)
+            while frame is not None:
+                module_name = frame.f_globals.get("__name__", "") or ""
+                if module_name.startswith(PLUGIN_MODULE_PREFIX):
+                    plugin_name = module_name.split(".", 1)[0]
+                    break
+                frame = frame.f_back
+        if not plugin_name:
+            # Last resort: whichever plugins configured this provider for their
+            # own calls. Covers dispatchers that never run the marking hook, and
+            # keeps every owner when several plugins share one provider.
+            plugin_name = "|".join(plugins_for_provider(chat_provider_id or "")[:3])
+        start_time = time.time()
         llm_resp = await prov.text_chat(
             prompt=prompt,
             image_urls=image_urls,
@@ -223,6 +251,49 @@ class Context:
             system_prompt=system_prompt,
             **kwargs,
         )
+        end_time = time.time()
+        # The agent-runner path already persists usage stats; this direct path
+        # did not, which is why dashboard usage looked incomplete. Opt-in via
+        # umo so callers without a session context stay untouched.
+        if umo:
+            try:
+                from astrbot.core import db_helper
+
+                await db_helper.insert_provider_stat(
+                    umo=umo,
+                    conversation_id=None,
+                    provider_id=chat_provider_id,
+                    provider_model=prov.get_model(),
+                    status="completed" if llm_resp.role != "err" else "error",
+                    # LLMResponse carries its usage on .usage (a TokenUsage);
+                    # it has no .stats, so the old lookup raised on every call
+                    # and dropped this path from the dashboard totals.
+                    stats=(
+                        {
+                            "token_usage": {
+                                "input_other": llm_resp.usage.input_other,
+                                "input_cached": llm_resp.usage.input_cached,
+                                "output": llm_resp.usage.output,
+                            },
+                            # Without these the call log showed "-" for duration
+                            # on every plugin-driven call.
+                            "start_time": start_time,
+                            "end_time": end_time,
+                        }
+                        if llm_resp.usage
+                        else {
+                            "start_time": start_time,
+                            "end_time": end_time,
+                        }
+                    ),
+                    # Kept in agent_type instead of a new column: no schema
+                    # migration, and no upstream db module to diverge from.
+                    agent_type=(
+                        f"llm_generate:{plugin_name}" if plugin_name else "llm_generate"
+                    ),
+                )
+            except Exception as e:  # noqa: BLE001 - stats must not break callers
+                logger.warning("Persist llm_generate stats failed: %s", e)
         return llm_resp
 
     async def tool_loop_agent(

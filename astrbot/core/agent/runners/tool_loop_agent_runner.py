@@ -25,10 +25,10 @@ from tenacity import (
 )
 
 from astrbot import logger
-from astrbot.api.event.extras import is_active_reply
 from astrbot.core.agent.message import ImageURLPart, TextPart, ThinkPart
 from astrbot.core.agent.tool import FunctionTool, ToolSet
 from astrbot.core.agent.tool_image_cache import tool_image_cache
+from astrbot.core.config.agent_runner import normalize_hook_timing_mode
 from astrbot.core.exceptions import EmptyModelOutputError
 from astrbot.core.message.components import Json
 from astrbot.core.message.message_event_result import (
@@ -111,6 +111,7 @@ AwaitableResultT = T.TypeVar("AwaitableResultT")
 
 class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
     TOOL_RESULT_MAX_ESTIMATED_TOKENS = 27_500
+    hook_timing_mode: str = "legacy"
     TOOL_RESULT_PREVIEW_MAX_ESTIMATED_TOKENS = 7000
     EMPTY_OUTPUT_RETRY_ATTEMPTS = 3
     EMPTY_OUTPUT_RETRY_WAIT_MIN_S = 1
@@ -229,6 +230,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         custom_token_counter: TokenCounter | None = None,
         custom_compressor: ContextCompressor | None = None,
         tool_schema_mode: str | None = "full",
+        hook_timing_mode: str | None = None,
         fallback_providers: list[Provider] | None = None,
         request_max_retries: int | None = None,
         tool_result_overflow_dir: str | None = None,
@@ -236,6 +238,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         **kwargs: T.Any,
     ) -> None:
         self.req = request
+        self.hook_timing_mode = normalize_hook_timing_mode(hook_timing_mode)
         self.streaming = streaming
         self.enforce_max_turns = enforce_max_turns
         self.llm_compress_instruction = llm_compress_instruction
@@ -821,6 +824,29 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
             except Exception as e:
                 logger.error(f"Error in on_agent_begin hook: {e}", exc_info=True)
 
+        # Fork: an image the provider cannot see should not consume an LLM turn.
+        # Upstream 4.29.4 has no equivalent short circuit, so keep it here at
+        # the start of the step, before any request is sent.
+        if getattr(self.req, "image_input_unavailable", False):
+            response = LLMResponse(
+                role="assistant",
+                completion_text="当前看不到图片，请重新发送。",
+                image_input_unavailable=True,
+            )
+            await self._complete_with_assistant_response(response)
+            chain = response.result_chain
+            if not chain and response.completion_text:
+                chain = MessageChain().message(response.completion_text)
+            if chain:
+                yield AgentResponse(
+                    type="llm_result", data=AgentResponseData(chain=chain)
+                )
+                if self.streaming:
+                    yield AgentResponse(
+                        type="streaming_delta", data=AgentResponseData(chain=chain)
+                    )
+            return
+
         # 开始处理，转换到运行状态
         self._transition_state(AgentState.RUNNING)
         llm_resp_result = None
@@ -960,6 +986,12 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                     logger.warning(
                         "skills_like tool re-query returned no tool calls; fallback to assistant response."
                     )
+                    # Fork hook-timing mode: "enhanced" fires the completion
+                    # hook before the reply is emitted; "legacy" keeps the
+                    # upstream timing (right after the llm_result yields).
+                    legacy_timing = self.hook_timing_mode == "legacy"
+                    if not legacy_timing:
+                        await self._complete_with_assistant_response(llm_resp)
                     if llm_resp.reasoning_content:
                         yield AgentResponse(
                             type="llm_result",
@@ -982,7 +1014,8 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                             ),
                         )
 
-                    await self._complete_with_assistant_response(llm_resp)
+                    if legacy_timing:
+                        await self._complete_with_assistant_response(llm_resp)
                     # Re-query uses text_chat(), so its reply has no stream chunks.
                     # Supply them after hooks without changing llm_result ordering.
                     if self.streaming:
@@ -1661,6 +1694,8 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
             await executor.aclose()
 
     def _finish_proactive_request(self) -> None:
+        from astrbot.api.event.extras import is_active_reply
+
         """Notify the proactive capability owner once, even if its token is stale.
 
         The plugin is found by the ``finish_proactive_request`` capability

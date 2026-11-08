@@ -79,6 +79,11 @@ class UpdateService:
             dashboard_version = await self.get_dashboard_version(
                 self.dashboard_static_folder
             )
+            # A served dist without a readable stamp must not disable update
+            # checking: fall back to the default lookup. Carried over from the
+            # fork's 4.28.2 behaviour, now at upstream's binding point.
+            if dashboard_version is None and self.dashboard_static_folder is not None:
+                dashboard_version = await self.get_dashboard_version(None)
             if update_type == "dashboard":
                 return UpdateServiceResult(
                     data={

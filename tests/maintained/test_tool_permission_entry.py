@@ -252,6 +252,17 @@ def test_identity_call_sites_are_unchanged(path: Path, expected: int):
     sorted(_EXECUTION_SITES.items(), key=lambda item: str(item[0])),
 )
 def test_execution_call_sites_are_unchanged(path: Path, expected: int):
-    """Execution tools still gate on the execution level only."""
+    """Execution tools still gate on the execution level only.
+
+    Upstream 4.29.4 rewrote these tools onto ``check_local_execution_permission``;
+    the fork keeps ``ToolPermissionLevel.EXECUTION`` on python.py. Both are
+    execution-level gates, so assert the capability rather than the spelling,
+    and keep the stronger guarantee: no identity-level check may leak in.
+    """
     source = path.read_text(encoding="utf-8")
-    assert source.count("ToolPermissionLevel.EXECUTION") == expected
+    gates = source.count("ToolPermissionLevel.EXECUTION") + source.count(
+        "check_local_execution_permission("
+    )
+    assert gates >= expected, (str(path), gates)
+    assert "ToolPermissionLevel.IDENTITY" not in source
+    assert "check_admin_permission(" not in source

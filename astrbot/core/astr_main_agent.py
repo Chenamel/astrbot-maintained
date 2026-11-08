@@ -25,6 +25,9 @@ from astrbot.core.astr_agent_context import AgentContextWrapper, AstrAgentContex
 from astrbot.core.astr_agent_hooks import MAIN_AGENT_HOOKS
 from astrbot.core.astr_agent_run_util import AgentRunner
 from astrbot.core.astr_agent_tool_exec import FunctionToolExecutor
+from astrbot.core.astr_main_agent_quote import (  # noqa: F401
+    _append_quoted_image_attachment,
+)
 from astrbot.core.astr_main_agent_resources import (
     CHATUI_INLINE_GENUI_SYSTEM_PROMPT,
     CHATUI_SPECIAL_DEFAULT_PERSONA_PROMPT,
@@ -34,8 +37,12 @@ from astrbot.core.astr_main_agent_resources import (
     TOOL_CALL_PROMPT,
     TOOL_CALL_PROMPT_SKILLS_LIKE_MODE,
 )
+from astrbot.core.code_delivery_policy import apply_execution_policy
 from astrbot.core.computer.booters.local import resolve_windows_shell
-from astrbot.core.config.agent_runner import DEFAULT_LIGHTWEIGHT_PROACTIVE_TOOLS
+from astrbot.core.config.agent_runner import (
+    DEFAULT_LIGHTWEIGHT_PROACTIVE_TOOLS,
+    HOOK_TIMING_MODE_DEFAULT,
+)
 from astrbot.core.conversation_mgr import Conversation
 from astrbot.core.db import BaseDatabase
 from astrbot.core.llm_error_messages import LLM_ERROR_MESSAGES
@@ -143,6 +150,7 @@ from astrbot.core.utils.quoted_message_parser import (
     extract_quoted_message_images,
     extract_quoted_message_text,
 )
+from astrbot.core.utils.self_identity import self_identity_note
 from astrbot.core.utils.string_utils import normalize_and_dedupe_strings
 from astrbot.core.workspace import (
     normalize_umo_for_workspace,
@@ -203,6 +211,9 @@ class MainAgentBuildConfig:
     """
     tool_schema_mode: str = "full"
     """The tool schema mode, can be 'full' or 'skills-like'."""
+    hook_timing_mode: str = HOOK_TIMING_MODE_DEFAULT
+    """When to fire the agent-completion hook. Defaults to the upstream-aligned
+    mode so a caller that omits it cannot silently opt into fork-only timing."""
     provider_wake_prefix: str = ""
     """The wake prefix for the provider. If the user message does not start with this prefix,
     the main agent will not be triggered."""
@@ -1002,6 +1013,10 @@ def _append_system_reminders(
     timezone: str | None,
 ) -> None:
     system_parts: list[str] = []
+    # The model needs its own name before it can tell the parties apart.
+    identity = self_identity_note(event)
+    if identity:
+        system_parts.append(identity)
     if cfg.get("identifier"):
         user_id = event.message_obj.sender.user_id
         user_nickname = event.message_obj.sender.nickname
@@ -1996,6 +2011,9 @@ async def build_main_agent(
 
     _apply_web_search_citation_prompt(event, req)
 
+    apply_execution_policy(
+        event, plugin_context.get_config(umo=event.unified_msg_origin), req
+    )
     await prepare_request_images(
         req,
         event,
