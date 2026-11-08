@@ -23,7 +23,12 @@ python -c "import zipfile,glob;z=zipfile.ZipFile(glob.glob('*.whl')[0]);print(su
 
 ## 什么时候需要走这套流程
 
-在 `astrbot/core/config/default.py` 的配置 schema 里新增了 fork 独有的键时。
+- 在 `astrbot/core/config/default.py` 的配置 schema 里新增了 fork 独有的键时。
+- **每次追上游大版本后必须重编并重新部署 `dist_maintained`。** 旧构建的语言包缺新版
+  config-metadata 词条，配置页会显示 `[MISSING: ...]` 或原始键路径；`assets/version`
+  仍是旧版本时，`versionsMismatch(core, dashboard)` 成立，顶部会误报「WebUI 有新版本」
+  并引导下载官方面板覆盖 fork 构建。重编后静态资源每次请求读盘，**强刷浏览器即可，
+  无需重启机器人**。
 
 ## 步骤
 
@@ -49,7 +54,9 @@ python -c "import zipfile,glob;z=zipfile.ZipFile(glob.glob('*.whl')[0]);print(su
    - 项目锁文件是 **lockfileVersion 9.0**，只能用 **pnpm 10**（pnpm 12 不读
      `package.json` 的 `pnpm.overrides`，会报 `ERR_PNPM_VERIFY_DEPS_BEFORE_RUN`）
    - 非交互环境必须 `CI=true`，否则 `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`
-   - 构建会顺带重新生成 `src/assets/mdi-subset/*`，那是工具链噪音，**不要提交**
+   - 构建会顺带重新生成 `src/assets/mdi-subset/*`：日常构建属工具链噪音，不要提交；
+     **跨大版本时图标集确实变了（上游会删旧图标、加新图标），应连同新 css 一起提交**，
+     否则仓库源码与发布产物长期不一致、每次构建都出现 diff
 
 3. **版本标记**（已自动化，通常无需手动处理）：
 
