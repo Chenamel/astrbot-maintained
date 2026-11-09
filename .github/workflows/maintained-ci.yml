@@ -55,6 +55,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # sync_audit.py compares the two upstream baseline tags; a shallow
+          # checkout without tags would silently turn the audit into a SKIP.
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -71,3 +76,6 @@ jobs:
 
       - name: Validate the seven-file README ring
         run: python maintained/tools/check_readme_ring.py .
+
+      - name: Upstream sync audit
+        run: PYTHONPATH=maintained python -m tools.sync_audit

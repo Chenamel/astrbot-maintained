@@ -8,7 +8,7 @@ from tools import instance_check
 
 
 def _line(stamp: str, text: str) -> str:
-    return f"[{stamp}] [Core] [ERRO] [v4.28.2+mtn1] [module:1]: {text}\n"
+    return f"[{stamp}] [Core] [ERRO] [v4.29.4+mtn1] [module:1]: {text}\n"
 
 
 def _instance(tmp_path, *, log_files=None, plugin: str = ""):

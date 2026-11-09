@@ -121,9 +121,24 @@ python maintained/tools/apply_patches.py --instance "<实例目录>" --apply
 - 不自动重启机器人、不改配置、不动插件、不碰 `data/`。
 - 不做「上游版本升级」，那走三方合并，与本工具无关。
 
-## 7. 测试
+## 7. `sync_audit.py`（升级覆盖审计）
+
+与 `check_drift.py` 不同：后者只比台账 68 条，前者以**两个上游基线之间的全量变更面**为参照，
+查签名漂移、上游新增模块/依赖、前端悬空 import、i18n 注册、API 导出零删减，
+以及实例侧的全量 core / venv / 面板 / 戳记 / 配置键。只读、纯标准库、可输出 JSON。
+
+```bash
+PYTHONPATH=maintained python -m tools.sync_audit
+PYTHONPATH=maintained python -m tools.sync_audit --instance "<实例目录>"
+PYTHONPATH=maintained python -m tools.sync_audit --json
+```
+
+已在 `maintained-ci.yml` 的 `static-checks` job 接入静态层。完整判据、分级与误报豁免见
+`docs/maintained/upstream-sync-audit.md`。
+
+## 8. 测试
 
 `tests/maintained/test_tools_check_drift.py` / `test_tools_apply_patches.py` /
-`test_tools_hook_timing_probe.py`：
+`test_tools_hook_timing_probe.py` / `test_sync_audit.py`：
 用 `tmp_path` 造出「假仓 + 假实例」，覆盖无漂移 / 内容不符 / 文件缺失 / 源损坏中止 /
-预演不写文件 / `--apply` 备份与写回 / 写回后复核 等分支。
+预演不写文件 / `--apply` 备份与写回 / 写回后复核，以及审计对四类已知事故的检出与误报豁免。

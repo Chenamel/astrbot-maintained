@@ -13,7 +13,7 @@ FOCUS = "100000000"
 
 
 def _line(stamp: str, text: str = "ordinary", level: str = "INFO") -> str:
-    return f"[{stamp}] [Core] [{level}] [v4.28.2+mtn1] [module:1]: {text}\n"
+    return f"[{stamp}] [Core] [{level}] [v4.29.4+mtn1] [module:1]: {text}\n"
 
 
 def _background() -> str:
