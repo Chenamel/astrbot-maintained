@@ -37,7 +37,7 @@
     "astrbot/core/event_bus.py": "4c19cf67ac2982a99c05273766e18e3710151cd1c16d41034ed44d8aa19da9eb",
     "astrbot/core/pipeline/context_utils.py": "ac47d1e2debb5a6a647226d14e407abad3aed13083e39f0a1e7d58f1d3f6782e",
     "astrbot/core/pipeline/process_stage/follow_up.py": "ce596166b166b9155f60efc47115e5f55aa20e017650a4cd63f02ab21a259b69",
-    "astrbot/core/pipeline/process_stage/method/agent_sub_stages/image_input.py": "b590e68e55c39472f4141cdf6c053afe1ce998051e8c13dae9f999790bd3f804",
+    "astrbot/core/pipeline/process_stage/method/agent_sub_stages/image_input.py": "e9378533e3fe3b49d743fc8dce76d21c58c0ac536ff548ccbb38a1f018c689f0",
     "astrbot/core/pipeline/process_stage/method/agent_sub_stages/internal.py": "b4a4ec41e38aeb2bca27192bbf9aac71a83f456df3152d347b5974220679d36c",
     "astrbot/core/pipeline/process_stage/method/star_request.py": "3c08414eb8c824be672683df9c32e45bc2760b6f95b7be104b579a9f1f721d3a",
     "astrbot/core/pipeline/process_stage/stage.py": "58edd5ac476fe6841fc759c881293ae2a5bc198dec3ef4f3a1873417c40d2fbf",

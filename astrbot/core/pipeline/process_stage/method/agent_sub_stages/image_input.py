@@ -12,6 +12,7 @@ from astrbot.core.agent.message import ImageURLPart, TextPart
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.provider.entities import IMAGE_CAPTION_MARKER, ProviderRequest
 from astrbot.core.utils.media_utils import (
+    ImageInputTooLargeError,
     MediaResolver,
     is_recoverable_image_error,
     prepare_model_image,
@@ -38,11 +39,13 @@ async def prepare_request_images(
         event: Owner of downloaded source files and prepared working files.
         enabled: Whether the current pipeline profile enables model image preparation.
         max_size: Normalized longest-edge limit for this request.
-        quality: JPEG output quality in the range 1-100.
+        quality: Retained for source compatibility with the proactive caller;
+            upstream 4.29.4 removed the per-request JPEG quality knob.
         output_dir: Event working file directory, separate from the shared cache.
         prepared: Per-request mapping reused after the request hook.
         quote_image_ref: Optional input for the dedicated quote caption branch.
-        montage_max_size: Optional montage-specific limit; defaults to ``max_size``.
+        montage_max_size: Retained for source compatibility; upstream 4.29.4
+            now bounds stills and montages with the same ``max_size``.
     """
     req.image_urls = normalize_and_dedupe_strings(req.image_urls)
     refs = list(req.image_urls)
@@ -58,15 +61,21 @@ async def prepare_request_images(
         if ref not in prepared:
             path = None
             if enabled:
-                path = await prepare_model_image(
-                    ref,
-                    max_size=max_size,
-                    output_dir=output_dir,
-                    quality=quality,
-                    montage_max_size=montage_max_size,
-                )
-                if path:
-                    event.track_temporary_local_file(path)
+                # Upstream 4.29.4 returns a result tuple and raises for oversized
+                # inputs. Passing the removed quality/montage kwargs here used to
+                # abort the whole proactive image step with a TypeError.
+                try:
+                    image = await prepare_model_image(
+                        ref,
+                        max_size=max_size,
+                        output_dir=output_dir,
+                    )
+                except ImageInputTooLargeError:
+                    image = None
+                if image:
+                    path, _is_montage, needs_cleanup, _original_path = image
+                    if needs_cleanup:
+                        event.track_temporary_local_file(path)
             else:
                 try:
                     async with MediaResolver(
