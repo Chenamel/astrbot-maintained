@@ -16,6 +16,7 @@ import zhCNConfig from './features/config.json';
 import zhCNConfigMetadata from './features/config-metadata.json';
 import zhCNConsole from './features/console.json';
 import zhCNTrace from './features/trace.json';
+import zhCNCalls from './features/calls.json';
 import zhCNAbout from './features/about.json';
 import zhCNSettings from './features/settings.json';
 import zhCNAuth from './features/auth.json';
@@ -58,6 +59,7 @@ export default {
       'config-metadata': zhCNConfigMetadata,
       console: zhCNConsole,
       trace: zhCNTrace,
+      calls: zhCNCalls,
       about: zhCNAbout,
       settings: zhCNSettings,
       auth: zhCNAuth,

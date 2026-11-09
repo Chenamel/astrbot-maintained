@@ -16,6 +16,7 @@ import enUSConfig from './features/config.json';
 import enUSConfigMetadata from './features/config-metadata.json';
 import enUSConsole from './features/console.json';
 import enUSTrace from './features/trace.json';
+import enUSCalls from './features/calls.json';
 import enUSAbout from './features/about.json';
 import enUSSettings from './features/settings.json';
 import enUSAuth from './features/auth.json';
@@ -58,6 +59,7 @@ export default {
       'config-metadata': enUSConfigMetadata,
       console: enUSConsole,
       trace: enUSTrace,
+      calls: enUSCalls,
       about: enUSAbout,
       settings: enUSSettings,
       auth: enUSAuth,

@@ -43,6 +43,10 @@ python -c "import zipfile,glob;z=zipfile.ZipFile(glob.glob('*.whl')[0]);print(su
    ⚠️ 用按行插入保住原文件排版；`json.dumps` 整文件重写会产生上千行噪音 diff
    （ru-RU 实测 2055 行）。插入时注意：末尾键没有尾逗号，新词条要插在它前面。
 
+   ⚠️ 4.29.4 起语言包由 `locales/<lang>/index.ts` 逐语言组装。新增 `features/*.json`
+   后必须在**四份** index.ts 都补 import 与挂载，否则构建照样成功、运行时却显示
+   `[MISSING: ...]`。`tests/maintained/test_i18n_registry.py` 会守这一点。
+
 2. 构建（在 `dashboard/` 下）：
 
    ```bash

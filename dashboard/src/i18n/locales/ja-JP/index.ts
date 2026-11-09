@@ -16,6 +16,7 @@ import jaJPConfig from './features/config.json';
 import jaJPConfigMetadata from './features/config-metadata.json';
 import jaJPConsole from './features/console.json';
 import jaJPTrace from './features/trace.json';
+import jaJPCalls from './features/calls.json';
 import jaJPAbout from './features/about.json';
 import jaJPSettings from './features/settings.json';
 import jaJPAuth from './features/auth.json';
@@ -58,6 +59,7 @@ export default {
       'config-metadata': jaJPConfigMetadata,
       console: jaJPConsole,
       trace: jaJPTrace,
+      calls: jaJPCalls,
       about: jaJPAbout,
       settings: jaJPSettings,
       auth: jaJPAuth,

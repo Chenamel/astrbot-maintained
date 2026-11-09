@@ -16,6 +16,7 @@ import ruRUConfig from './features/config.json';
 import ruRUConfigMetadata from './features/config-metadata.json';
 import ruRUConsole from './features/console.json';
 import ruRUTrace from './features/trace.json';
+import ruRUCalls from './features/calls.json';
 import ruRUAbout from './features/about.json';
 import ruRUSettings from './features/settings.json';
 import ruRUAuth from './features/auth.json';
@@ -58,6 +59,7 @@ export default {
       'config-metadata': ruRUConfigMetadata,
       console: ruRUConsole,
       trace: ruRUTrace,
+      calls: ruRUCalls,
       about: ruRUAbout,
       settings: ruRUSettings,
       auth: ruRUAuth,
