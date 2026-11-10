@@ -65,5 +65,6 @@
     "system": "系统配置"
   },
   "pluginView": "插件可视化视图",
-  "pluginViewType": "插件可视化视图"
+  "pluginViewType": "插件可视化视图",
+  "pluginWebui": "插件页面"
 }

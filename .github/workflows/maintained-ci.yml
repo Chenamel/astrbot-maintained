@@ -5,6 +5,11 @@ name: Maintained Fork CI
 # push here. Keep fork-specific checks in a separate file instead of editing
 # upstream workflow files, and never enable the upstream release / image
 # publishing workflows on this branch.
+#
+# The two manual-only jobs below replace coverage the fork never had: the
+# upstream dashboard CI skips itself on forks via a repository condition, and
+# the upstream unit-test workflows are disabled in this repo's settings.
+# They stay workflow_dispatch-only until both have been observed green.
 
 on:
   push:
@@ -79,3 +84,75 @@ jobs:
 
       - name: Upstream sync audit
         run: PYTHONPATH=maintained python -m tools.sync_audit
+
+  dashboard-build:
+    name: dashboard build (manual)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          # pnpm 12 ignores pnpm.overrides in the lockfile (9.0) and fails.
+          version: 10.28.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.13.0'
+          cache: pnpm
+          cache-dependency-path: dashboard/pnpm-lock.yaml
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          # `npm run stamp` invokes `python ../scripts/stamp_dashboard_version.py`.
+          python-version: '3.12'
+
+      - name: Check i18n keys
+        working-directory: dashboard
+        run: pnpm run i18n:check
+
+      - name: Install and build
+        working-directory: dashboard
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+  upstream-suite:
+    name: full upstream pytest suite (manual)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: python -m pip install --upgrade pip uv
+
+      - name: Install Linux sandbox dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+          # Ubuntu AppArmor blocks unprivileged user namespaces by default;
+          # the real sandbox tests need them on this ephemeral runner.
+          if [ -f /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          bwrap --unshare-all --ro-bind / / /bin/true
+
+      - name: Run the full upstream suite
+        run: bash ./scripts/run_pytests_ci.sh ./tests

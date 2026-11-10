@@ -47,6 +47,11 @@ python -c "import zipfile,glob;z=zipfile.ZipFile(glob.glob('*.whl')[0]);print(su
    后必须在**四份** index.ts 都补 import 与挂载，否则构建照样成功、运行时却显示
    `[MISSING: ...]`。`tests/maintained/test_i18n_registry.py` 会守这一点。
 
+   ⚠️ 改任何语言包后跑 `CI=true pnpm run i18n:check`：它检查四语言叶子键集合必须与
+   zh-CN 基线完全一致（双向）。曾因合并时只在 ru-RU 保留 fork 独有的
+   `core.navigation.pluginWebui` 而漏补另外三份，本地检查才暴露。
+   `sync_audit.py` 的 S5 只管 `features/*.json` 是否注册，管不到这种跨语言漂移。
+
 2. 构建（在 `dashboard/` 下）：
 
    ```bash

@@ -64,6 +64,11 @@ PYTHONPATH=maintained python -m tools.sync_audit --json
 
 - **CI 已接入**：`maintained-ci.yml` 的 `static-checks` job 跑静态层；checkout 必须
   `fetch-depth: 0` + `fetch-tags: true`，否则两个基线取不到，审计会退化成 `SKIP`。
+- **手动验证 job**：同一 workflow 另有 `dashboard-build`（`pnpm run i18n:check` + `vue-tsc` + `vite build`）
+  与 `upstream-suite`（上游全套 `tests/`），只在 `workflow_dispatch` 时跑。上游的
+  `dashboard_ci.yml` 带 `github.repository == 'AstrBotDevs/AstrBot'` 守卫（fork 上整段跳过），
+  `unit_tests.yml` 等 6 个又在仓库设置里 `disabled_manually`，所以这两个 job 是 fork 专属替代。
+  两者观察到全绿之前不绑定 push/PR，避免引入持续红的检查。
 - **自测**：`tests/maintained/test_sync_audit.py` 用构造样例验证 S1/S4/S5/S7/S8/I1
   确实能报出已知四类事故，并守住上面的误报豁免。
 - 本地发布：`release_gate.py` 已覆盖 lint / manifest / dashboard / README 环 / 两套测试 / drift / stamp，
