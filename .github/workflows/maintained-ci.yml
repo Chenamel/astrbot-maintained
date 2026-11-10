@@ -6,10 +6,11 @@ name: Maintained Fork CI
 # upstream workflow files, and never enable the upstream release / image
 # publishing workflows on this branch.
 #
-# The two manual-only jobs below replace coverage the fork never had: the
-# upstream dashboard CI skips itself on forks via a repository condition, and
-# the upstream unit-test workflows are disabled in this repo's settings.
-# They stay workflow_dispatch-only until both have been observed green.
+# The dashboard and full-suite jobs below replace coverage the fork never had:
+# the upstream dashboard CI skips itself on forks via a repository condition, and
+# the upstream unit-test workflows are disabled in this repo's settings. Both
+# were observed green on a manual run before being bound to every push/PR.
+# The full upstream suite takes about five minutes; keep its timeout generous.
 
 on:
   push:
@@ -86,8 +87,7 @@ jobs:
         run: PYTHONPATH=maintained python -m tools.sync_audit
 
   dashboard-build:
-    name: dashboard build (manual)
-    if: github.event_name == 'workflow_dispatch'
+    name: dashboard build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -124,8 +124,7 @@ jobs:
           pnpm run build
 
   upstream-suite:
-    name: full upstream pytest suite (manual)
-    if: github.event_name == 'workflow_dispatch'
+    name: full upstream pytest suite
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
