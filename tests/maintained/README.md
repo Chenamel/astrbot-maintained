@@ -48,7 +48,7 @@ PYTHONPATH="$EV/Lib/site-packages" "$IV" -m pytest tests/maintained -q
 | `test_api_turns.py` | `is_current` fail-open 且不抛；`mark_sent` 安全；`merged_*` 读取与类型过滤；`reset*` 缺席返回 False |
 | `test_api_delivery.py` | `CODE_DELIVERY_FAILURE` 非空；`code_task_spec` / `has_code_delivery` 缺席时返回安全默认值 |
 | `test_api_permissions.py` | `is_admin` 多维判定；**非管理员恒被拒绝**（安全不变量）；`execution_denial` 不抛 |
-| `test_api_proactive.py` | 开关恒为关闭；模块**不存在任何 enable 入口**；分类器 fail-closed |
+| `test_api_proactive.py` | 本层**不存在任何 enable 入口**、`proactive_switch_is_disabled → True`；分类器 fail-closed |
 | `test_api_content.py` | `is_text_part` / `is_image_part` 缺席与容错；OpenAI 风格 dict 识别 |
 | `test_api_runtime.py` | 数据目录为绝对路径；缺席时下载响亮失败、引用图返回空表 |
 | `test_api_embedding.py` | `is_embedding_provider` 缺席与容错 |

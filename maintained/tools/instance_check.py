@@ -99,8 +99,13 @@ def check_log(root: Path, since: str = "", until: str = "") -> bool:
     return _check("错误数", False, f"{len(errors)} 条，见上")
 
 
-def check_switch(root: Path) -> bool:
-    print("\n③ 铁律 6：上游主动回复开关必须恒关闭")
+def check_disabled_plugins(root: Path) -> bool:
+    """Read the disabled-plugin list as evidence of the default-off policy.
+
+    This deliberately reads no switch value: upstream's ``active_reply.enable``
+    and plugin-level switches are independent of that list.
+    """
+    print("\n③ 默认关闭策略：实例禁用插件列表可读")
     db = root / DB_PATH
     if not db.exists():
         return _check("数据库", False, "缺失")
@@ -183,7 +188,7 @@ def main(argv: list[str] | None = None) -> int:
     results = [
         check_files(root, plugin),
         check_log(root, since, until),
-        check_switch(root),
+        check_disabled_plugins(root),
         check_decisions(root, plugin),
     ]
     print()

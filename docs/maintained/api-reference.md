@@ -175,11 +175,16 @@ else:
 
 恒返回 `True`。
 
-这是本 fork 的硬约束：主动回复在代码层面无法被打开，
-记录在 `maintained/installed_manifest.json` 的 `proactive_must_remain_disabled` 字段里。
+它描述的是**本 API 层的分工**：`astrbot/api/proactive/` 只提供判定标记、人格生成与
+历史写回，不提供主动触发能力，也不替插件决定时机。台账
+`maintained/installed_manifest.json` 的 `proactive_must_remain_disabled` 记录的是
+「默认关闭」这一默认策略，不是对整个机器人的限制。
 
-**注意**：看到它别当成"开关状态查询"，它是不变量声明。想集成主动回复的插件，
-这个函数返回 `True` 意味着"本 fork 不会替你做主动触发"，你得自己管时机。
+**注意**：看到它别当成「全局开关状态查询」。官方内置的主动回复由
+`provider_ltm_settings.active_reply.enable` 控制（默认 `false`，可在面板调整），
+插件层也可以有自己的开关；二者都不经过本 API 层。想集成主动回复的插件，
+返回 `True` 只意味着「这一层不会替你做主动触发」，时机与发送仍由插件自己管理。
+同一实例同一时间只启用一套，避免一条消息收到两次主动回复。
 
 ### `is_lightweight_proactive(event) -> bool`
 

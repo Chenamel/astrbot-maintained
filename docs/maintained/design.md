@@ -64,7 +64,7 @@ maintained/v4.29.4  (长期主干)
 | `astrbot/api/turns/` | 直报回合状态访问与重置 | P2 的一半 |
 | `astrbot/api/delivery/` | 交付策略纯函数 | P3 的一部分 |
 | `astrbot/api/permissions/` | 权限与执行授权 | P6 |
-| `astrbot/api/proactive/` | 轻量主动判定（开关恒关） | 铁律 6 |
+| `astrbot/api/proactive/` | 轻量主动判定（本层不提供主动触发入口） | 默认关闭策略 |
 | `astrbot/api/content/` | 内容部件类型 + `is_*` 判定 | 阶段 5 追加 |
 | `astrbot/api/runtime/` | 运行时工具（数据目录 / 下载 / 引用图） | 阶段 5 追加 |
 | `astrbot/api/embedding/` | 嵌入提供者类型 | 阶段 5 追加 |
@@ -97,7 +97,7 @@ def old_name(*args, **kwargs):
 | api 层符号缺失 | api 侧 try/except 回退内部实现或字面量常量，**插件加载永不失败** |
 | 新钩子注册失败 | `logger.warning` 后跳过，主流程不受影响 |
 | 新可选参数为 `None` | 走旧代码路径 |
-| 主动回复相关异常 | 默认关闭（`proactive_must_remain_disabled` 恒 true） |
+| 主动回复相关异常 | 默认关闭（台账 `proactive_must_remain_disabled` 记录该默认策略） |
 | 三方合并冲突 | 回退到 `baseline/v4.29.4`，按 `maintained/` 台账重放 |
 | 台账 SHA 不匹配 | 比对脚本非零退出，阻断发布 |
 

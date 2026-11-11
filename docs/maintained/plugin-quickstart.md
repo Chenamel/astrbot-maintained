@@ -103,7 +103,7 @@ chat_provider_id=None, timeout=None)` 是协程，返回 `LLMResponse | None`。
 | `content` | 文本 / 图片内容部件的类型与判定 | `content.is_text_part(part)` | 部件类型解析为 `None`，判定返回 `False` |
 | `runtime` | 数据目录、图片下载、本地时间、钩子时序模式 | `runtime.hook_timing_mode()` | 模式回落 `"legacy"`；下载类工具响亮失败 |
 | `embedding` | 嵌入 provider 的类型判定 | `embedding.is_embedding_provider(obj)` | `False` |
-| `proactive` | 轻量主动标记、人格生成、历史写回 | `proactive.proactive_switch_is_disabled()` | 开关恒 `True`；轻量判定 `False`；生成 `None`；写回 `False` |
+| `proactive` | 轻量主动标记、人格生成、历史写回 | `proactive.proactive_switch_is_disabled()` | 恒 `True`（本层不提供主动触发入口，非全局开关）；轻量判定 `False`；生成 `None`；写回 `False` |
 
 每个模块的完整符号表、参数与返回值语义见 [`api-contract.md`](./api-contract.md) §3，
 每个模块都有 `available() -> bool`。

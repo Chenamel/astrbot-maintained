@@ -199,12 +199,15 @@ def capabilities() -> dict[str, bool]: ...
 
 ### 3.5 `astrbot/api/proactive/` — 主动场景
 
-约束：六铁律第 6 条：主动回复开关恒为关闭，本层不得提供任何开启途径。
+约束：本层（`astrbot/api/proactive/`）只提供主动场景的判定标记、人格生成与历史写回，
+**不提供主动触发入口**；默认策略为关闭，记录在台账 `proactive_must_remain_disabled`。
+这是**分层约定，不是全局禁令**：官方内置的 `provider_ltm_settings.active_reply.enable`
+与插件自带开关各自独立，均不受本层约束。同一实例同一时间只启用一套，避免重复发送。
 
 | 符号 | 类型 | 语义 | 补丁缺席时 |
 |---|---|---|---|
 | `available() -> bool` | 函数 | 轻量主动判定是否就位 | `False` |
-| `proactive_switch_is_disabled() -> bool` | 函数 | 恒返回 `True`，声明铁律 6 不变量 | 恒 `True` |
+| `proactive_switch_is_disabled() -> bool` | 函数 | 恒返回 `True`，表示本层不提供主动触发能力（**非全局开关状态**） | 恒 `True` |
 | `is_lightweight_proactive(event) -> bool` | 函数 | 该请求是否被判定为轻量主动场景 | `False`（fail-closed：宁可走完整路径，也不误入轻量路径） |
 | `persona_available() -> bool` | 函数 | 人格感知生成是否就位 | `False` |
 | `generate_with_persona(context, event, prompt, ...) -> LLMResponse \| None` | 协程 | 生成**带人格**的话：先过 `on_llm_request` 钩子，再调 provider | **`None`**（fail-closed：拿不到人格就不生成，由插件自行降级） |
@@ -257,7 +260,7 @@ core 自己也写群历史（`persist_group_message`），只是优先级最低�
 | `test_api_content.py` | 缺席时 `is_text_part` / `is_image_part` 判定与容错；OpenAI 风格 dict |
 | `test_api_runtime.py` | 数据目录为绝对路径；缺席时下载**响亮失败**、引用图返回空表 |
 | `test_api_embedding.py` | 缺席时 `is_embedding_provider → False`；容错 |
-| `test_manifest_guard.py` | 仓工作树↔台账自洽；台账只含 core、`proactive_must_remain_disabled` 为 `True`、条数钉 |
+| `test_manifest_guard.py` | 仓工作树↔台账自洽；台账只含 core、默认关闭策略字段为 `True`、条数钉 |
 | `test_api_frozen.py` | 上游 api 文件相对 `baseline/v4.29.4` 零改动（白名单=`ALLOWED_ADDITIONS`，当前 10 个新增文件） |
 | `test_tools_check_drift.py` / `test_tools_apply_patches.py` | 工具链：漂移检测、预演不写、写前备份、源损坏中止、退出码 |
 

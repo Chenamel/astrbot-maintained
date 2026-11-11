@@ -7,11 +7,15 @@ Public surface (see ``docs/maintained/api-contract.md``):
 - :func:`is_lightweight_proactive`
 - :func:`generate_with_persona`
 
-The maintained fork keeps the proactive-reply switch disabled at all times.
-This module therefore exposes no way to enable it: it only reports the
-invariant, lets a plugin ask whether the core has classified a request as a
-lightweight proactive scenario, and lets a plugin generate wording that goes
-through the persona chain.
+This layer keeps the default-off policy and deliberately exposes no way to
+trigger a proactive reply: it reports that fact, lets a plugin ask whether the
+core has classified a request as a lightweight proactive scenario, and lets a
+plugin generate wording that goes through the persona chain.
+
+This is a division of responsibility, not a global restriction. Upstream's
+built-in ``provider_ltm_settings.active_reply.enable`` (off by default) and a
+plugin's own switch are independent of this module. Enabling both on the same
+instance would send two proactive replies for one message.
 """
 
 from __future__ import annotations
@@ -37,11 +41,12 @@ _PERSONA_MODULE = "astrbot.core.proactive_persona"
 
 
 def proactive_switch_is_disabled() -> bool:
-    """Return whether proactive replies are guaranteed to stay disabled.
+    """Report that this API layer does not trigger proactive replies.
 
-    Always ``True``. The invariant is recorded in
-    ``maintained/installed_manifest.json`` as ``proactive_must_remain_disabled``
-    and no code path may enable proactive replies.
+    Always ``True``. The default-off policy is recorded in
+    ``maintained/installed_manifest.json`` as ``proactive_must_remain_disabled``.
+    This says nothing about the rest of the bot: upstream's built-in
+    ``active_reply.enable`` setting and a plugin's own switch are independent.
 
     Returns:
         ``True``, unconditionally.

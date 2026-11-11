@@ -10,7 +10,7 @@
     "astrbot/api/event/extras.py": "8d47709465c5a86531abce28e9c4e8678554760447f8c3d5a0819b0e8b29bb2a",
     "astrbot/api/media/__init__.py": "18eb28314aefa6b5595d118d42d5081890c90ab4d984aa723405e88b49fb07b9",
     "astrbot/api/permissions/__init__.py": "6fe3a426c126f016f63ef44df24d6ab88a3d7a1027265fcc7f0e7f785407b0e1",
-    "astrbot/api/proactive/__init__.py": "132600cd6dbcacd01b1b1beb14955d381442145f66d0caada77b7e644b2b8df1",
+    "astrbot/api/proactive/__init__.py": "a4c1b12478f90b34853677e08285e4764837ebb2a5f87edbb4e05a31b834d0ca",
     "astrbot/api/runtime/__init__.py": "c8f4ebd9c092b88a8e37a3de97904ba51d2e7eb540f969bd925721bff495978f",
     "astrbot/api/turns/__init__.py": "26fe891ef89fe2414ec42350f27fc78ad5829d3195ab54008a5ed77db2aecedd",
     "astrbot/builtin_stars/bot_info/_conf_schema.json": "daf186bf2b5033d04683fb44d35ec2a03d83ace097c980f38fa1d86d918d275d",

@@ -1,7 +1,9 @@
 """Behaviour of the additive proactive module.
 
-The invariant under test: the proactive-reply switch stays disabled and no
-function in this module can enable it.
+The invariant under test: this API layer offers no way to trigger a proactive
+reply on its own -- it only reports that fact, classifies requests and generates
+wording. Enabling proactive replies is a separate concern (upstream's
+``active_reply.enable`` setting or a plugin's own switch).
 """
 
 from types import SimpleNamespace

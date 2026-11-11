@@ -7,8 +7,7 @@ Three invariants are checked here:
    without refreshing its hash fails immediately instead of surfacing later as
    instance drift.
 2. The manifest itself keeps its contract: core files only, no plugin or
-   dashboard entries, and the proactive-reply switch marked as permanently
-   disabled.
+   dashboard entries, and the default-off policy recorded in its header.
 3. **Everything the fork touched is listed.** A file missing from the manifest
    is not deployed by ``apply_patches`` and is invisible to ``check_drift``, so
    the instance quietly runs without it. That is how four builtin-plugin assets
@@ -63,7 +62,7 @@ def test_repo_tree_matches_manifest():
     assert report.consistent, f"working tree differs from manifest: {report.drift}"
 
 
-def test_manifest_marks_proactive_as_permanently_disabled():
+def test_manifest_records_default_off_policy():
     assert _manifest()["proactive_must_remain_disabled"] is True
 
 
