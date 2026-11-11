@@ -237,7 +237,7 @@ core 自己也写群历史（`persist_group_message`），只是优先级最低�
 `call_event_hook(event, EventType.OnLLMRequestEvent, req)`，再拿（可能已被改写的）
 `req` 调 provider，与 pipeline 内 `internal.py` 的做法一致。
 
-**纯加法**：没有插件调用它就不会执行，且不触碰铁律 6 的开关语义
+**纯加法**：没有插件调用它就不会执行，且不触碰默认关闭策略
 （它只生成文本，**不发送**，发送与否由插件决定）。
 
 ## 4. 明确不做

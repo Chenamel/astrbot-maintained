@@ -105,6 +105,10 @@ chat_provider_id=None, timeout=None)` 是协程，返回 `LLMResponse | None`。
 | `embedding` | 嵌入 provider 的类型判定 | `embedding.is_embedding_provider(obj)` | `False` |
 | `proactive` | 轻量主动标记、人格生成、历史写回 | `proactive.proactive_switch_is_disabled()` | 恒 `True`（本层不提供主动触发入口，非全局开关）；轻量判定 `False`；生成 `None`；写回 `False` |
 
+`api.proactive` 不提供主动触发入口：官方内置的 `active_reply.enable` 与插件自带开关
+各自独立，均不受本层约束。**同一实例同一时间只启用一套**，否则一条群消息可能
+收到两次主动回复。
+
 每个模块的完整符号表、参数与返回值语义见 [`api-contract.md`](./api-contract.md) §3，
 每个模块都有 `available() -> bool`。
 
