@@ -144,6 +144,18 @@ jobs:
 
       - name: Install Linux sandbox dependency
         run: |
+          # GitHub-hosted runners prefer azure.archive.ubuntu.com, which
+          # intermittently fails DNS resolution (actions/runner-images#675).
+          # Use the public mirrors and fail over quickly instead of stalling
+          # for ~4 minutes on a dead Azure mirror.
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' /etc/apt/apt-mirrors.txt
+          fi
+          printf '%s\n' \
+            'Acquire::Retries "0";' \
+            'Acquire::http::Timeout "20";' \
+            'Acquire::https::Timeout "20";' \
+            | sudo tee /etc/apt/apt.conf.d/99-maintained-apt > /dev/null
           sudo apt-get update
           sudo apt-get install -y bubblewrap
           # Ubuntu AppArmor blocks unprivileged user namespaces by default;
