@@ -95,7 +95,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6.1.0
+        uses: pnpm/action-setup@v6.1.1
         with:
           # pnpm 12 ignores pnpm.overrides in the lockfile (9.0) and fails.
           version: 10.28.2
