@@ -236,6 +236,7 @@
       :model-value="modelValue"
       @update:model-value="emitUpdate"
       :secret="Boolean(itemMeta?.secret)"
+      :picker="itemMeta?._special === 'select_tool' ? 'tools' : ''"
       class="config-field"
     />
 

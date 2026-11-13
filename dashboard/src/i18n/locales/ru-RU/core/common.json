@@ -142,7 +142,14 @@
         "noItemsHint": "Элементов нет. Напишите что-нибудь выше и нажмите Enter.",
         "inputPlaceholder": "Введите текст и нажмите Enter",
         "editTitle": "Изменить элемент",
-        "modifyButton": "Изменить"
+        "modifyButton": "Изменить",
+        "pickTools": "Выбрать из доступных инструментов",
+        "pickToolsTitle": "Выбор инструментов",
+        "pickToolsSearch": "Поиск по названию или описанию",
+        "pickToolsEmpty": "Доступных инструментов нет",
+        "pickToolsHint": "Отмеченные инструменты добавятся в список; уже добавленные пропускаются.",
+        "pickToolsLoadError": "Не удалось получить список инструментов: {error}",
+        "pickToolsSelected": "Выбрано: {count}"
     },
     "itemCard": {
         "enabled": "Включено",

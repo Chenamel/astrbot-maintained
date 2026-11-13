@@ -142,7 +142,14 @@
     "noItemsHint": "No items yet, type in the input above and press Enter to add",
     "inputPlaceholder": "Type and press Enter to add",
     "editTitle": "Edit List Items",
-    "modifyButton": "Modify"
+    "modifyButton": "Modify",
+    "pickTools": "Choose from available tools",
+    "pickToolsTitle": "Choose tools",
+    "pickToolsSearch": "Search a tool name or description",
+    "pickToolsEmpty": "No tools available",
+    "pickToolsHint": "Ticked tools are appended to the list; anything already listed is skipped.",
+    "pickToolsLoadError": "Could not load the tool list: {error}",
+    "pickToolsSelected": "{count} selected"
   },
   "itemCard": {
     "enabled": "Enabled",

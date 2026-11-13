@@ -142,7 +142,14 @@
     "noItemsHint": "項目がありません。上の入力欄に入力し、Enter キーで追加してください",
     "inputPlaceholder": "入力し、Enter キーで追加",
     "editTitle": "リスト項目を編集",
-    "modifyButton": "変更"
+    "modifyButton": "変更",
+    "pickTools": "利用可能なツールから選択",
+    "pickToolsTitle": "ツールを選択",
+    "pickToolsSearch": "ツール名または説明で検索",
+    "pickToolsEmpty": "利用できるツールがありません",
+    "pickToolsHint": "チェックしたツールを一覧に追加します。既にあるものは重複しません。",
+    "pickToolsLoadError": "ツール一覧を取得できませんでした：{error}",
+    "pickToolsSelected": "{count} 件選択"
   },
   "itemCard": {
     "enabled": "有効",

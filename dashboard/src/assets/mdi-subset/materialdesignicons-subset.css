@@ -1,4 +1,4 @@
-/* Auto-generated MDI subset – 267 icons */
+/* Auto-generated MDI subset – 268 icons */
 /* Do not edit manually. Run: pnpm run subset-icons */
 
 @font-face {
@@ -510,6 +510,10 @@
 
 .mdi-format-list-bulleted::before {
   content: "\F0279";
+}
+
+.mdi-format-list-checks::before {
+  content: "\F0756";
 }
 
 .mdi-frequently-asked-questions::before {

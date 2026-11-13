@@ -3988,19 +3988,6 @@ CONFIG_METADATA_3 = {
                             "provider_settings.computer_use_runtime": "sandbox",
                         },
                     },
-                    "provider_settings.execution_gate_mode": {
-                        "description": "执行类工具授权模式（本分支新增）",
-                        "type": "string",
-                        "options": ["legacy", "strict"],
-                        "labels": [
-                            "原版（仅管理员）",
-                            "严格（当前消息须明确要求运行）",
-                        ],
-                        "hint": "legacy：与官方原版一致，只校验 AstrBot 管理员权限，插件调用行为不受影响（默认）。"
-                        "strict：在管理员之外还要求当前消息明确要求「运行/执行」，转述文档、教程、代码不再被视为授权；"
-                        "代价是「麻烦你帮我运行一下」「跑一下」「启动」这类说法也会被拒绝，此时可退回 legacy。"
-                        "本项为维护分支新增能力，官方原版没有。",
-                    },
                     "provider_settings.sandbox.booter": {
                         "description": "沙箱环境驱动器",
                         "type": "string",
@@ -4190,6 +4177,17 @@ CONFIG_METADATA_3 = {
                         "type": "bool",
                         "hint": "启用后，将会传递给 Agent 相关工具来实现主动型 Agent。你可以告诉 AstrBot 未来某个时间要做的事情，它将被定时触发然后执行任务。",
                     },
+                    "agent_runner.config.misc.lightweight_proactive_tools": {
+                        "description": "轻量主动回复可用工具",
+                        "type": "list",
+                        "items": {"type": "string"},
+                        "_special": "select_tool",
+                        "hint": "非 @/唤醒的主动回复只保留这批工具，留空表示不做限制。"
+                        "列表之外的工具可由插件自行声明（FunctionTool.is_lightweight_proactive_safe）后加入。",
+                        "condition": {
+                            "agent_runner.runner_type": "local",
+                        },
+                    },
                 },
                 "condition": {
                     "agent_runner.runner_type": "local",
@@ -4374,32 +4372,6 @@ CONFIG_METADATA_3 = {
                         "options": ["skills_like", "full"],
                         "labels": ["Skills-like（两阶段）", "Full（完整参数）"],
                         "hint": "skills-like 先下发工具名称与描述，再下发参数；full 一次性下发完整参数。",
-                        "condition": {
-                            "agent_runner.runner_type": "local",
-                        },
-                    },
-                    "agent_runner.config.misc.lightweight_proactive_tools": {
-                        "description": "轻量主动回复可用工具",
-                        "type": "list",
-                        "items": {"type": "string"},
-                        "hint": "非 @/唤醒的主动回复只保留这批工具。列表之外的工具可由插件自行声明 "
-                        "（FunctionTool.is_lightweight_proactive_safe）后加入。",
-                        "condition": {
-                            "agent_runner.runner_type": "local",
-                        },
-                    },
-                    "agent_runner.config.misc.hook_timing_mode": {
-                        "description": "Agent 完成钩子时序",
-                        "type": "string",
-                        "options": ["enhanced", "legacy"],
-                        "labels": [
-                            "Enhanced（钩子先于回复）",
-                            "Legacy（与官方原版一致）",
-                        ],
-                        "hint": "legacy：与官方原版一致，回复先发出、钩子后触发（默认）。"
-                        "enhanced：完成钩子在回复发出之前触发，审计/改写类插件可先拿到控制权；"
-                        "仅在你确实需要「回复发出前介入」时开启，社区插件若依赖「消息已发送」语义请保持 legacy。"
-                        "两种模式下，本分支独有的路径（图片降级兜底、末轮补生成）都保留优化。",
                         "condition": {
                             "agent_runner.runner_type": "local",
                         },
@@ -4712,6 +4684,25 @@ CONFIG_METADATA_3 = {
                     },
                 },
             },
+            "tool_execution": {
+                "description": "工具执行授权",
+                "type": "object",
+                "items": {
+                    "provider_settings.execution_gate_mode": {
+                        "description": "执行类工具授权模式",
+                        "type": "string",
+                        "options": ["legacy", "strict"],
+                        "labels": [
+                            "仅管理员（默认）",
+                            "须明确要求运行",
+                        ],
+                        "hint": "仅管理员：与官方原版一致，只校验 AstrBot 管理员权限，插件调用行为不受影响。"
+                        "须明确要求运行：在管理员之外还要求当前消息明确要求「运行/执行」，"
+                        "转述文档、教程、代码不再被视为授权；"
+                        "代价是「麻烦你帮我运行一下」「跑一下」「启动」这类说法也会被拒绝，此时可改回仅管理员。",
+                    },
+                },
+            },
         },
     },
     "plugin_group": {
@@ -4726,6 +4717,28 @@ CONFIG_METADATA_3 = {
                         "type": "bool",
                         "hint": "默认启用全部未被禁用的插件。若插件在插件页面被禁用，则此处的选择不会生效。",
                         "_special": "select_plugin_set",
+                    },
+                },
+            },
+            "hooks": {
+                "description": "完成钩子",
+                "type": "object",
+                "items": {
+                    "agent_runner.config.misc.hook_timing_mode": {
+                        "description": "Agent 完成钩子时序",
+                        "type": "string",
+                        "options": ["enhanced", "legacy"],
+                        "labels": [
+                            "回复发出前触发",
+                            "回复发出后触发（默认）",
+                        ],
+                        "hint": "回复发出前触发：完成钩子在回复发出之前执行，需要审计或改写回复的插件可以在这里介入；"
+                        "依赖「消息已发送」语义的插件会因此收不到已经发出的消息。"
+                        "回复发出后触发：回复先发出、钩子后执行，与插件生态的普遍预期一致。"
+                        "图片降级兜底与末轮补生成在两种模式下的表现都一致。",
+                        "condition": {
+                            "agent_runner.runner_type": "local",
+                        },
                     },
                 },
             },
@@ -4984,7 +4997,7 @@ CONFIG_METADATA_3_SYSTEM = {
                         "type": "string",
                         "hint": "面板「检查更新」请求的地址，需要返回 GitHub Releases 兼容的 JSON。"
                         "默认指向本维护版自己的发布页，因此面板只会提示本维护版的版本，"
-                        "不会出现上游新版本，也就不会有人误点后被覆盖成本 fork 改动不存在的上游代码。"
+                        "不会出现上游新版本，也就不会有人误点更新后被换成一版没有这些改动的上游代码。"
                         "填 `https://api.soulter.top/releases` 可以改回跟随官方上游。留空则使用默认值。",
                     },
                     "update_repository": {

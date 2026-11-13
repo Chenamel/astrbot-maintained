@@ -142,7 +142,14 @@
     "noItemsHint": "暂无项目，在上方输入框输入后按回车添加",
     "inputPlaceholder": "输入后按回车添加",
     "editTitle": "修改列表项",
-    "modifyButton": "修改"
+    "modifyButton": "修改",
+    "pickTools": "从可用工具中选择",
+    "pickToolsTitle": "选择工具",
+    "pickToolsSearch": "搜索工具名或说明",
+    "pickToolsEmpty": "没有可用的工具",
+    "pickToolsHint": "勾选后加入列表，已在列表里的不会重复添加。",
+    "pickToolsLoadError": "读取工具列表失败：{error}",
+    "pickToolsSelected": "已选 {count} 个"
   },
   "itemCard": {
     "enabled": "已启用",

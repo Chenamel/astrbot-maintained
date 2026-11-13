@@ -31,7 +31,7 @@
     "astrbot/core/astr_main_agent_quote.py": "9f389aa9ce6994255350097eb61da7162566a451b7429f9df35561357008cdb6",
     "astrbot/core/code_delivery_policy.py": "f0584871045ded176305eff7a0869537c6b09c095dad704ab76e1231114d554f",
     "astrbot/core/config/agent_runner.py": "e2a74015cc389e3a065c2913277bfe49e7fb7f2453b32e4d7c37a65fef6163db",
-    "astrbot/core/config/default.py": "3cc5f8cefe21bb58924bcca195671db78e4be878b975eb22bfa1e48f916a0182",
+    "astrbot/core/config/default.py": "9f9e2c2d4a12512bc3d94383f4c0f83f3c2faa80af93930570097faf0a9e018c",
     "astrbot/core/core_lifecycle.py": "fbc15ab57b1e99fdea34dc82977f99f77883217af20538cce36bf8e6d9c62c46",
     "astrbot/core/cron/manager.py": "cc91e584bdbde39ab69d59cc6b82cad64bf175c71c1dbd59ad0a84ce8c1335d1",
     "astrbot/core/event_bus.py": "4c19cf67ac2982a99c05273766e18e3710151cd1c16d41034ed44d8aa19da9eb",
