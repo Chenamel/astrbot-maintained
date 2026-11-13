@@ -274,6 +274,7 @@
         },
         "sandbox": {
           "booter": {
+            "labels": ["Shipyard Neo", "Shipyard", "CUA"],
             "description": "Sandbox Environment Driver"
           },
           "shipyard_neo_endpoint": {
@@ -297,6 +298,7 @@
             "hint": "CUA sandbox image or OS type. Defaults to linux. Supported values depend on the installed CUA SDK."
           },
           "cua_os_type": {
+            "labels": ["Linux", "macOS", "Windows", "Android"],
             "description": "CUA OS Type",
             "hint": "CUA sandbox operating system type. Defaults to linux."
           },
@@ -408,10 +410,16 @@
           "add_cron_tools": {
             "description": "Enable",
             "hint": "When enabled, related tools will be passed to the Agent to implement proactive Agent capabilities. You can tell AstrBot what to do at a future time, and it will be triggered on schedule to execute the task, and report the result back to you."
-          },
-          "lightweight_proactive_tools": {
-            "description": "Lightweight proactive reply tools",
-            "hint": "Unsolicited proactive replies (without @ or a wake word) are limited to this list; empty means no limit. Tools outside the list can be added by plugins declaring FunctionTool.is_lightweight_proactive_safe."
+          }
+        }
+      },
+      "agent_runner": {
+        "config": {
+          "misc": {
+            "lightweight_proactive_tools": {
+              "description": "Lightweight proactive reply tools",
+              "hint": "Unsolicited proactive replies (without @ or a wake word) are limited to this list; empty means no limit. Tools outside the list can be added by plugins declaring FunctionTool.is_lightweight_proactive_safe."
+            }
           }
         }
       }
@@ -1134,6 +1142,7 @@
       "description": "Tool execution",
       "provider_settings": {
         "execution_gate_mode": {
+          "labels": ["Administrator only (default)", "Explicit run request"],
           "description": "Execution tool authorization mode",
           "hint": "Administrator only: matches upstream -- only the AstrBot administrator check applies and plugin behaviour is unaffected. Explicit run request: also requires the current message to ask for running; quoting docs or tutorials no longer counts as consent, and casual phrasings like \"run it for me\" are refused too -- switch back if that gets in the way."
         }
@@ -1178,6 +1187,7 @@
         "config": {
           "misc": {
             "hook_timing_mode": {
+              "labels": ["Before the reply is sent", "After the reply is sent (default)"],
               "description": "Agent completion hook timing",
               "hint": "After the reply: matches upstream -- the reply goes out first and the hook fires afterwards, which is what plugins generally expect. Before the reply: the hook fires before the reply is sent, so audit or rewrite plugins can step in; plugins that rely on \"the message has already been sent\" will not see it."
             }

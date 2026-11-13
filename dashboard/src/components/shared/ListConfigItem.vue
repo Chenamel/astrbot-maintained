@@ -470,8 +470,14 @@ async function loadTools() {
   pickerLoading.value = true
   pickerError.value = ''
   try {
-    const data = await toolApi.list()
-    const rows = Array.isArray(data) ? data : []
+    const response = await toolApi.list()
+    // The v1 wrapper hands back an axios response, and the endpoint in turn
+    // wraps its array in { status, data }. Older callers see a bare array.
+    // Accept both so the picker does not silently show an empty catalogue.
+    const envelope = response?.data ?? response
+    const rows = Array.isArray(envelope?.data)
+      ? envelope.data
+      : Array.isArray(envelope) ? envelope : []
     pickerTools.value = rows
       .map(tool => ({
         name: tool?.name || '',

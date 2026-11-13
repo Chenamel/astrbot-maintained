@@ -362,6 +362,7 @@
         },
         "sandbox": {
           "booter": {
+            "labels": ["Shipyard Neo", "Shipyard", "CUA"],
             "description": "サンドボックス環境ドライバー"
           },
           "shipyard_neo_endpoint": {
@@ -385,6 +386,7 @@
             "hint": "CUA サンドボックスのイメージまたは OS 種類です。デフォルトは linux です。linux、macos、windows、android を指定できますが、利用可能な値は CUA SDK の対応状況によります。"
           },
           "cua_os_type": {
+            "labels": ["Linux", "macOS", "Windows", "Android"],
             "description": "CUA OS の種類",
             "hint": "CUA サンドボックスの OS 種類です。デフォルトは linux です。"
           },
@@ -496,10 +498,16 @@
           "add_cron_tools": {
             "description": "有効化",
             "hint": "有効にすると、プロアクティブエージェントに必要なツールがエージェントへ渡されます。将来の指定時刻に行うことを AstrBot に伝えると、予定どおりにタスクを実行して結果を送信します。"
-          },
-          "lightweight_proactive_tools": {
-            "description": "軽量プロアクティブ返信で使用できるツール",
-            "hint": "@やウェイクなしのプロアクティブ返信はこのツール一覧に限定されます。空欄なら制限なし。一覧外のツールは、プラグインが FunctionTool.is_lightweight_proactive_safe を宣言すると追加できます。"
+          }
+        }
+      },
+      "agent_runner": {
+        "config": {
+          "misc": {
+            "lightweight_proactive_tools": {
+              "description": "軽量プロアクティブ返信で使用できるツール",
+              "hint": "@やウェイクなしのプロアクティブ返信はこのツール一覧に限定されます。空欄なら制限なし。一覧外のツールは、プラグインが FunctionTool.is_lightweight_proactive_safe を宣言すると追加できます。"
+            }
           }
         }
       }
@@ -1235,6 +1243,7 @@
       "description": "ツール実行の認可",
       "provider_settings": {
         "execution_gate_mode": {
+          "labels": ["管理者のみ（既定）", "実行を明示"],
           "description": "実行ツールの認可モード",
           "hint": "管理者のみ：公式版と同一で、AstrBot 管理者権限のみを確認し、プラグインの動作には影響しません。実行を明示：管理者に加え、現在のメッセージで「実行」を明示的に求める必要があります。ドキュメントやチュートリアルの引用は同意と見なされず、「実行して」といった砕けた表現も拒否されます。支障がある場合は「管理者のみ」に戻してください。"
         }
@@ -1279,6 +1288,7 @@
         "config": {
           "misc": {
             "hook_timing_mode": {
+              "labels": ["返信の送出前に発火", "返信の送出後に発火（既定）"],
               "description": "Agent 完了フックのタイミング",
               "hint": "返信の後：公式版と同一で、返信を送信してからフックが発火します。プラグインの一般的な想定と一致します。返信の前：フックが返信の送出前に発火し、監査・書き換え系プラグインが介入できます。「メッセージが送信済み」という前提のプラグインは通知を受け取れません。"
             }

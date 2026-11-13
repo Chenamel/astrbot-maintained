@@ -290,6 +290,7 @@
         },
         "sandbox": {
           "booter": {
+            "labels": ["Shipyard Neo", "Shipyard", "CUA"],
             "description": "沙箱环境驱动器"
           },
           "shipyard_neo_endpoint": {
@@ -313,6 +314,7 @@
             "hint": "CUA 沙箱镜像/系统类型，默认 linux。可填写 linux、macos、windows、android，具体取决于 CUA SDK 支持。"
           },
           "cua_os_type": {
+            "labels": ["Linux", "macOS", "Windows", "Android"],
             "description": "CUA 操作系统类型",
             "hint": "CUA 沙箱操作系统类型，默认 linux。"
           },
@@ -424,10 +426,16 @@
           "add_cron_tools": {
             "description": "启用",
             "hint": "启用后，将会传递给 Agent 相关工具来实现主动型 Agent。你可以告诉 AstrBot 未来某个时间要做的事情，它将被定时触发然后执行任务，然后将结果发送给你。"
-          },
-          "lightweight_proactive_tools": {
-            "description": "轻量主动回复可用工具",
-            "hint": "非 @/唤醒的主动回复只保留这批工具，留空表示不做限制。列表之外的工具可由插件自行声明（FunctionTool.is_lightweight_proactive_safe）后加入。"
+          }
+        }
+      },
+      "agent_runner": {
+        "config": {
+          "misc": {
+            "lightweight_proactive_tools": {
+              "description": "轻量主动回复可用工具",
+              "hint": "非 @/唤醒的主动回复只保留这批工具，留空表示不做限制。列表之外的工具可由插件自行声明（FunctionTool.is_lightweight_proactive_safe）后加入。"
+            }
           }
         }
       }
@@ -1155,6 +1163,7 @@
       "description": "工具执行授权",
       "provider_settings": {
         "execution_gate_mode": {
+          "labels": ["仅管理员（默认）", "须明确要求运行"],
           "description": "执行类工具授权模式",
           "hint": "仅管理员：与官方原版一致，只校验 AstrBot 管理员权限，插件调用行为不受影响。须明确要求运行：在管理员之外还要求当前消息明确要求「运行/执行」，转述文档、教程、代码不再被视为授权；代价是「麻烦你帮我运行一下」「跑一下」「启动」这类说法也会被拒绝，此时可改回仅管理员。"
         }
@@ -1199,6 +1208,7 @@
         "config": {
           "misc": {
             "hook_timing_mode": {
+              "labels": ["回复发出前触发", "回复发出后触发（默认）"],
               "description": "Agent 完成钩子时序",
               "hint": "回复发出后触发：与官方原版一致，回复先发出、钩子后执行，符合插件生态的普遍预期。回复发出前触发：完成钩子在回复发出之前执行，审计或改写类插件可以介入；依赖「消息已发送」语义的插件会因此拿不到已经发出的消息。"
             }

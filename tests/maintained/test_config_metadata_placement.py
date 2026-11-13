@@ -130,3 +130,68 @@ def test_config_locale_files_have_no_duplicate_keys():
 
         json.loads(path.read_text(encoding="utf-8-sig"), object_pairs_hook=detect)
         assert duplicates == [], (locale, duplicates)
+
+
+def _locale_node(data: dict, section: str, group: str, field_path: str):
+    """Resolve a dotted metadata key into the nested locale bundle."""
+    node = data.get(section, {}).get(group, {})
+    for part in field_path.split("."):
+        node = node.get(part, {}) if isinstance(node, dict) else {}
+    return node
+
+
+def test_every_field_resolves_in_every_locale():
+    """A moved field is invisible until its i18n path moves with it.
+
+    The bundle mirrors dotted metadata keys as nested objects. Copying a
+    neighbouring field's layout once put the tool list under
+    ``provider_settings.proactive_capability`` instead of
+    ``agent_runner.config.misc``; the description never resolved and the field
+    vanished from the form. This walks every declared string, not just ours.
+    """
+    fields = []
+    for section, group, spec in _groups(CONFIG_METADATA_3):
+        for path, value in _declarations(spec.get("items") or {}):
+            for attr in ("description", "hint", "subtitles"):
+                if attr in value:
+                    fields.append((section, group, path, attr))
+
+    assert fields, "the schema no longer declares any translatable copy"
+
+    for locale in CONFIG_LOCALES:
+        path = LOCALE_DIR / locale / "features" / "config-metadata.json"
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+        for section, group, field_path, attr in fields:
+            node = _locale_node(data, section, group, field_path)
+            assert attr in node, (locale, section, group, field_path, attr)
+
+
+def test_every_select_has_option_labels_in_every_locale():
+    """A select without translated labels falls back to raw option values.
+
+    The metadata converter replaces ``labels`` with an i18n key. An unmapped key
+    is exactly how ``legacy`` / ``strict`` reached the panel next to a perfectly
+    translated description, so every declared select is checked against all
+    four bundles.
+    """
+    selects: list[tuple[str, str, str, int]] = []
+    for section, group, spec in _groups(CONFIG_METADATA_3):
+        for path, value in _declarations(spec.get("items") or {}):
+            if "labels" in value:
+                selects.append((section, group, path, len(value["labels"])))
+
+    assert selects, "the schema no longer declares any labelled select"
+
+    for locale in CONFIG_LOCALES:
+        path = LOCALE_DIR / locale / "features" / "config-metadata.json"
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+        for section, group, field_path, count in selects:
+            node = _locale_node(data, section, group, field_path)
+            labels = node.get("labels") if isinstance(node, dict) else None
+            assert isinstance(labels, list) and len(labels) == count, (
+                locale,
+                section,
+                group,
+                field_path,
+                labels,
+            )
