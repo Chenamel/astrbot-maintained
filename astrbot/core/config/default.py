@@ -260,8 +260,8 @@ DEFAULT_CONFIG = {
     "t2i_endpoint": "",
     "t2i_use_file_service": False,
     "t2i_active_template": "base",
-    # Where the panel checks for updates. Defaults to this distribution's own
-    # releases; point it at upstream's releases to leave the fork deliberately.
+    # The panel queries this endpoint for new releases; the response must be
+    # GitHub Releases compatible. Keep it aligned with update_repository.
     "update_source": "https://api.github.com/repos/Chenamel/astrbot-maintained/releases",
     "update_repository": "https://github.com/Chenamel/astrbot-maintained",
     "http_proxy": "",
@@ -3154,7 +3154,7 @@ CONFIG_METADATA_2 = {
                         "description": "执行类工具授权模式",
                         "type": "string",
                         "options": ["legacy", "strict"],
-                        "hint": "legacy（默认）：与官方原版一致，只校验管理员权限。"
+                        "hint": "legacy（默认）：只校验管理员权限。"
                         "strict：额外要求当前消息明确要求运行/执行。",
                     },
                     "file_extract": {
@@ -3299,7 +3299,7 @@ CONFIG_METADATA_2 = {
             "direct_turn_quiet_sec": {
                 "description": "QQ 消息聚合窗口",
                 "type": "float",
-                "hint": "仅 aiocqhttp 生效：收到消息后先等待这么多秒，把连续发来的几条合并成一个回合再交给模型。默认 4 秒；设为 0 关闭聚合，每条消息立即处理（与官方原版一致）。",
+                "hint": "仅 aiocqhttp 生效：收到消息后先等待这么多秒，把连续发来的几条合并成一个回合再交给模型。默认 4 秒；设为 0 关闭聚合，每条消息立即处理。",
             },
             "callback_api_base": {
                 "type": "string",
@@ -4696,7 +4696,7 @@ CONFIG_METADATA_3 = {
                             "仅管理员（默认）",
                             "须明确要求运行",
                         ],
-                        "hint": "仅管理员：与官方原版一致，只校验 AstrBot 管理员权限，插件调用行为不受影响。"
+                        "hint": "仅管理员：只校验 AstrBot 管理员权限，插件调用行为不受影响。"
                         "须明确要求运行：在管理员之外还要求当前消息明确要求「运行/执行」，"
                         "转述文档、教程、代码不再被视为授权；"
                         "代价是「麻烦你帮我运行一下」「跑一下」「启动」这类说法也会被拒绝，此时可改回仅管理员。",
@@ -4990,21 +4990,20 @@ CONFIG_METADATA_3_SYSTEM = {
                         "description": "QQ 消息聚合窗口（秒）",
                         "type": "float",
                         "hint": "仅 aiocqhttp 生效：收到消息后先等待这么多秒，把连续发来的几条合并成一个回合再交给模型。"
-                        "默认 4 秒；设为 0 关闭聚合，每条消息立即处理（与官方原版一致）。",
+                        "默认 4 秒；设为 0 关闭聚合，每条消息立即处理。",
                     },
                     "update_source": {
                         "description": "更新检查地址",
                         "type": "string",
                         "hint": "面板「检查更新」请求的地址，需要返回 GitHub Releases 兼容的 JSON。"
-                        "默认指向本维护版自己的发布页，因此面板只会提示本维护版的版本，"
-                        "不会出现上游新版本，也就不会有人误点更新后被换成一版没有这些改动的上游代码。"
-                        "填 `https://api.soulter.top/releases` 可以改回跟随官方上游。留空则使用默认值。",
+                        "留空则使用默认值。更换地址时请同时确认「更新来源仓库」指向同一个项目，"
+                        "否则检查到的版本与下载到的安装包可能不是同一份。",
                     },
                     "update_repository": {
                         "description": "更新来源仓库",
                         "type": "string",
                         "hint": "下载更新包时使用的仓库地址，需与上面的更新检查地址指向同一个项目。"
-                        "默认是本维护版的仓库；改回 `https://github.com/AstrBotDevs/AstrBot` 则跟随官方。",
+                        "留空则使用默认值。",
                     },
                     "log_escape_message_newlines": {
                         "description": "日志中转义消息换行",

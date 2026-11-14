@@ -1144,7 +1144,7 @@
         "execution_gate_mode": {
           "labels": ["Administrator only (default)", "Explicit run request"],
           "description": "Execution tool authorization mode",
-          "hint": "Administrator only: matches upstream -- only the AstrBot administrator check applies and plugin behaviour is unaffected. Explicit run request: also requires the current message to ask for running; quoting docs or tutorials no longer counts as consent, and casual phrasings like \"run it for me\" are refused too -- switch back if that gets in the way."
+          "hint": "Administrator only: Only the AstrBot administrator check applies and plugin behaviour is unaffected. Explicit run request: also requires the current message to ask for running; quoting docs or tutorials no longer counts as consent, and casual phrasings like \"run it for me\" are refused too -- switch back if that gets in the way."
         }
       }
     },
@@ -1189,7 +1189,7 @@
             "hook_timing_mode": {
               "labels": ["Before the reply is sent", "After the reply is sent (default)"],
               "description": "Agent completion hook timing",
-              "hint": "After the reply: matches upstream -- the reply goes out first and the hook fires afterwards, which is what plugins generally expect. Before the reply: the hook fires before the reply is sent, so audit or rewrite plugins can step in; plugins that rely on \"the message has already been sent\" will not see it."
+              "hint": "After the reply: The reply goes out first and the hook fires afterwards, which is what plugins generally expect. Before the reply: the hook fires before the reply is sent, so audit or rewrite plugins can step in; plugins that rely on \"the message has already been sent\" will not see it."
             }
           }
         }
@@ -1331,7 +1331,7 @@
       },
       "direct_turn_quiet_sec": {
         "description": "Message aggregation window (seconds)",
-        "hint": "aiocqhttp only: wait this many seconds after a message, merging consecutive lines from the same person into one turn. Default 4; set 0 to disable aggregation and handle every message on its own (same as stock AstrBot)."
+        "hint": "aiocqhttp only: wait this many seconds after a message, merging consecutive lines from the same person into one turn. Default 4; set 0 to disable aggregation and handle every message on its own."
       },
       "log_escape_message_newlines": {
         "description": "Escape newlines in logs",

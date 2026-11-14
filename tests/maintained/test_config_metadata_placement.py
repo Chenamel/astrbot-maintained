@@ -17,7 +17,11 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from astrbot.core.config.default import CONFIG_METADATA_3, CONFIG_METADATA_3_SYSTEM
+from astrbot.core.config.default import (
+    CONFIG_METADATA_2,
+    CONFIG_METADATA_3,
+    CONFIG_METADATA_3_SYSTEM,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 LOCALE_DIR = ROOT / "dashboard" / "src" / "i18n" / "locales"
@@ -32,6 +36,15 @@ BANNED = (
     "メンテナンスフォーク",
     "добавление форка",
     "этого форка",
+    "与官方原版一致",
+    "本维护版",
+    "改回跟随官方",
+    "matches upstream",
+    "same as stock astrbot",
+    "公式版と同一",
+    "公式版と同じ",
+    "как в официальной версии",
+    "как в оригинале",
 )
 
 
@@ -98,6 +111,7 @@ def test_the_tool_list_can_be_picked_from_the_registry():
 def test_config_copy_does_not_explain_the_branch():
     """Provenance notes belong in a commit message, not in a form."""
     for name, tree in (
+        ("CONFIG_METADATA_2", CONFIG_METADATA_2),
         ("CONFIG_METADATA_3", CONFIG_METADATA_3),
         ("CONFIG_METADATA_3_SYSTEM", CONFIG_METADATA_3_SYSTEM),
     ):
