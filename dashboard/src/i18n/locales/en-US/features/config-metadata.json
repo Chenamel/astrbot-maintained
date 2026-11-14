@@ -418,7 +418,7 @@
           "misc": {
             "lightweight_proactive_tools": {
               "description": "Lightweight proactive reply tools",
-              "hint": "Unsolicited proactive replies (without @ or a wake word) are limited to this list; empty means no limit. Tools outside the list can be added by plugins declaring FunctionTool.is_lightweight_proactive_safe."
+              "hint": "Proactive replies triggered without an @ mention or wake word may only call tools in this list; leave empty for no restriction. Plugins can also opt in a tool by setting FunctionTool.is_lightweight_proactive_safe to True."
             }
           }
         }
@@ -1139,12 +1139,12 @@
       }
     },
     "tool_execution": {
-      "description": "Tool execution",
+      "description": "Tool Execution Authorization",
       "provider_settings": {
         "execution_gate_mode": {
           "labels": ["Administrator only (default)", "Explicit run request"],
           "description": "Execution tool authorization mode",
-          "hint": "Administrator only: Only the AstrBot administrator check applies and plugin behaviour is unaffected. Explicit run request: also requires the current message to ask for running; quoting docs or tutorials no longer counts as consent, and casual phrasings like \"run it for me\" are refused too -- switch back if that gets in the way."
+          "hint": "Administrator only: Checks administrator status only. Explicit run request: Also requires an explicit command to run or execute in the current message, so quoted docs, tutorials, or code blocks will not trigger execution. Indirect or slang phrasings without explicit run verbs will also be blocked; switch back to \"Administrator only\" if needed."
         }
       }
     },
@@ -1189,7 +1189,7 @@
             "hook_timing_mode": {
               "labels": ["Before the reply is sent", "After the reply is sent (default)"],
               "description": "Agent completion hook timing",
-              "hint": "After the reply: The reply goes out first and the hook fires afterwards, which is what plugins generally expect. Before the reply: the hook fires before the reply is sent, so audit or rewrite plugins can step in; plugins that rely on \"the message has already been sent\" will not see it."
+              "hint": "After the reply is sent: Sends the reply first and runs the completion hook afterwards, matching standard plugin expectations. Before the reply is sent: Runs the hook before sending so audit or rewrite plugins can intervene, though plugins expecting an already-sent message will not observe the sent state."
             }
           }
         }
@@ -1330,12 +1330,12 @@
         "hint": "Log level for console output."
       },
       "direct_turn_quiet_sec": {
-        "description": "Message aggregation window (seconds)",
-        "hint": "aiocqhttp only: wait this many seconds after a message, merging consecutive lines from the same person into one turn. Default 4; set 0 to disable aggregation and handle every message on its own."
+        "description": "Message Aggregation Quiet Window",
+        "hint": "Applies to aiocqhttp only: waits for the specified seconds after receiving a message to merge consecutive messages from the same sender into a single turn. Defaults to 4; set to 0 to disable aggregation and process each message immediately."
       },
       "log_escape_message_newlines": {
         "description": "Escape newlines in logs",
-        "hint": "Multi-line group messages make the log hard to read. When on (default) a newline is shown as the return arrow so one message stays on one line; turn off to keep the original text. Display only -- plugins still receive the message unchanged."
+        "hint": "When enabled by default, message newlines in logs are rendered as ⏎ so each message stays on a single line; disable to keep raw multi-line output. Affects log display only; plugins receive the original message unchanged."
       },
       "log_file_enable": {
         "description": "Enable File Logging",
