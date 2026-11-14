@@ -63,7 +63,7 @@ def test_s1_reports_stale_kwarg(tmp_path, monkeypatch):
 
 
 def test_s1_ignores_fork_kept_module(tmp_path, monkeypatch):
-    """A symbol removed upstream but deliberately kept by the fork is fine."""
+    """A symbol removed from the baseline but kept deliberately is fine."""
     monkeypatch.setattr(audit, "ROOT", tmp_path)
     _write(
         tmp_path / "astrbot" / "core" / "caller.py",
@@ -121,7 +121,7 @@ def test_s7_reports_missing_local_module(tmp_path, monkeypatch):
 
 
 def test_s8_reports_removed_api_export(tmp_path, monkeypatch):
-    """Dropping an upstream API export breaks plugins and must be BLOCK."""
+    """Dropping a baseline API export breaks plugins and must be BLOCK."""
     monkeypatch.setattr(audit, "ROOT", tmp_path)
     _write(
         tmp_path / "astrbot" / "api" / "all.py",

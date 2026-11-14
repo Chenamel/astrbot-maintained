@@ -186,7 +186,7 @@ def test_levels_stay_independent(monkeypatch):
 
 
 def test_execution_level_falls_back_to_the_admin_check_in_legacy_mode():
-    """Legacy mode matches upstream: only the administrator check runs."""
+    """Legacy mode runs only the administrator check."""
     context = _context(_event(), {"execution_gate_mode": "legacy"})
     error = util.check_tool_permission(
         context, "Python execution", util.ToolPermissionLevel.EXECUTION

@@ -85,7 +85,7 @@ def test_manifest_hashes_are_lowercase_sha256():
 
 
 def test_every_touched_core_file_is_listed():
-    """A core file the fork touched but did not list is silently undeployable.
+    """A core file changed but not listed is silently undeployable.
 
     ``apply_patches`` only copies manifest entries and ``check_drift`` only
     compares manifest entries, so an unlisted file is invisible on both sides:

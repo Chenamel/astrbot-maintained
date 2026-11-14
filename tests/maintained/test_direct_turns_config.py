@@ -1,8 +1,8 @@
 """The aiocqhttp aggregation window is configurable and can be switched off.
 
-The quiet window is a fork addition: it costs every aiocqhttp message a few
-seconds before the model is even called, which upstream never pays. The knob
-under test lets a deployment opt out without losing the code path.
+The quiet window costs every aiocqhttp message a few seconds before the
+model is even called. The knob under test lets a deployment opt out without
+losing the code path.
 
 The subtle part is that a zero-length window must also stop turn tracking. If
 it only shortened the wait, the first message would be released instantly while

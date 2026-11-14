@@ -63,7 +63,7 @@ def test_hook_timing_mode_round_trips_and_rejects_unknown_values():
         assert runtime.hook_timing_mode() == runtime.HOOK_TIMING_ENHANCED
         core_config.set_hook_timing_mode(runtime.HOOK_TIMING_LEGACY)
         assert runtime.hook_timing_mode() == runtime.HOOK_TIMING_LEGACY
-        # An invalid mode must keep the fork default instead of switching semantics.
+        # An invalid mode must keep the default instead of switching semantics.
         core_config.set_hook_timing_mode("not-a-mode")
         assert runtime.hook_timing_mode() == runtime.HOOK_TIMING_LEGACY
     finally:

@@ -251,7 +251,7 @@ def test_strict_mode_injects_the_prompt_and_drops_unauthorized_tools(
 
 
 def test_legacy_mode_keeps_the_tools_and_skips_the_prompt():
-    """Legacy mode matches upstream: no filtering and no prompt injection."""
+    """Legacy mode applies no filtering and no prompt injection."""
     request = _request(_tool("astrbot_execute_python", is_execution_tool=True))
 
     policy.apply_execution_policy(_Event(sender_id=""), LEGACY_CONFIG, request)

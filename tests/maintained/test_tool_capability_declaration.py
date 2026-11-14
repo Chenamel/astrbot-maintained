@@ -100,7 +100,7 @@ def test_unauthorized_request_drops_declared_execution_tools():
 
 
 def test_legacy_mode_keeps_execution_tools_without_authorization():
-    """Legacy mode matches upstream: the per-call gate decides, not the filter."""
+    """Legacy mode lets the per-call gate decide, not the filter."""
     request = _request(
         _tool("astrbot_execute_python", is_execution_tool=True),
         _tool("web_search"),

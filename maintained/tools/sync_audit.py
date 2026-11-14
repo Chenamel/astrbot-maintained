@@ -520,9 +520,10 @@ def check_s6() -> list[Finding]:
 def check_s7() -> list[Finding]:
     """Python imports inside ``astrbot`` must resolve to a real module.
 
-    Upstream deletions that the fork still imports crash the instance before the
-    log system starts, which is exactly why a green ``check_drift`` is not proof
-    that an instance can boot. Optional imports guarded by ``try`` are skipped.
+    Modules deleted between baselines but still imported crash the instance
+    before the log system starts, which is exactly why a green ``check_drift``
+    is not proof that an instance can boot. Optional imports guarded by ``try``
+    are skipped.
     """
     findings: list[Finding] = []
     for file in sorted((ROOT / "astrbot").rglob("*.py")):
