@@ -2,9 +2,9 @@
 
 ``internal.py`` uses this check to decide whether a message that carries no
 written text still counts as "the user summoned the bot", which is what earns it
-the fallback prompt. It used to look at ``At`` components only, so quoting one
-of the bot's own messages and typing nothing left the request with an empty
-prompt. The shared ``mentions_self`` helper already covers both shapes.
+the fallback prompt. Looking at ``At`` components alone would leave a quoted
+reply with no written text with an empty prompt. The shared ``mentions_self``
+helper covers both shapes.
 """
 
 from types import SimpleNamespace

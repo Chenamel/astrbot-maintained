@@ -1,17 +1,17 @@
 """Version endpoints must report the dist the server is actually serving.
 
 A desktop launcher can keep an official ``data/dist`` to satisfy its own
-version check while the core serves the fork's dashboard from a separate
+version check while the core serves its dashboard from a separate
 directory chosen with ``--webui-dir`` / ``ASTRBOT_WEBUI_DIR``. Reading the
 managed dist's stamp in that setup makes ``/api/updates/check`` claim a WebUI
 update that does not exist and ``/api/stats/version`` report the wrong current
 version.
 
-Upstream 4.29.4 now binds the served directory on the service itself
+The served directory is bound on the service itself
 (``dashboard_static_folder=``, wired from ``app.py``), so the same contract is
-asserted at the new binding point: the reader receives the served folder, the
+asserted at that binding point: the reader receives the served folder, the
 stamp is reported from it, and an unreadable stamp falls back to the default
-lookup. The fork keeps ``_effective_dashboard_version`` as an additive helper.
+lookup. ``_effective_dashboard_version`` is the helper that resolves it.
 """
 
 from __future__ import annotations

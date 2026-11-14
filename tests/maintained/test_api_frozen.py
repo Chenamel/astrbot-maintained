@@ -1,7 +1,7 @@
 """Guards the "additive only" rule for the public API surface.
 
-The fork may add modules under ``astrbot/api/`` but must never modify the
-upstream ones, because plugins depend on that surface. The baseline tag is
+Modules under ``astrbot/api/`` that came with the baseline must stay
+byte-identical, because plugins depend on that surface. The baseline tag is
 immutable, so it is the natural reference point: anything reported by
 ``git diff`` that is not on the allow-list below is a contract break.
 """
@@ -15,7 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 BASELINE = "baseline/v4.29.4"
 
-#: Modules this fork added under astrbot/api/. Everything else must be
+#: Modules outside the frozen surface. Everything else must be
 #: byte-identical to the baseline.
 ALLOWED_ADDITIONS = {
     "astrbot/api/_bridge.py",

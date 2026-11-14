@@ -132,7 +132,7 @@ def test_api_degrades_to_none_when_core_patch_is_absent(monkeypatch):
 
 
 def test_api_reports_availability_when_installed():
-    # The core module ships with this fork, so the capability is present.
+    # The core module is present, so the capability resolves to True.
     assert proactive_api.persona_available() is True
 
 

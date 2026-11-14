@@ -1,13 +1,13 @@
-"""The T8-12 Step 3 split of ``astr_main_agent`` (A + B contracts).
+"""Contract and behaviour coverage for the main-agent helper modules.
 
-Step 3 moved nine helpers into ``astr_main_agent_quote`` (#38) and
-``astr_main_agent_proactive`` (#39) and re-exported them, because the pipeline
-stage and the upstream tests resolve them as ``astr_main_agent`` attributes.
+Nine helpers live in ``astr_main_agent_quote`` and
+``astr_main_agent_proactive`` and are re-exported, because the pipeline stage
+and the upstream tests resolve them as ``astr_main_agent`` attributes.
 
 Group A pins that contract (including the AST assertion that the
 ``MainAgentBuildConfig`` call still lives in ``InternalAgentSubStage.initialize``).
-Group B pins the behaviour of the moved helpers that had no direct coverage
-anywhere, so the move is backed by tests rather than by inspection.
+Group B pins the behaviour of those helpers, which the rest of the suite does
+not cover directly.
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ PROACTIVE_ALL = (
     "_proactive_cron_job_tools",
 )
 
-#: Keyword arguments of the MainAgentBuildConfig call captured before Step 3.
+#: Keyword arguments expected in the MainAgentBuildConfig call.
 EXPECTED_BUILD_KEYWORDS = {
     "tool_call_timeout",
     "tool_schema_mode",
@@ -166,14 +166,14 @@ def test_build_config_is_still_built_in_initialize():
 
 
 def test_build_config_keywords_are_unchanged():
-    """Every fork-relevant keyword survives the upstream 4.29.4 rewrite."""
+    """Every build keyword the runtime depends on is still passed."""
     tree = ast.parse(INTERNAL_PATH.read_text(encoding="utf-8"))
     call, _, _ = _find_build_config_call(tree)
     keywords = {keyword.arg for keyword in call.keywords if keyword.arg}
 
-    # Upstream added its own fields (timezone, request_max_retries, ...). Assert
-    # the capability that matters -- the fork's runtime-mode keys and the core
-    # build inputs must still be passed -- instead of pinning the exact set.
+    # The build carries extra fields of its own (timezone, request_max_retries,
+    # ...). Assert the capability that matters -- runtime-mode keys and the core
+    # build inputs must be passed -- instead of pinning the exact set.
     required = {
         "tool_call_timeout",
         "tool_schema_mode",
@@ -204,17 +204,17 @@ def test_moved_symbols_stay_reachable_from_astr_main_agent():
 def test_citation_constants_are_reexported():
     """Both names resolve to the same citation text and tool set.
 
-    Upstream 4.29.4 defines these constants in ``astr_main_agent`` itself while
-    the fork still ships its proactive helper module. Object identity is no
-    longer the contract; equal, non-empty content is.
+    ``astr_main_agent`` defines these constants while the proactive helper
+    module also holds them, so object identity is not the contract; equal,
+    non-empty content is.
     """
     for name in ("WEB_SEARCH_CITATION_PROMPT", "WEB_SEARCH_CITATION_TOOL_NAMES"):
         on_main = getattr(astr_main_agent, name)
         on_helper = getattr(astr_main_agent_proactive, name)
         assert on_main and on_helper, name
-        # Upstream ships a superset of citation tools (added finance/image/news/
-        # scholar/deepseek/serpapi). Adopt upstream: the fork's helper set must
-        # remain covered, and the prompt text must still be part of it.
+        # The main module lists a superset of citation tools (finance/image/news/
+        # scholar/deepseek/serpapi). The helper set must remain covered, and the
+        # prompt text must still be part of it.
         if isinstance(on_main, (set, frozenset)):
             assert set(on_helper) <= set(on_main), name
         else:
@@ -224,9 +224,9 @@ def test_citation_constants_are_reexported():
 def test_internal_stage_imports_the_quote_module():
     """The pipeline stage still resolves quoted-message attachments.
 
-    Upstream 4.29.4 folded quote handling into ``internal.py`` instead of
-    importing the fork's helper module. Assert the capability (Reply components
-    are walked for attached files) rather than the import spelling.
+    ``internal.py`` handles quoted messages itself rather than importing the
+    quote helper module. Assert the capability (Reply components are walked for
+    attached files) rather than the import spelling.
     """
     tree = ast.parse(INTERNAL_PATH.read_text(encoding="utf-8"))
     names = {

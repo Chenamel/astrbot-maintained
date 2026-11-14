@@ -1,7 +1,7 @@
 """The launcher-friendly WebUI directory fallback.
 
 AstrBot Launcher starts ``python main.py`` with a fixed argument vector, so the
-fork's own dashboard dist cannot be selected with ``--webui-dir``. The core
+bundled dashboard dist cannot be selected with ``--webui-dir``. The core
 reads ``ASTRBOT_WEBUI_DIR`` as a fallback. These tests pin the precedence and
 the shared variable name without importing ``main.py``, which bootstraps the
 runtime at import time.
@@ -80,8 +80,8 @@ def test_variable_name_matches_the_restart_path() -> None:
 def test_an_unusable_env_dir_falls_back_to_the_default() -> None:
     """A user-wide env var reaches every instance on the machine.
 
-    Only this fork's ``main.py`` entry point reads it, and another instance
-    may not have the directory it names. The entry point must check for the
+    Only the ``main.py`` entry point reads it, and another instance may not
+    have the directory it names. The entry point must check for the
     path and fall back instead of failing the whole startup.
     """
     text = (REPO_ROOT / "main.py").read_text(encoding="utf-8")

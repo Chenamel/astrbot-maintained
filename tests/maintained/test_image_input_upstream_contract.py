@@ -1,10 +1,9 @@
-"""The fork image helper must follow the upstream prepare_model_image contract.
+"""The image helper must follow the ``prepare_model_image`` contract.
 
-Upstream 4.29.4 dropped the ``quality`` and ``montage_max_size`` keyword
-arguments and changed the return value from a path to a result tuple. The
-proactive persona path is the only caller of this helper, and a mismatch there
-is swallowed by its broad exception handler, so a regression would otherwise
-only show up as a WARN in a live instance.
+The helper takes no ``quality`` or ``montage_max_size`` keyword arguments and
+returns a result tuple rather than a path. The proactive persona path is the
+only caller, and a mismatch there is swallowed by its broad exception handler,
+so a regression would otherwise only show up as a WARN in a live instance.
 """
 
 from __future__ import annotations

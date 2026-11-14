@@ -1,8 +1,8 @@
 """A proactive reply must carry the configured persona.
 
 The persona lives in core and is normally applied by the agent path from a
-conversation context. A one-shot call has none, so before this it went out with
-an empty system prompt: the 1.3k-character persona only ever reached @-mentions.
+conversation context. A one-shot call has no such context, so the system prompt
+must be assembled explicitly or the persona never reaches it.
 
 These tests drive the real function with stand-ins and assert on the request the
 provider actually receives -- the only place the injection can be observed.
@@ -133,8 +133,8 @@ async def test_hook_injected_parts_reach_the_provider(monkeypatch):
     """Memory recalls and role notes appended by hooks must survive.
 
     ``generate_with_persona`` runs the ``on_llm_request`` hooks on its own
-    request; before this fix it then called the provider without
-    ``extra_user_content_parts``, so every part a hook added was discarded --
+    request; calling the provider without ``extra_user_content_parts`` would
+    discard every part a hook added --
     long-term memory, the role note, the at-all permission block -- while the
     docstring promised they would contribute exactly as in a normal reply.
     """

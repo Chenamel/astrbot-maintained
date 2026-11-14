@@ -33,7 +33,10 @@ def test_structural_guard_accepts_the_current_runner():
     assert errors == []
     assert len(sites) == hook_timing_probe.EXPECTED_CALL_SITES
     branches = [site["branch"] for site in sites]
-    assert branches.count("enhanced") == hook_timing_probe.EXPECTED_TIMING_SITES["enhanced"]
+    assert (
+        branches.count("enhanced")
+        == hook_timing_probe.EXPECTED_TIMING_SITES["enhanced"]
+    )
     assert branches.count("legacy") == hook_timing_probe.EXPECTED_TIMING_SITES["legacy"]
     assert branches.count("") == hook_timing_probe.EXPECTED_CALL_SITES - sum(
         hook_timing_probe.EXPECTED_TIMING_SITES.values()

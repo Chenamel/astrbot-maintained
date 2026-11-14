@@ -1,9 +1,9 @@
 """Hook timing modes of the tool-loop agent runner.
 
-The fork fires the agent-completion hook **before** the reply is emitted
-(``enhanced``); ``legacy`` restores the upstream ordering ("reply first,
-completion hook after") on the skills-like re-query fallback path, which is the
-only path where this fork actually diverges from upstream.
+On the skills-like re-query fallback path, ``enhanced`` fires the
+agent-completion hook **before** the reply is emitted, while ``legacy`` emits
+the reply first and runs the hook afterwards. That path is where the two modes
+differ.
 
 This file is self-contained: the fixtures in ``tests/test_tool_loop_agent_runner.py``
 are module-local and cannot be shared, so the mocks are redefined here.
@@ -173,8 +173,8 @@ async def test_skills_like_requery_hook_timing(
     runner.step = recorded_step
     chains = [chain async for chain in run_agent(runner)]
 
-    # Legacy defers the hook until after the reply (upstream ordering);
-    # enhanced fires it before, so audit plugins get control first.
+    # Legacy defers the hook until after the reply; enhanced fires it before,
+    # so audit plugins get control first.
     assert hooks_at_emission == [expected_hook_at_emission]
     # Either way the hook must still run exactly once before the runner is done.
     assert hooks.agent_done_called

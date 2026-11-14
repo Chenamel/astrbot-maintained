@@ -4,8 +4,8 @@ The module decides execution authorization and code delivery with hand-written
 regexes, so the real behaviour differs from what the patterns suggest. These
 tests pin the **currently observed** outcomes (see
 ``docs/maintained/code-delivery-policy.md``); cases known to be wrong are marked
-in their docstring and belong to **T8-10**, which is deliberately not fixed
-here. Fixing T8-10 must update both that document and these assertions.
+in their docstring and left as-is deliberately. Changing the regexes must update
+both that document and these assertions.
 """
 
 from __future__ import annotations
@@ -127,7 +127,7 @@ def test_non_admin_sender_is_always_denied():
     assert execution_denial(FakeEvent("运行这个脚本"), {"admins_id": []}) is not None
 
 
-#: Genuine model refusals that must stop the code repair flow (T8-14).
+#: Genuine model refusals that must stop the code repair flow.
 REFUSAL_TEXTS = (
     "这个我没法协助你编写攻击脚本",
     "抱歉，这部分不方便展开",
@@ -136,7 +136,7 @@ REFUSAL_TEXTS = (
     "这类勒索软件的写法我不能提供",
 )
 
-#: Ordinary technical answers that must never look like a refusal (T8-14).
+#: Ordinary technical answers that must never look like a refusal.
 NON_REFUSAL_TEXTS = (
     "这个函数用于检测恶意输入，返回布尔值",
     "危险操作建议加个确认步骤",
@@ -159,7 +159,7 @@ def test_ordinary_answers_are_not_refusals(text: str):
 
 
 def test_help_you_write_phrasing_is_still_missed():
-    """Known residual gap (T8-14): "不能帮你写" carries no action keyword.
+    """Known residual gap: "不能帮你写" carries no action keyword.
 
     Widening the action list to cover it also flags ordinary sentences such as
     "这个库不会帮你处理危险输入", so the gap is kept and pinned instead.
@@ -168,7 +168,7 @@ def test_help_you_write_phrasing_is_still_missed():
 
 
 def test_quoted_document_text_is_no_longer_authorized():
-    """Fixed (T8-10): quoting a document no longer counts as authorization.
+    """Quoting a document does not count as authorization.
 
     The quoting-marker rule drops clauses that merely report what a document,
     tutorial or snippet says, so "docs say: compile, then run" is denied.
@@ -238,7 +238,7 @@ def test_ordinary_content_is_not_a_refusal(text: str):
     ],
 )
 def test_refusals_outside_the_word_list_are_currently_missed(text: str):
-    """Known misjudgment (T8-10): real refusals that the pattern misses.
+    """Known misjudgment: real refusals that the pattern misses.
 
     ``病毒`` / ``木马`` are absent from the risk word list, English refusals
     need a risk word, and a refusal phrase needs one of the follow-up verbs.
@@ -260,7 +260,7 @@ def test_refusals_outside_the_word_list_are_currently_missed(text: str):
     ],
 )
 def test_technical_statements_are_currently_read_as_refusals(text: str):
-    """Known misjudgment (T8-10): technical prose read as a refusal.
+    """Known misjudgment: technical prose read as a refusal.
 
     A risk word plus refusal wording is enough even when the sentence is a
     technical statement, so the repair step is skipped and the user receives
@@ -336,8 +336,8 @@ def test_unlabelled_block_is_currently_missed_when_a_language_is_requested(
 
     The fence regex lets ``\\s*`` consume the newline, so the first body line
     becomes the language label and the ``not label`` fallbacks (``#include``,
-    ``def``) never run. Documented in ``code-delivery-policy.md`` §4; not part
-    of T8-10.
+    ``def``) never run. Documented in ``code-delivery-policy.md`` §4; the
+    authorization rules are not involved.
 
     Args:
         language: The requested canonical language.
@@ -366,19 +366,32 @@ def test_the_gate_mode_is_read_in_exactly_one_place():
     """
     from astrbot.core.code_delivery_policy import execution_gate_mode
 
-    assert execution_gate_mode({"provider_settings": {"execution_gate_mode": "strict"}}) == "strict"
-    assert execution_gate_mode({"provider_settings": {"execution_gate_mode": "legacy"}}) == "legacy"
+    assert (
+        execution_gate_mode({"provider_settings": {"execution_gate_mode": "strict"}})
+        == "strict"
+    )
+    assert (
+        execution_gate_mode({"provider_settings": {"execution_gate_mode": "legacy"}})
+        == "legacy"
+    )
 
 
-@pytest.mark.parametrize("bad", ["STRICT", "Strict", "", "enabled", 1, True, None, [], {}])
+@pytest.mark.parametrize(
+    "bad", ["STRICT", "Strict", "", "enabled", 1, True, None, [], {}]
+)
 def test_an_unreadable_mode_falls_back_to_legacy(bad):
     """Falling back to strict would tighten the gate on a typo."""
     from astrbot.core.code_delivery_policy import execution_gate_mode
 
-    assert execution_gate_mode({"provider_settings": {"execution_gate_mode": bad}}) == "legacy"
+    assert (
+        execution_gate_mode({"provider_settings": {"execution_gate_mode": bad}})
+        == "legacy"
+    )
 
 
-@pytest.mark.parametrize("config", [None, {}, {"provider_settings": None}, {"provider_settings": "x"}])
+@pytest.mark.parametrize(
+    "config", [None, {}, {"provider_settings": None}, {"provider_settings": "x"}]
+)
 def test_a_missing_or_broken_config_still_answers(config):
     from astrbot.core.code_delivery_policy import execution_gate_mode
 

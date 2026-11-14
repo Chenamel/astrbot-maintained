@@ -1,4 +1,4 @@
-"""Plugin capability discovery in core (P2 / T8-03).
+"""Plugin capability discovery in core.
 
 Core must not know any plugin directory name: the proactive helpers find the
 plugin by the capability method it exposes and fail closed when nobody

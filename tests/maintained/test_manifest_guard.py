@@ -8,7 +8,7 @@ Three invariants are checked here:
    instance drift.
 2. The manifest itself keeps its contract: core files only, no plugin or
    dashboard entries, and the default-off policy recorded in its header.
-3. **Everything the fork touched is listed.** A file missing from the manifest
+3. **Every core file changed here is listed.** A file missing from the manifest
    is not deployed by ``apply_patches`` and is invisible to ``check_drift``, so
    the instance quietly runs without it. That is how four builtin-plugin assets
    were being copied by hand without anyone noticing.
@@ -39,7 +39,7 @@ def _manifest() -> dict:
 
 
 def _base_ref() -> str:
-    """Return the upstream reference the fork's changes are measured against."""
+    """Return the baseline reference the working tree is compared against."""
     return str(_manifest().get("base_ref") or "baseline/v4.29.4")
 
 
@@ -94,7 +94,8 @@ def test_every_touched_core_file_is_listed():
     hand, absent on any fresh instance.
 
     The comparison is against ``base_ref`` rather than the previous commit: what
-    matters is "this fork changed it", not "the last patch touched it".
+    matters is whether the file differs from that baseline, not whether the
+    last patch touched it.
     """
     base = _base_ref()
     changed = {

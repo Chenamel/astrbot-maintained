@@ -1,9 +1,8 @@
-"""Shared At/Reply "mentions another account" predicate (T8-12 Step 1).
+"""Shared At/Reply "mentions another account" predicate.
 
-``follow_up.try_capture_follow_up`` used to carry a verbatim copy of the
-predicate that lives in ``direct_turns``, with a different ``self_id``
-fallback. Both now call ``direct_turns.mentions_other``; these tests pin the
-shared behaviour and prove the refactor did not change what either caller sees.
+Both ``follow_up.try_capture_follow_up`` and ``direct_turns`` call
+``direct_turns.mentions_other``. These tests pin the shared behaviour and prove
+the two callers see the same answer for every message shape.
 """
 
 from __future__ import annotations
@@ -48,7 +47,7 @@ class _EventWithoutSelfId(_Event):
 
 
 def _legacy_follow_up_predicate(event) -> bool:
-    """The predicate as it read before Step 1 deduplicated it."""
+    """Reference predicate for comparison against the shared helper."""
     self_id = str(event.get_self_id()) if hasattr(event, "get_self_id") else ""
     return any(
         isinstance(component, At)
@@ -60,7 +59,7 @@ def _legacy_follow_up_predicate(event) -> bool:
 
 
 def _legacy_direct_turns_predicate(event) -> bool:
-    """The ``direct_turns`` copy as it read before Step 1."""
+    """Reference ``direct_turns`` predicate used for comparison."""
     self_id = str(event.get_self_id())
     return any(
         isinstance(component, At)

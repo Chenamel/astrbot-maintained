@@ -1,7 +1,7 @@
 """Mechanical enforcement of the public-surface documentation gate.
 
-The ``project_rules`` document (§9) requires that every module this fork adds
-under ``astrbot/api/`` is usable by the community: a module docstring, an explicit
+Every module under ``astrbot/api/`` outside the frozen surface must be
+usable by the community: a module docstring, an explicit
 ``__all__`` that matches the contract, a docstring on every exported symbol, a
 ``#:`` comment on every exported constant -- and no public-looking definition
 that is absent from ``__all__`` ("wild private definitions").
@@ -19,7 +19,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-#: Modules this fork owns. Upstream modules are frozen (see test_api_frozen.py).
+#: Modules outside the frozen surface. See test_api_frozen.py.
 OWNED_MODULES = [
     "astrbot.api._bridge",
     "astrbot.api.content",
@@ -36,7 +36,7 @@ OWNED_MODULES = [
 #: documented, but they are allowed to hold non-exported helpers.
 INTERNAL_MODULES = {"astrbot.api._bridge"}
 
-#: Public modules: everything else this fork owns.
+#: Public modules: all of the above except the internal bridge.
 PUBLIC_MODULES = [name for name in OWNED_MODULES if name not in INTERNAL_MODULES]
 
 

@@ -1,10 +1,10 @@
-"""The T8-12 Step 4a split of the tool-loop agent runner.
+"""Contract and behaviour coverage for the tool-loop support module.
 
-The three oversized-tool-result helpers moved into ``tool_loop_support``
-(#37); the runner keeps thin delegating methods so the upstream test that
-patches ``runner._write_tool_result_overflow_file`` on the *instance* keeps
-working. Group A pins that contract (including delegate signature parity),
-group B pins the behaviour of the moved helpers, which had no direct coverage.
+Three oversized-tool-result helpers live in ``tool_loop_support``; the runner
+keeps thin delegating methods so the test that patches
+``runner._write_tool_result_overflow_file`` on the *instance* keeps working.
+Group A pins that contract (including delegate signature parity), group B pins
+the behaviour of those helpers, which no other test covers directly.
 """
 
 from __future__ import annotations
@@ -112,8 +112,8 @@ def test_runner_imports_the_support_module_and_keeps_the_completion_hook():
         for node in ast.walk(tree)
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     ]
-    # Upstream 4.29.4 inlines these helpers in the runner; the fork keeps the
-    # support module as an independently tested unit. The contract that matters
+    # The runner also carries these helpers inline; the support module stays
+    # an independently tested unit. The contract that matters
     # is that the completion hook stays in the runner and the support surface
     # stays importable -- not the direction of the import.
     import astrbot.core.agent.runners.tool_loop_support as support

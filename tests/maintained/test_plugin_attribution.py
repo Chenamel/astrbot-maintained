@@ -1,7 +1,7 @@
 """Plugin attribution must survive the fact that every plugin module is "main".
 
 Every plugin's entry module is literally named ``main``, so ``handler.__module__``
-is the same string for all of them and the old prefix check matched nothing.
+is the same string for all of them; a prefix check on it matches nothing.
 The source file path has no such ambiguity, and it also works for plugins whose
 directory lacks the ``astrbot_plugin_`` prefix (``meme_manager`` is one).
 """
@@ -57,7 +57,7 @@ _WINDOWS_PATHS = pytest.mark.skipif(
             "/opt/astrbot/data/plugins/astrbot_plugin_livingmemory/main.py",
             "astrbot_plugin_livingmemory",
         ),
-        # No astrbot_plugin_ prefix: the prefix check used to miss this one.
+        # No astrbot_plugin_ prefix: a prefix check would miss this one.
         pytest.param(
             r"D:\astrbot\data\plugins\meme_manager\main.py",
             "meme_manager",

@@ -113,7 +113,9 @@ def test_text_readers_return_empty_string_for_wrong_types():
 
 def test_a_single_url_string_is_one_url_not_a_character_list():
     """``extend("http://...")`` would append every character as an image."""
-    urls = extras.owned_image_urls(_event(**{extras.OWNED_IMAGE_URLS: "http://x/a.png"}))
+    urls = extras.owned_image_urls(
+        _event(**{extras.OWNED_IMAGE_URLS: "http://x/a.png"})
+    )
 
     assert urls == ["http://x/a.png"]
 
@@ -128,14 +130,19 @@ def test_a_malformed_url_list_is_filtered(bad):
 def test_quote_urls_survive_a_value_that_is_not_a_mapping():
     """This is the crash that motivated the module: ``.get()`` on a string."""
     for bad in (None, "nope", 42, ["a"]):
-        assert extras.owned_quote_image_urls(
-            _event(**{extras.OWNED_QUOTE_IMAGE_URLS: bad})
-        ) == {}
+        assert (
+            extras.owned_quote_image_urls(
+                _event(**{extras.OWNED_QUOTE_IMAGE_URLS: bad})
+            )
+            == {}
+        )
 
 
 def test_quote_urls_are_keyed_by_message_id_and_cleaned():
     value = {"1": ["http://x/a.png"], "2": "http://x/b.png", "3": [None]}
-    urls = extras.owned_quote_image_urls(_event(**{extras.OWNED_QUOTE_IMAGE_URLS: value}))
+    urls = extras.owned_quote_image_urls(
+        _event(**{extras.OWNED_QUOTE_IMAGE_URLS: value})
+    )
 
     assert urls == {"1": ["http://x/a.png"], "2": ["http://x/b.png"]}
 

@@ -1,9 +1,8 @@
 """llm_generate() usage must reach the dashboard.
 
-Context.llm_generate() persisted its stats by reading ``llm_resp.stats``, but
-LLMResponse has no such attribute -- it carries a TokenUsage on ``.usage``. Every
-call raised inside the try block, so the whole direct-LLM path was dropped from
-provider_stats (662 warnings in a single day) and never showed up in the totals.
+``LLMResponse`` carries a TokenUsage on ``.usage``, not on ``.stats``. Reading
+the wrong attribute raises inside the stats-writing try block and drops the
+whole direct-LLM path from provider_stats, so it never shows up in the totals.
 """
 
 import asyncio
@@ -94,8 +93,8 @@ async def test_usage_is_persisted(monkeypatch):
 async def test_missing_usage_still_records_timing(monkeypatch):
     """A response without usage has no tokens, but the call still took time.
 
-    The call log used to show "-" for duration on every plugin-driven call
-    because only token usage was persisted.
+    Duration is only available in the call log when the usage record is
+    persisted alongside the token counts.
     """
     ctx, db = _context(monkeypatch, _response(usage=None))
     await ctx.llm_generate(umo="umo", chat_provider_id="p", prompt="hi")

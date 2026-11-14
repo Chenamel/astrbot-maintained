@@ -1,8 +1,7 @@
 """Pictures on the proactive path.
 
-The wording step of a proactive reply used to send no picture at all while the
-judge had one, which is how the bot answered "补个截图或者模组名吧" to somebody
-who had posted the screenshot nineteen seconds earlier.
+The wording step of a proactive reply must see the picture the judge saw. If it
+receives only text, it asks for a screenshot that is already in the conversation.
 
 The pipeline that fixes it has three outcomes, and each has its own way of being
 wrong in a live group:

@@ -1,7 +1,7 @@
-"""Local maintenance protection gate (P9 / T8-06).
+"""Local maintenance protection gate.
 
 The registry protects locally maintained plugins from being overwritten or
-removed. Missing file: warn and allow (the repo is fork-specific, so blocking
+removed. Missing file: warn and allow (the registry is optional, so blocking
 everyone else would lock plugin management entirely). Unreadable file: block.
 See ``docs/maintained/maintenance-gate.md``.
 """

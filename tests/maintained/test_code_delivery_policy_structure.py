@@ -1,17 +1,17 @@
-"""Structure and extraction contracts of ``code_delivery_policy`` (T8-12 Step 2).
+"""Structure and extraction contracts of ``code_delivery_policy``.
 
-Step 2 only extracts two private helpers (``_task_text`` and
-``_drop_execution_tools``); it must not touch the T8-10 regexes, the
-``execution_denial`` body (lines 38-78) or the unconditional prompt injection.
+Two private helpers (``_task_text`` and ``_drop_execution_tools``) hold the
+extraction logic; the regex literals, the ``execution_denial`` body
+(lines 38-78) and the unconditional prompt injection are deliberately frozen.
 
 This file pins both sides of that promise:
 
 - the regex literals stay byte-for-byte identical (a literal snapshot, so any
-  edit to a pattern turns the suite red -- which is the *expected* signal when
-  T8-10 is finally fixed, see ``docs/maintained/code-delivery-policy.md`` §7);
-- the two extracted helpers keep the contracts the inline code had, including
-  the ones no existing test covered: the ``removed`` return value, the rebuilt
-  ``ToolSet`` type, and the fact that an authorized request is never rebuilt.
+  edit to a pattern turns the suite red -- the expected signal for a deliberate
+  change, see ``docs/maintained/code-delivery-policy.md`` §7);
+- the two helpers keep the contracts the inline code had, including the ones no
+  other test covers: the ``removed`` return value, the rebuilt ``ToolSet``
+  type, and the fact that an authorized request is never rebuilt.
 """
 
 from __future__ import annotations
@@ -52,12 +52,12 @@ DENIAL_REGEX_LITERALS = (
         r"^(?:(?:请|麻烦|帮我|替我|帮忙|现在|直接|实际|在电脑上|在本机|把这段代码|把这个脚本)\s*)*(?:编译并运行|运行|执行)(?:一下|一遍|它|这|该|代码|程序|脚本|命令|python|shell|cpp|c\+\+|\s|$)",
     ),
     (
-        # The T8-10 branch: quoting a document used to count as consent.
+        # Quoting a document is not consent.
         "authorize_then",
         r"|(?:然后|并|再|并且)\s*(?:实际|直接|帮我)?\s*(?:运行|执行)(?:一下|它|这|代码|程序|脚本|命令|\s|$)",
     ),
     (
-        # T8-10 fix: a reporting marker means the run verb is quoted, not requested.
+        # A reporting marker means the run verb is quoted, not requested.
         # "这段" deliberately stays out: "帮我运行这段代码：" is a genuine request.
         "quoting_marker",
         r"(?i)(?:文档|教程|示例|例子|例如|举例|说明书|readme|注释|书中|官方|上[一面]|下[一面]|里写|写着|说的是|意思是|中提到|里提到)[^。！？!?\n]{0,12}(?:写|说|提到|表示|描述|是|：|:)",

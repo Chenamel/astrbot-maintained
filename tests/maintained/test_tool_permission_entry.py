@@ -1,10 +1,10 @@
-"""Single tool permission entry (P6 / T8-05).
+"""Single tool permission entry.
 
-The admin check and the current-message execution check now share one
+The admin check and the current-message execution check share one
 implementation, ``check_tool_permission``, while every caller still picks
-exactly one level so its strength is unchanged. The upstream modules that never
-became fork patches keep calling the frozen ``check_admin_permission`` name,
-which forwards to the identity level. See
+exactly one level so its strength is unchanged. Modules outside the patched
+surface keep calling the frozen ``check_admin_permission`` name, which forwards
+to the identity level. See
 ``docs/maintained/tool-permission-entry.md``.
 """
 
@@ -235,7 +235,7 @@ def test_admin_permission_forwards_to_the_identity_level(monkeypatch):
 
 
 def test_the_parallel_entry_point_is_gone():
-    """The second fork-owned entry point no longer exists."""
+    """Only one execution entry point is exposed."""
     assert not hasattr(util, "check_execution_permission")
 
 
@@ -254,9 +254,9 @@ def test_identity_call_sites_are_unchanged(path: Path, expected: int):
 def test_execution_call_sites_are_unchanged(path: Path, expected: int):
     """Execution tools still gate on the execution level only.
 
-    Upstream 4.29.4 rewrote these tools onto ``check_local_execution_permission``;
-    the fork keeps ``ToolPermissionLevel.EXECUTION`` on python.py. Both are
-    execution-level gates, so assert the capability rather than the spelling,
+    These tools may spell the gate ``check_local_execution_permission`` or
+    ``ToolPermissionLevel.EXECUTION``. Both are execution-level gates, so
+    assert the capability rather than the spelling,
     and keep the stronger guarantee: no identity-level check may leak in.
     """
     source = path.read_text(encoding="utf-8")

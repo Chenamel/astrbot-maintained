@@ -1,12 +1,12 @@
-"""Guard the registry of intentional upstream deviations (P11).
+"""Guard the registry of intentional test deviations.
 
 The registry in ``maintained/p11_deviations.py`` is what makes "the suite is
-green" a well-defined statement. Alpha and beta are empty since T8-15/T8-16
-turned their behaviour into opt-in modes; the ``config`` group is not, because
-the fork adds two defaults to a mapping upstream compares by exact equality.
-These tests guard the registry itself -- a renamed upstream test, a watered-down
-reason, a deleted red-line note, or a group whose count drifted must turn the
-suite red instead of silently disabling the alarm.
+green" a well-defined statement. Alpha and beta are empty because their
+behaviour is opt-in; the ``config`` group is not, because two extra defaults
+break a mapping the test compares by exact equality. These tests guard the
+registry itself -- a renamed test, a watered-down reason, a deleted red-line
+note, or a group whose count drifted must turn the suite red instead of
+silently disabling the alarm.
 """
 
 from __future__ import annotations
@@ -19,9 +19,9 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-#: Number of deviations per group (see the ``inventory`` document, section 4 P11).
-#: Alpha and beta are zero since T8-15/T8-16 turned them into opt-in modes; the
-#: config group holds the two exact-dict assertions our extra defaults break.
+#: Number of deviations per group (see the ``inventory`` document, section 4).
+#: Alpha and beta are zero because their behaviour is opt-in; the config group
+#: holds the two exact-dict assertions the extra defaults break.
 EXPECTED_COUNTS = {
     p11_deviations.ALPHA: 0,
     p11_deviations.BETA: 0,
@@ -84,11 +84,10 @@ def test_deviation_reason_names_its_group(node_id):
 def test_beta_protection_is_declared_in_code():
     """The beta red line is asserted from code, not from a maintainer-only doc.
 
-    The phrases used to be read straight out of ``inventory.md`` and
-    ``project_rules.md``. Those documents are now maintainer-only (``.internal/``,
-    gitignored), so a guard that needed them would fail -- or be skipped -- in a
-    fresh clone of the published repository, quietly removing the alarm it exists
-    to raise. The phrases therefore live in
+    Maintainer-only documents (``.internal/``, gitignored) are absent from a
+    fresh clone of the published repository, so a guard that read its phrases
+    from them would fail -- or be skipped -- there, quietly removing the alarm
+    it exists to raise. The phrases therefore live in
     :data:`p11_deviations.PROTECTED_RED_LINES`, which git tracks.
     """
     declared = {phrase for _, phrase, _ in p11_deviations.PROTECTED_RED_LINES}

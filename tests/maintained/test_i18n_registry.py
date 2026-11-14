@@ -1,9 +1,8 @@
-"""Guard the fork's i18n namespace registration against upstream loader migrations.
+"""Guard i18n namespace registration for feature bundles.
 
-Upstream 4.29.4 replaced the static ``translations.ts`` with per-locale
-``locales/<lang>/index.ts`` bundles. A fork-only feature bundle that is present
-on disk but not imported (or imported but not mounted) renders as
-``[MISSING: ...]`` at runtime while the build still succeeds.
+Locales load from per-language ``locales/<lang>/index.ts`` bundles. A feature
+bundle present on disk but not imported (or imported but not mounted) renders
+as ``[MISSING: ...]`` at runtime while the build still succeeds.
 """
 
 from __future__ import annotations

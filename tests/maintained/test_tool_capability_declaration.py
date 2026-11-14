@@ -1,4 +1,4 @@
-"""Tool capability declarations (P3 / T8-04).
+"""Tool capability declarations.
 
 Core keeps no hardcoded tool-name allowlist: execution tools declare
 ``is_execution_tool``, and proactive tools either declare
@@ -201,7 +201,7 @@ def test_hardcoded_tool_name_lists_are_gone(module, constant: str):
     """The old hardcoded allowlists must not come back.
 
     Args:
-        module: The module that used to own the allowlist.
+        module: The module expected not to expose the constant.
         constant: The removed constant name.
     """
     assert not hasattr(module, constant)

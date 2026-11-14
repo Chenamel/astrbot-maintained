@@ -1,14 +1,11 @@
-"""Where the maintained-only config fields live, and how they read.
+"""Where the config fields live, and how they read.
 
-Placement is not cosmetic: every one of these keys was originally dropped into
-a group chosen because it was nearby in the file, not because a reader would
-look there. Upstream later added an access-control section, which gave the
-execution-authorization switch an obvious home. The tests pin the three homes
-so a future merge cannot quietly move them back into a junk drawer.
+Placement is not cosmetic: a key belongs in the group a reader would look for,
+not merely the one nearest in the file. The tests pin the three homes so a
+future merge cannot quietly move them into a junk drawer.
 
-The other half is voice. Early copy kept explaining that an option was added
-by this branch and absent upstream. That is a note to the maintainer, not to
-the person configuring a bot, and it does not belong in a form.
+The other half is voice. A form field states what the setting does and what to
+watch out for; it does not carry notes about where the setting came from.
 """
 
 from __future__ import annotations
@@ -130,8 +127,7 @@ def test_config_copy_does_not_explain_the_branch():
 def test_config_locale_files_have_no_duplicate_keys():
     """A duplicate key silently discards the earlier translation.
 
-    Two copies of ``execution_gate_mode`` once sat in the same object; the
-    second won, and it was the one carrying the provenance note.
+    Two copies of a key in one object would silently discard the earlier one.
     """
     for locale in CONFIG_LOCALES:
         path = LOCALE_DIR / locale / "features" / "config-metadata.json"

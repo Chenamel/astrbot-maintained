@@ -1,9 +1,9 @@
-"""The fork's own config keys must be reachable and validated.
+"""Every config key must be reachable and validated.
 
 Two different schema trees drive the dashboard, and picking the wrong one is
 silent: the key still saves, still takes effect, and simply never appears in any
-form. That is how two of these five keys ended up editable only through the raw
-JSON view.
+form. A key declared in the wrong tree is editable only through the raw JSON
+view.
 
 * ``CONFIG_METADATA_3_SYSTEM`` -- the system-settings page (``/api/v1/system-config``).
 * ``CONFIG_METADATA_3``        -- a bot's config profile (``/api/v1/config-profiles/<id>``).
@@ -44,11 +44,7 @@ def _forward_refs(meta: dict, *, expect_keys: tuple[str, ...]) -> bool:
                 # ``_3`` writes keys as dotted paths (``provider_settings.x``)
                 # while ``_2`` nests them; compare the last segment so both work.
                 leaf = key.rsplit(".", 1)[-1]
-                if (
-                    leaf in expect_keys
-                    and isinstance(value, dict)
-                    and "type" in value
-                ):
+                if leaf in expect_keys and isinstance(value, dict) and "type" in value:
                     found.add(leaf)
                 walk(value)
         elif isinstance(node, list):
@@ -62,8 +58,8 @@ def _forward_refs(meta: dict, *, expect_keys: tuple[str, ...]) -> bool:
 def test_system_settings_show_the_two_misc_keys():
     """``direct_turn_quiet_sec`` / ``log_escape_message_newlines`` belong here.
 
-    Both are top-level settings with no other home; before this they were only
-    in the legacy tree, which the current UI never requests.
+    Both are top-level settings with no other home. The legacy tree validates
+    them but the current UI never requests it.
     """
     assert _forward_refs(
         CONFIG_METADATA_3_SYSTEM,

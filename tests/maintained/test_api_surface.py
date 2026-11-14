@@ -167,8 +167,8 @@ def test_a_complete_core_reports_nothing_missing():
 def test_a_missing_required_capability_is_reported(monkeypatch):
     """The point of the set: absence becomes an ERROR at start-up, not a shrug.
 
-    Optional helpers still degrade quietly -- only the ones the fork's own
-    behaviour depends on are escalated.
+    Optional helpers still degrade quietly -- only the ones core behaviour
+    depends on are escalated.
     """
     import astrbot.api._bridge as bridge
 
