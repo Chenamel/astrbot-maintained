@@ -125,7 +125,7 @@ git rev-parse 'baseline/v4.29.4^{commit}'
   三处版本号**完全一致**，由 `tests/maintained/test_version_marker.py` 钉住；
   `+mtnN` 是 PEP 440 允许的本地版本标记，也是 pip 包名之后第二重身份标识。
 - 启动日志艺术字下方会多一行 `AstrBot Maintained Fork v4.29.4+mtn1`，官方版本没有这一行。
-- 第二行应为 `3c7adafa…`（上游 `v4.29.4` 的基线提交）。`baseline/v4.29.4` 是附注标签，
+- 第二行应为 `613354144…`（上游 `v4.29.4` 的基线提交）。`baseline/v4.29.4` 是附注标签，
   直接 `git rev-parse baseline/v4.29.4` 返回的是标签对象自身的 id，加 `^{commit}` 才是提交；
   该锚点永久存在，供回滚与三方合并比对。
 

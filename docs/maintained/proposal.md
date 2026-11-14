@@ -26,14 +26,14 @@
 1. AstrBot 运行实例的 core 曾被打过 **26 个补丁（+1639 / -91 行）**；2026-10-08 启动器更新核心后，补丁被官方 core 覆盖丢失。
 2. 当时的插件因顶层语句 `from astrbot.core.provider.entities import IMAGE_INPUT_UNAVAILABLE_NOTICE` 导入失败，导致其 `main.py` **整体无法加载**（一处顶层 import 失败即全插件失效）。
 3. **根因不是补丁错，是架构错**：插件硬依赖 core 私有路径且无降级兜底 → core 一动，插件全死。
-4. 现有维护仓 `maintenance_repos/astrbot_local` 是**快照式归档**（6 commit、无 remote、其中 `upstream/core` 为 depth=1 浅克隆），无法做三方合并、无法对外发布、无法复现基线。
+4. 现有的本地归档仓是**快照式归档**（6 commit、无 remote、其中 `upstream/core` 为 depth=1 浅克隆），无法做三方合并、无法对外发布、无法复现基线。
 5. 需要的是一个**能长期演进、能回溯、能合规公开**的 fork 仓库，把补丁升格为「有稳定公开 API 的维护分支」。
 
 ## 2. 目标（可度量）
 
 | ID | 目标 | 度量方式 |
 |---|---|---|
-| G1 | 基线可复现 | 任意机器 clone 后 `git rev-parse baseline/v4.29.4` 可达 `3c7adafa`，且工作区字节与上游一致（CRLF 计数为 0） |
+| G1 | 基线可复现 | 任意机器 clone 后 `git rev-parse 'baseline/v4.29.4^{commit}'` 可达 `613354144`，且工作区字节与上游一致（CRLF 计数为 0） |
 | G2 | 对外兼容 | 原版插件**零改动**可用；`astrbot.api.*` 与事实公开符号全部冻结 |
 | G3 | 只做加法 | 新增能力一律落 `astrbot/api/**`，不触碰既有对外可见路径 |
 | G4 | 合规 | 满足 AGPL §13：公开仓库 + `NOTICE` + 同源可获取 |
@@ -70,7 +70,7 @@
 | 术语 | 含义 |
 |---|---|
 | upstream | `AstrBotDevs/AstrBot`，AGPL-3.0，默认分支 `master` |
-| baseline | tag `v4.29.4` → commit `3c7adafa1397e182d60b1016bf88759265113c8a` |
+| baseline | tag `v4.29.4` → commit `61335414433db721b3f7ecc93f90deafe0a59d78` |
 | maintained | 本 fork 主干分支 `maintained/v4.29.4`；锚点 tag `baseline/v4.29.4` |
 | api 层 | `astrbot/api/**`，对插件公开的唯一稳定面 |
 | core 内部 | `astrbot/core/**`，除已登记补丁外不得作为插件依赖面 |
@@ -94,11 +94,12 @@
 
 ## 8. 验收标准（每条可命令验证）
 
-- **A1** `git rev-parse baseline/v4.29.4` = `3c7adafa…`（锚点标签永久指向基线，主干 HEAD 随维护推进而前进），`git status --porcelain` 为空，本地无 `master` 分支。
+- **A1** `git rev-parse 'baseline/v4.29.4^{commit}'` = `613354144…`（锚点标签是附注标签，需加 `^{commit}` 才取到提交；该锚点永久指向基线，主干 HEAD 随维护推进而前进），`git status --porcelain` 为空，本地无 `master` 分支。
 - **A2** `git remote -v`：`upstream` 禁推、`origin` 为 SSH `Chenamel/astrbot-maintained`；`ssh -T git@github.com` 返回 Chenamel。
-- **A3** `pyproject.toml` 为 `4.29.4`（PEP 440 严格可解析的基版本），
-  `astrbot.__version__` 为 `4.29.4+mtn1`（带 fork 标记），二者的一致性由
-  `tests/maintained/test_version_marker.py` 钉住；`python -c "import astrbot; print(astrbot.__version__)"` 应输出 `4.29.4+mtn1`。
+- **A3** `pyproject.toml`、`astrbot.__version__` 与 `maintained/VERSION` 三处均为
+  `4.29.4+mtn1`，由 `tests/maintained/test_version_marker.py` 钉住；
+  `python -c "import astrbot; print(astrbot.__version__)"` 应输出 `4.29.4+mtn1`，
+  严格 `Version()` 调用方改用 `astrbot.__version_base__`（`4.29.4`）。
 - **A4** 全仓 grep 无具体插件目录名、无第三方 fork 名、`git ls-files` 无 `data/plugins` 路径。
   ✅ **已达成**：P2 改造已让 core 侧不再按插件目录名找插件（改走能力契约）；内部施工文档
   已移出公开树；守卫见 `tests/maintained/test_plugin_capability_lookup.py`（插件目录名白名单为空）。
@@ -111,7 +112,7 @@
 
 ## 10. 依赖与前置
 
-SSH 密钥 `id_ed25519_workbuddy`、GitHub 账号 `Chenamel`、Python 3.12 venv、`ruff==0.15.22`、归档仓 `maintenance_repos/astrbot_local`（只读）。
+专用 SSH 密钥、发布仓账号、Python 3.12 venv、`ruff==0.15.22`、只读归档仓。
 
 ## 11. 决策记录
 
