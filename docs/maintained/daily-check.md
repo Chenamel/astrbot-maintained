@@ -1,22 +1,16 @@
-# 每日晨检（daily_check.py）
+# 每日晨检（`daily_check.py`）
 
-晨检的四项统计由 `maintained/tools/daily_check.py` 完成，自动化任务只负责把输出
-**原样呈现**。口径以本文件为准：改判据时，代码、测试和本文必须一起改，
-否则下次又会出现"每天异常但没人知道在报什么"。
+晨检的四项统计由 `maintained/tools/daily_check.py` 完成，自动化任务只负责将脚本输出原样呈现。统计口径以本文件为准；调整判据或阈值时，须同步更新代码、测试与本文档。
 
-## 为什么交给脚本
+## 字段与数据源边界
 
-早期晨检是让模型每天现读日志、JSONL 和 SQLite 再自己汇总，于是反复出现口径漂移：
+日志、判定记录与数据库的字段口径存在以下边界，脚本已将这些规则固化：
 
-- `shadow_log` 一度有 `source=replay`，后来字段消失，"排除 replay"这步失效；
-- `NO_JUDGE` 是节流（`skipped_by=quota/throttle`），曾被误当成失败；
-- 群 ID 在 `group` 字段（`default:GroupMessage:<id>`），`group_id` 恒为 null；
-- `provider_stats.created_at` 是 UTC naive，和日志/判定的本地时间差 8 小时；
-- 活跃日志在 `core/data/logs/astrbot.log`，不在实例根目录；日志会轮转成
-  `astrbot.<时间戳>.log`，只看当前文件的末 4000 行会连着漏报；
-- `--since` 只有下界，把执行日当天的错误算进了"昨天"。
-
-这些都不该由模型每次重新推断。脚本把时间窗、字段、分类固定下来，模型只读结果。
+- `shadow_log.jsonl` 中带有 `source=replay` 的回放记录不计入真实流量；
+- `NO_JUDGE` 表示配额或节流跳过，不计入判定失败；
+- 群号存放在 `group` 字段，形如 `default:GroupMessage:<id>`，`group_id` 恒为 `null`；
+- `provider_stats.created_at` 为 UTC naive 时间戳，与本地日志时间相差 8 小时；
+- 活跃日志位于 `core/data/logs/astrbot.log` 并按 `astrbot.<时间戳>.log` 轮转，统计时需扫描时间窗内全部轮转文件。
 
 ## 用法
 
@@ -25,70 +19,56 @@ python maintained/tools/daily_check.py --instance "<实例目录>"
 python maintained/tools/daily_check.py --instance "<实例目录>" --date 2026-11-06
 ```
 
-`--date` 省略时取本地昨天；重点群用 `--focus-group` 传，或用环境变量 `ASTRBOT_FOCUS_GROUP`，都没设时不摘录发送样本。
-**只读**：不写实例、不重启服务。退出码只表示脚本能否运行（0 成功 / 2 目录不对），
-**不表示健康等级** —— 有事也在报告里说，不用退出码报警。
+`--date` 省略时默认统计本地昨天；重点群通过 `--focus-group` 或环境变量 `ASTRBOT_FOCUS_GROUP` 指定，未指定时不摘录发送样本。
+脚本为纯只读操作，不写实例文件、不重启服务。退出码仅表示脚本自身执行状态（`0` 成功 / `2` 参数或目录错误），健康等级直接体现在输出报告中。
 
 ## 四个数据源
 
-| 用途 | 路径（相对实例根） | 时间字段 | 注意 |
+| 用途 | 路径（相对 `<实例目录>`） | 时间字段 | 读取规则 |
 |---|---|---|---|
-| 错误与静默 | `core/data/logs/astrbot*.log` | 行首 `[YYYY-MM-DD HH:MM:SS.mmm]`，本地 | 扫全部轮转文件，逐行按时间戳过滤，不按文件名、不截断末 4000 行 |
-| 判定统计 | `core/data/plugins/*/shadow_log.jsonl`（按实例实际插件目录匹配） | `ts`，本地 | 每行一个 JSON；`source=replay` 跳过（兼容旧文件） |
-| 真发送 | 同上 | 同上 | 仅 `sent=true` 计入；重点群摘录 `persona_text` 前 60 字 |
-| 成本 | `core/data/data_v4.db` 的 `provider_stats` | `created_at`，**UTC naive** | 只统计 `token_input_other` 与请求数；按 `agent_type` 分组 |
+| 错误与静默 | `core/data/logs/astrbot*.log` | 行首 `[YYYY-MM-DD HH:MM:SS.mmm]`（本地时间） | 扫描全部轮转文件，逐行按时间戳过滤，不按文件名过滤、不截断尾部行数 |
+| 判定统计 | `core/data/plugins/*/shadow_log.jsonl` | `ts`（本地时间） | 逐行解析 JSON；跳过 `source=replay` 记录 |
+| 真发送 | 同上 | 同上 | 仅统计 `sent=true`；重点群摘录 `persona_text` 前 60 字 |
+| 成本 | `core/data/data_v4.db` 的 `provider_stats` 表 | `created_at`（**UTC naive**） | 统计 `token_input_other` 与请求数，按 `agent_type` 分组 |
 
 ## 时间窗
 
-- 报告本地 GMT+8 的一个自然日，半开区间 `[D 00:00, D+1 00:00)`。
-- 成本表用等价的 UTC 窗口 `[D-1 16:00, D 16:00)`，避免把 UTC 日期当成本地日期。
-- 日志行不满足窗口就丢弃；窗口两端也计入静默时长，所以"全天无日志"能被发现。
-- 若报告日就是今天，静默只算到当前时刻——**尚未到来的时间不算停机**。
+- 报告本地 GMT+8 的一个自然日，取半开区间 `[D 00:00, D+1 00:00)`。
+- 数据库成本查询使用等价的 UTC 窗口 `[D-1 16:00, D 16:00)`。
+- 窗口首尾两端同样计入静默时长计算，以检出全天无日志的停机状态；若统计日期为当天，则静默截止到当前时刻。
 
-> **口径修正（2026-11-07）**：此前把「UTC 日历日」当成「昨天」，成本数混了 8 小时时区。
-> 判定、日志、成本现在统一用本地日等价窗口；历史记录里的旧数字不要拿来校验本脚本。
+> 判定、日志与成本统计均统一对齐到本地自然日窗口。
 
 ## 健康分级
 
 | 级别 | 触发条件 | 代码常量 |
 |---|---|---|
-| `incident`（⚠️ 异常） | 事故级错误 ≥1；窗口内零日志；最长静默 > 4 小时；判定 ERROR 占比 > 10% | `INCIDENT_GAP_MINUTES=240`、`ERROR_RATE_LIMIT=0.10` |
+| `incident`（⚠️ 异常） | 事故级错误 ≥ 1；窗口内零日志；最长静默 > 4 小时；判定 `ERROR` 占比 > 10% | `INCIDENT_GAP_MINUTES=240`、`ERROR_RATE_LIMIT=0.10` |
 | `notice`（注意） | 最长静默 > 1 小时；噪声与其他错误合计 > 50 条 | `NOTICE_GAP_MINUTES=60`、`NOISE_LIMIT=50` |
-| `ok`（通过） | 其余 | — |
+| `ok`（通过） | 其余情况 | — |
 
-**只有 `incident` 才加 ⚠️。** 日常外部噪声单独计数，不再触发异常：表情图/CDN
-下载失败、@ 用户信息获取失败、上游 429/502/503/超时、asyncio 关闭异常，
-以及插件侧的 `ActionFailed`、接口返回错误代码、内容安全 LLM 审查失败、
-meme 图片解析失败、点赞/下载失败。这些都是执行记录里反复出现、无需每日
-追查的老面孔；`NOISE_RE` 是它们的唯一清单。
-未被任何规则匹配的错误归入"其他"，并把前两条塞进报告的「需关注」行 ——
-新类型的错误不会被静默吞掉，维护者据此决定要不要加进事故或噪声清单。
+仅 `incident` 级别标记 ⚠️。常见的外部网络与平台瞬态错误归入 `NOISE_RE` 单独计数，不触发异常：表情图/CDN 下载失败、@ 用户信息获取失败、上游 429/502/503/超时、asyncio 关闭异常，以及插件侧的 `ActionFailed`、接口错误码、内容安全审查失败、meme 图片解析失败、点赞/下载失败。
+未命中任何规则的错误归入「其他」，并将前两条写入报告的「需关注」行，防止新型错误被静默忽略。
 
-事故级关键词以 `INCIDENT_RE` 为准：数据库损坏 / `sqlite3.DatabaseError` /
-`PluginVersionUnsupportedError` / 插件加载失败 / `KeyError: 'items'`。
+事故级错误以 `INCIDENT_RE` 为准：数据库损坏、`sqlite3.DatabaseError`、`PluginVersionUnsupportedError`、插件加载失败、`KeyError: 'items'`。
 
 ## 判定口径
 
-- `NO_JUDGE` 是节流，**不算失败**；只有 `ERROR` 计入失败率。
-- `sent=true` 才是真发送，`REPLY` 只表示判定结果。
-- 群 ID 取自 `group` 字段最后一段；`group` 为空的行不计入群排行。
-- 失败率分母是窗口内全部判定（含 `NO_JUDGE`），这样占比不会被节流放大。
+- `NO_JUDGE` 为节流跳过，不计入失败；仅 `ERROR` 计入失败分子。
+- `sent=true` 计为真实发送，`REPLY` 仅表示判定通过。
+- 群 ID 取自 `group` 字段末尾段；`group` 为空的行不计入群排行。
+- 失败率分母为窗口内全部判定行数（含 `NO_JUDGE`），防止节流放大失败率。
 
 ## 与自动化任务的契约
 
-本机自动化任务（每天固定时间）只做一件事：运行脚本，把不超过 8 行的输出
-原样贴出。它**不自行读日志或数据库、不改写数字、不自行加异常标记**。
-需要人话解读时可以补一句，但不得改动报告里的数值与级别。
+定时自动化任务仅运行本脚本并将不超过 8 行的输出原样贴出，不自行读取日志或数据库、不改写数值、不擅自增删异常标记。
 
-## 与 instance_check.py 的分工
+## 与 `instance_check.py` 的分工
 
-`maintained/tools/instance_check.py` 是给**单个插件做重启复核**的只读工具
-（检查该插件目录、配置与判定日志）。它不是整体健康检查，晨检不再依赖它；
-要用它请显式传 `--plugin`，否则插件相关检查会跳过而不是报红。
+`maintained/tools/instance_check.py` 用于对单个插件执行重启后复核（需显式传入 `--plugin` 检查指定插件目录、配置与判定日志），不属于每日整体晨检流程。
 
 ## 维护约定
 
-1. 新增事故/噪声类型、改阈值、改时间窗：同时改 `daily_check.py`、
-   `tests/maintained/test_daily_check.py` 和本文，一笔提交。
-2. 输出行数上限 8 行，自动化按这个上限排版。
-3. 脚本不写任何实例文件；需要修实例数据时走 `apply_patches.py`。
+1. 调整事故/噪声正则、阈值或时间窗时，必须同步修改 `daily_check.py`、`tests/maintained/test_daily_check.py` 与本文档。
+2. 报告输出严格控制在 8 行以内。
+3. 脚本保持纯只读；修复实例文件请使用 `apply_patches.py`。

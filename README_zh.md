@@ -13,7 +13,7 @@
 
 </div>
 
-这是 AstrBot 的维护分支，跟随上游发布版本持续更新。仓库独立维护，不在 GitHub 的 fork 网络里。分发包只包含 core 本体，不含插件。许可证是 AGPL-3.0-or-later，与上游作者无从属关系。
+这是 AstrBot 的独立维护分支，持续跟随上游正式发布版本更新（基线锚点见 `baseline/*`，当前维护版本见 `maintained/VERSION`）。本仓库脱离 GitHub fork 网络独立维护，分发包仅包含 core 本体，不含任何插件。项目按 AGPL-3.0-or-later 协议开源，与上游作者无隶属或代表关系。
 
 ## 核心差异与新增 API
 

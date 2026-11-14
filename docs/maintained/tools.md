@@ -1,131 +1,96 @@
-# 维护工具链（阶段 6）
+# 维护工具链手册
 
-> 回答一个问题：启动器又把 core 覆盖了怎么办？ 答案是两条命令。
+> 启动器升级核心或外部操作覆盖本地文件后，使用以下工具完成漂移检测、补丁重放、钩子时序校验与升级覆盖审计。
 
-## 0. 背景
+## 0. 工具一览
 
-10-08 的事故是「启动器更新核心 → 26 个补丁被官方覆盖 → 插件 import 不到私有符号 →
-整体加载失败」。事后排查全靠人工比对，耗时且有遗漏风险（本次审计才发现补丁压根没进仓）。
-
-阶段 6 把这两个动作固化成工具：
-
-| 工具 | 作用 | 何时用 |
+| 工具脚本 | 核心用途 | 适用场景 |
 |---|---|---|
-| `maintained/tools/check_drift.py` | 检测实例 core 是否与台账（=维护版真相源）不一致 | 机器人异常时、启动器更新后、定期巡检 |
-| `maintained/tools/apply_patches.py` | 修复：把仓内维护版 core 打回实例（带备份与校验） | check_drift 报出漂移后 |
-| `maintained/tools/hook_timing_probe.py` | 取证：记录并校验 agent 完成钩子相对最终回复的时序 | T8-12 每步拆分前后（β 红线） |
+| `maintained/tools/check_drift.py` | 校验运行实例及仓库工作树的 `astrbot/**` 文件是否与 SHA-256 台账一致 | 日常巡检、启动器更新后、排查能力异常时 |
+| `maintained/tools/apply_patches.py` | 将仓库内的维护版 core 文件同步到运行实例（自动备份被覆盖文件并复核） | `check_drift.py` 检出文件缺失或哈希不匹配后 |
+| `maintained/tools/hook_timing_probe.py` | 记录并校验 agent 完成钩子相对于最终回复产出的时序关系 | 修改或重构 `tool_loop_agent_runner.py` 前后 |
+| `maintained/tools/sync_audit.py` | 对比两个上游 `baseline/*` 标签之间的全量变更面，核查仓库与实例是否完整吸收 | 每次跟进上游正式版本升级后 |
 
-## 1. 共同约定
+## 1. 通用约定
 
-- 真相源：`maintained/installed_manifest.json`（登记本 fork 改动过的 `astrbot/**` 文件，条数以该文件为准）。
-  - 判定口径：凡是本 fork 改动过的 `astrbot/**` 文件都必须登记，否则 `apply_patches` 不会部署它；
-    若该文件又被别的已登记文件 import，就会在实例侧 `ImportError`（曾由此导致启动失败）。
-  - 双端校验：一端是实例的工作树，另一端是 fork 仓的工作树。
-- 哈希口径：文件磁盘字节的 SHA-256。仓内文件全部为 LF。
-- 目标根：`--instance <实例目录>`，工具自动定位其下的 `core/`。
-- 只碰台账内的文件：工具不会读写台账之外的任何文件（不动 `data/`、不动配置、不动插件）。
-- 不含任何插件信息：与本仓「只留 core」的定位一致，工具里没有插件名。
+- **单一台账真相源**：`maintained/installed_manifest.json` 登记本分支修改或新增的全部 `astrbot/**` 文件路径及磁盘字节 SHA-256（仓库文件统一为 LF 换行符）。凡是修改过的 `astrbot/**` 文件均须登记入台账，否则 `apply_patches.py` 不会将其部署到实例。
+- **实例路径解析**：通过 `--instance "<实例目录>"` 传入实例根目录，工具会自动定位其下的 `core/` 目录。
+- **操作边界**：工具仅读写台账内登记的 `astrbot/**` 文件（及备份目录 `<实例目录>/optimization_backups/`），绝不修改 `data/` 运行时数据、配置文件或任何插件目录。
 
-## 2. `check_drift.py`
+## 2. `check_drift.py`（漂移检测）
 
 ```bash
-# 人读输出
+# 人类可读报告（检查运行实例）
 python maintained/tools/check_drift.py --instance "<实例目录>"
 
-# 机器读（JSON）
+# 机器可读 JSON 输出
 python maintained/tools/check_drift.py --instance "<实例目录>" --json
 
-# 同时校验「仓内工作树」是否也与台账一致（默认只校验实例）
+# 同时校验仓库工作树与运行实例双端一致性
 python maintained/tools/check_drift.py --instance "<实例目录>" --check-repo
 ```
 
-输出：每条文件的状态（`ok` / `mismatch` / `missing`），以及计数与结论。
+输出逐个受保护文件的状态（`ok` / `mismatch` / `missing`）及汇总统计。
+退出码：`0` 表示完全一致；`1` 表示存在漂移；`2` 表示参数错误或台账不可读。
 
-退出码：`0` 无漂移；`1` 有漂移；`2` 用法/环境错误（如实例路径不存在、台账读不到）。
-便于直接接进自动化（例如让机器人在启动后自检并告警）。
-
-## 3. `apply_patches.py`
+## 3. `apply_patches.py`（补丁重放与恢复）
 
 ```bash
-# 预演（默认行为，不写任何文件）
+# 只读预演（默认行为，不修改任何文件）
 python maintained/tools/apply_patches.py --instance "<实例目录>"
 
-# 真正执行（写文件 + 先备份）
+# 执行写入（先备份目标文件，再复制并复核哈希）
 python maintained/tools/apply_patches.py --instance "<实例目录>" --apply
 ```
 
-行为：
+执行流程：
+1. 读取 `maintained/installed_manifest.json`，先校验当前仓库工作树中的源文件哈希与台账是否完全一致；若源文件不一致则立即中止（退出码 `2`）。
+2. 计算实例侧变更计划：`create`（实例缺失）、`update`（哈希不符）、`skip`（已一致）。
+3. 传入 `--apply` 时，先将被覆盖的实例文件备份至 `<实例目录>/optimization_backups/<时间戳>_CST_apply_patches/`（附带记录操作前状态的 `manifest.json`）。
+4. 复制文件并立即重新计算 SHA-256 复核，输出最终一致率。
 
-1. 读台账，逐个核对源文件（fork 仓工作树）哈希与台账一致 → 不一致则中止（源损坏，宁可不做）。
-2. 计算计划：`create`（实例缺失）/ `update`（内容不符）/ `skip`（已一致）。
-3. `--apply` 时先备份到 `<实例>/optimization_backups/<时间戳>_CST_apply_patches/`
-   （只备份将被覆盖的文件 + 一份记录操作前状态的 `manifest.json`）。
-4. 逐文件复制，随后立即复核台账，输出最终一致率。
-5. 绝不动台账之外的文件；绝不删除任何东西。
+退出码：`0` 表示同步成功（或无需变更）；`1` 表示复核仍存在不一致；`2` 表示用法错误或源文件校验失败。写入完成后需重启 AstrBot 实例使新代码生效。
 
-退出码：`0` 成功（或无变化）；`1` 复核后仍有不符；`2` 用法/源校验失败。
+## 4. `hook_timing_probe.py`（完成钩子时序探针）
 
-**注意**：写完 core 源码后需重启 AstrBot 才生效（工具不做重启，避免突然中断正在跑的任务）。
-
-## 4. `hook_timing_probe.py`
-
-T8-12 要拆分四个过大的 core 文件，而 **β（agent 完成钩子的时序）必须逐点保真**。
-该探针把「钩子相对于最终回复的位置」记录下来，供每一步拆分后机械比对。
+重构或拆分 runner 相关文件时，agent 完成钩子（`_complete_with_assistant_response`）相对于最终回复 yield 的触发时序必须保持不变。该探针用于记录并机械比对 5 个标准分支的时序关系。
 
 ```bash
-# 落盘基线（按 commit 命名）
+# 导出当前基线快照
 python maintained/tools/hook_timing_probe.py --quiet --dump maintained/baselines/hook_timing/<shortsha>.json
 
-# 与基线比对
+# 与基线快照机械比对
 python maintained/tools/hook_timing_probe.py --quiet --compare maintained/baselines/hook_timing/<shortsha>.json
 ```
 
-**5 个 case**（括号为落盘时的行号）：`image_unavailable`(984) / `no_tool_call`(1100) /
-`requery_enhanced`(1142) / `requery_legacy`(1166) / `tool_failure_final`(1340)。
+- **覆盖的 5 个标准分支**：`image_unavailable`、`no_tool_call`、`requery_enhanced`、`requery_legacy`、`tool_failure_final`。
+- **核心时序不变量（仅比对相对事件顺序，不依赖源码绝对行号）**：
+  - `enhanced` 分支：`hook_index < first_final_yield_index`（钩子先于回复触发）
+  - `legacy` 分支：`hook_index > first_final_yield_index`（回复先于钩子发出）
+  - 无模式分支区分的 3 个路径（`image_unavailable`、`no_tool_call`、`tool_failure_final`）：两种模式下产出事件序列完全一致（`mode_symmetry`）。
+- **AST 结构守卫**：每次运行自动扫描 `tool_loop_agent_runner.py`，断言 `await self._complete_with_assistant_response(` 调用点恰好为 **5 处**（`enhanced` 分支 1 处、`legacy` 分支 1 处、无条件调用 3 处）。
+- **比对字段**：仅比对 `events`、`summary` 与 `mode_symmetry`；忽略随提交变动的 `repo_commit` 与行号字段 `case.call_site`。
+- **退出码**：`0` 一致；`1` 时序不变量或结构守卫失败；`2` 参数或环境错误。
 
-**不变量（只比相对关系，不比绝对行号）**：
-
-- `enhanced` ⇒ `hook_index < first_final_yield_index`
-- `legacy` ⇒ `hook_index > first_final_yield_index`
-- 984 / 1100 / 1340 **没有** `legacy_timing` 分支 ⇒ 两种模式下结果必须完全相同（`mode_symmetry`）
-
-**结构守卫**：每次运行都符号化扫描 runner，断言 `await self._complete_with_assistant_response(`
-恰好 **5 处**，其中 enhanced 分支 1 处、legacy 分支 1 处、无条件 3 处，**不依赖行号**，
-所以拆分后行号漂移不会误报，但少一处/多一处立刻判红。
-
-**比对范围**：只比 `events` / `summary` / `mode_symmetry`。`repo_commit` 与 `case.call_site`
-是信息字段，本就会随改动移动，不参与比对。
-
-**退出码**：`0` 一致；`1` 有 case / 不变量 / 结构守卫失败；`2` 用法或环境错误。
-`--quiet` 只压制 runner 自身的日志（它会打 traceback），不影响判定。
-
-## 5. 典型处置流程
+## 5. 标准恢复流程
 
 ```bash
-# 1. 发现机器人异常 / 启动器更新过核心
+# 1. 检查实例与仓库是否存在漂移
 python maintained/tools/check_drift.py --instance "<实例目录>" --check-repo
 
-# 2. 若报出漂移：先预演，看要改哪些文件
+# 2. 预演修复计划
 python maintained/tools/apply_patches.py --instance "<实例目录>"
 
-# 3. 确认无误后执行
+# 3. 执行备份与同步
 python maintained/tools/apply_patches.py --instance "<实例目录>" --apply
 
-# 4. 重启 AstrBot，再用 check_drift 复查
+# 4. 重启 AstrBot 实例后复查
+python maintained/tools/check_drift.py --instance "<实例目录>"
 ```
 
-## 6. 明确不做
+## 6. `sync_audit.py`（升级覆盖审计）
 
-- **不拦启动器**（做不到：拦不住进程外的文件覆盖）。本工具链的定位是**事后快速检测 + 一键恢复**，
-  把 MTTR 从"人工排查半小时"降到"两条命令"。
-- 不自动重启机器人、不改配置、不动插件、不碰 `data/`。
-- 不做「上游版本升级」，那走三方合并，与本工具无关。
-
-## 7. `sync_audit.py`（升级覆盖审计）
-
-与 `check_drift.py` 不同：后者只比台账 68 条，前者以**两个上游基线之间的全量变更面**为参照，
-查签名漂移、上游新增模块/依赖、前端悬空 import、i18n 注册、API 导出零删减，
-以及实例侧的全量 core / venv / 面板 / 戳记 / 配置键。只读、纯标准库、可输出 JSON。
+`check_drift.py` 仅校验台账内登记的文件，而 `sync_audit.py` 以两个上游 `baseline/*` 标签之间的全量变更面为参照，检查函数签名变更、上游新增模块与依赖、前端本地导入、四语言 i18n 注册、`astrbot/api/all.py` 导出完整性及实例侧全量文件同步情况：
 
 ```bash
 PYTHONPATH=maintained python -m tools.sync_audit
@@ -133,15 +98,11 @@ PYTHONPATH=maintained python -m tools.sync_audit --instance "<实例目录>"
 PYTHONPATH=maintained python -m tools.sync_audit --json
 ```
 
-已在 `maintained-ci.yml` 的 `static-checks` job 接入静态层。完整判据、分级与误报豁免见
-`docs/maintained/upstream-sync-audit.md`。
+完整检查项定义（S1–S8、I1–I5）与误报豁免规则见 [`upstream-sync-audit.md`](./upstream-sync-audit.md)。
 
-## 8. 测试
+## 7. 对应测试套件
 
-`tests/maintained/test_tools_check_drift.py` / `test_tools_apply_patches.py` /
-`test_tools_hook_timing_probe.py` / `test_sync_audit.py`：
-用 `tmp_path` 造出「假仓 + 假实例」，覆盖无漂移 / 内容不符 / 文件缺失 / 源损坏中止 /
-预演不写文件 / `--apply` 备份与写回 / 写回后复核，以及审计对四类已知事故的检出与误报豁免。
+`tests/maintained/test_tools_check_drift.py`、`test_tools_apply_patches.py`、`test_tools_hook_timing_probe.py` 与 `test_sync_audit.py` 使用临时目录构造模拟仓库与实例，覆盖正常校验、内容漂移、文件缺失、源损坏中止、只读预演、备份写回及时序探针断言。
 
 ## 9. L2 盲评
 

@@ -1,6 +1,6 @@
-# Design — AstrBot Maintained Fork
+# 架构分层与兼容边界说明
 
-> 本文件回答「怎么做」。每个设计必须可追溯到 proposal 的某条需求。
+> 本文件说明维护分支的目录分层、兼容冻结边界、内部转发机制与版本发布规则。
 
 ## 1. 架构总览
 
@@ -8,130 +8,91 @@
 upstream AstrBotDevs/AstrBot (master)
         │  git fetch / 三方合并
         ▼
-baseline/*  (锚点 tag, 指向当前上游发布提交)
+baseline/*  (附注标签锚点，指向当前同步的上游正式发布提交)
         │
         ▼
-maintained/*  (长期主干)
+maintained/*  (长期维护主干)
         │
-        ├── astrbot/api/**        ← 新增能力的唯一落点（插件可见）
-        ├── astrbot/core/**       ← 仅已登记补丁，最小侵入
-        └── maintained/           ← 台账、工具、版本（本 fork 自有，零冲突）
+        ├── astrbot/api/**        ← 扩展 API 的唯一公开落点（插件可见）
+        ├── astrbot/core/**       ← 最小侵入式补丁（全部登记 SHA-256 台账）
+        └── maintained/           ← 台账、运维工具、版本与基线记录（与上游零路径冲突）
                 │
                 ▼
-        插件（只允许 import astrbot.api.*）
+        外部插件（仅依赖 astrbot.api.*）
 ```
 
-## 2. 需求-方案对应关系表
+## 2. 核心设计目标与落点映射
 
-| 需求ID | 需求描述 | 方案要点 | 落点文件 | 触碰对外可见路径 | 兼容影响 | 验证测试 |
-|---|---|---|---|---|---|---|
-| R-01 | 插件顶层 import 私有常量导致整体加载失败 | 在 `astrbot/api/**` 暴露该契约常量，插件改从 api 导入 | `astrbot/api/…` | 否（仅新增） | 无 | `tests/maintained/test_api_media.py` |
-| R-02 | 函数内 import 私有 `direct_turns.coordinator` | api 层提供访问入口 + try/except 降级 | `astrbot/api/…` | 否 | 无 | `tests/maintained/test_api_turns.py` |
-| R-03 | 在途 LLM 取消能力（需 `runner.request_stop`） | core 补丁 + api 层封装 | `astrbot/core/…` + `astrbot/api/…` | 否 | 无（默认关闭） | `tests/maintained/test_api_turns.py` |
-| R-04 | 空参重复工具调用 14 次 | `REPEATED_TOOL_FAILURE_LIMIT` 补丁 | `astrbot/core/agent/runners/…` | 否 | 无 | 上游 `tests/test_tool_loop_agent_runner.py` |
-| R-05 | provider 内部图片降级 | core 补丁 | `astrbot/core/provider/…` | 否 | 无 | `tests/maintained/test_api_media.py`、上游 `tests/test_process_stage_images.py` |
-| R-06 | 维护保护（拦面板覆盖插件） | `star/maintenance.py` + `updater` 保护 | `astrbot/core/star/…` | 否 | 无 | 离线：`maintained/tools/check_drift.py` |
-| R-07 | 补丁完整性可校验 | SHA-256 台账 + 比对脚本 | `maintained/installed_manifest.json` | 否 | 无 | `tests/maintained/test_manifest_guard.py` |
+| 领域 | 解决的问题 | 方案要点 | 落点路径 | 验证测试 |
+|---|---|---|---|---|
+| 媒体契约公开化 | 插件顶层导入 core 私有常量在核心升级后触发 `ImportError` | 在 `astrbot/api/media` 暴露常量与判定函数，缺失时镜像兜底 | `astrbot/api/media/` | `tests/maintained/test_api_media.py` |
+| 直发回合协调 | 同一用户连续发言合并与在途请求过期判定 | `direct_turns` 协调器 + `astrbot/api/turns` 只读/重置封装 | `astrbot/core/utils/direct_turns.py`、`astrbot/api/turns/` | `tests/maintained/test_api_turns.py` |
+| 工具循环防死锁 | 模型空参或重复调用同一失败工具导致死循环 | `REPEATED_TOOL_FAILURE_LIMIT` 阈值拦截 | `astrbot/core/agent/runners/` | `tests/test_tool_loop_agent_runner.py` |
+| 图片输入降级防幻觉 | 图片转述失败时模型凭上下文盲猜图片内容 | 注入 `IMAGE_INPUT_UNAVAILABLE_NOTICE` 防幻觉指令 | `astrbot/core/provider/`、`astrbot/core/pipeline/` | `tests/maintained/test_api_media.py` |
+| 本地维护插件保护 | 面板误更新或误卸载本地维护版插件 | `star/maintenance.py` 检查保护名单，损坏时 fail-closed | `astrbot/core/star/maintenance.py` | `tests/maintained/test_maintenance_gate.py` |
+| 受保护文件完整性 | 启动器或外部操作覆盖 core 补丁后静默失效 | `installed_manifest.json` SHA-256 台账 + `check_drift.py` | `maintained/installed_manifest.json` | `tests/maintained/test_manifest_guard.py` |
 
 ## 3. 兼容边界与冻结清单
 
-### 3.1 冻结层（不可动）
+### 3.1 冻结层（严禁破坏签名或删除）
 
-- `astrbot/api/**` 现存**全部**符号。
-- core 中被插件事实依赖的 5 个路径（视为事实公开，冻结）：
-  - `astrbot.core.agent.message.TextPart`
+- 上游 `astrbot/api/**` 现存的全部模块与导出符号（由 `tests/maintained/test_api_frozen.py` 守护）。
+- `astrbot/core/**` 中被社区插件广泛使用的 5 个事实公开符号（已同步通过 `astrbot/api/` 转发，原路径保持冻结）：
+  - `astrbot.core.agent.message.TextPart`（含配对的 `ImageURLPart`）
   - `astrbot.core.provider.provider.EmbeddingProvider`
   - `astrbot.core.utils.astrbot_path.get_astrbot_data_path`
   - `astrbot.core.utils.io.download_image_by_url`
   - `astrbot.core.utils.quoted_message_parser.extract_quoted_message_images`
+- `astrbot/core/tools/computer_tools/util.py` 中的 `check_admin_permission`（保留在 `__all__` 中作为身份级权限转发器，兼容上游 monkeypatch 测试）。
 
-### 3.2 加法层（自由）
+### 3.2 扩展层（只做加法）
 
-新模块、新钩子、新可选参数，**默认值必须保持旧行为**。
+新增 API 模块、新增可选参数与新增配置项的默认值必须保持与上游原版一致的行为，确保未修改配置的实例与原版插件零感知运行。
 
-### 3.3 例外（内部重命名）
+### 3.3 内部重命名与 shim 规范
 
-必须同时满足：shim 转发 + `DeprecationWarning` + 测试 + 单独提交并在 commit message 说明理由。
-
-## 4. 新增模块清单（阶段 3 落 + 阶段 5 追加）
-
-接口契约以 [`api-contract.md`](./api-contract.md) 为唯一规格（含签名、降级语义、测试要求）。
-
-| 模块 | 职责 | 解决的共性问题 |
-|---|---|---|
-| `astrbot/api/_bridge.py` | 内部桥：惰性解析 core 符号 + 能力清单（非公开面） | 统一降级机制 |
-| `astrbot/api/media/` | 图片输入契约与判定 | P1（插件顶层 import 私有常量）、P4（`<image_caption>` 硬编码） |
-| `astrbot/api/turns/` | 直报回合状态访问与重置 | P2 的一半 |
-| `astrbot/api/delivery/` | 交付策略纯函数 | P3 的一部分 |
-| `astrbot/api/permissions/` | 权限与执行授权 | P6 |
-| `astrbot/api/proactive/` | 轻量主动判定（本层不提供主动触发入口） | 默认关闭策略 |
-| `astrbot/api/content/` | 内容部件类型 + `is_*` 判定 | 阶段 5 追加 |
-| `astrbot/api/runtime/` | 运行时工具（数据目录 / 下载 / 引用图） | 阶段 5 追加 |
-| `astrbot/api/embedding/` | 嵌入提供者类型 | 阶段 5 追加 |
-
-**关键约束**：以上模块均为**新增文件**，**不修改**任何既有 api 文件（由 `tests/maintained/test_api_frozen.py` 守护）；
-core 侧补丁在基线 4.29.4 上不存在，api 层必须降级可用、补丁就位后自动生效。
-
-## 5. core 内部改动策略
-
-最小侵入：新增文件 > 新增可选参数 > 修改函数体。**不删不改现有函数签名**。
-
-## 6. 重命名与 shim 策略
+若确需重命名内部函数，必须在原路径保留 shim 转发函数、发出 `DeprecationWarning` 并附带回归测试：
 
 ```python
-# 旧路径保留为 shim
 def old_name(*args, **kwargs):
     warnings.warn("old_name is deprecated; use new_name", DeprecationWarning, stacklevel=2)
     return new_name(*args, **kwargs)
 ```
 
-## 7. 关键调用链
+## 4. 扩展 API 模块清单
 
-1. **插件加载失败链路**：`main.py:28` 顶层 import → `astrbot.core.provider.entities` 缺符号 → 整个插件加载失败。修法：改从 `astrbot.api.*` 导入 + try/except。
-2. **在途取消链路**：`direct_turns.coordinator` → `runner.request_stop` → 取消在途 LLM。修法：api 层封装 + 降级。
+详细签名与降级规格见 [`api-contract.md`](./api-contract.md)。
 
-## 8. 降级方案（逐条兜底）
-
-| 场景 | 兜底 |
+| 模块路径 | 核心职责 |
 |---|---|
-| api 层符号缺失 | api 侧 try/except 回退内部实现或字面量常量，**插件加载永不失败** |
-| 新钩子注册失败 | `logger.warning` 后跳过，主流程不受影响 |
-| 新可选参数为 `None` | 走旧代码路径 |
-| 主动回复相关异常 | 默认关闭（台账 `proactive_must_remain_disabled` 记录该默认策略） |
-| 三方合并冲突 | 回退到当前 `baseline/*` 锚点 tag，按 `maintained/` 台账重放 |
-| 台账 SHA 不匹配 | 比对脚本非零退出，阻断发布 |
+| `astrbot/api/_bridge.py` | 内部桥接：惰性解析 core 符号与 `capabilities()` 状态汇总（非公开面） |
+| `astrbot/api/media/` | 图片输入可用性判定与防幻觉提示常量 |
+| `astrbot/api/turns/` | 直发回合合并文本/图片查询、已发送标记与会话回合重置 |
+| `astrbot/api/delivery/` | 代码任务识别与代码完整交付判定 |
+| `astrbot/api/permissions/` | 管理员身份校验与单次执行意图授权判定 |
+| `astrbot/api/proactive/` | 轻量主动场景判定、经过 `on_llm_request` 的人格生成与历史写回 |
+| `astrbot/api/content/` | 文本与图片内容部件类型转发及安全类型判定函数 |
+| `astrbot/api/runtime/` | 数据目录、图片下载、引用图提取、本地时间格式化与钩子时序查询 |
+| `astrbot/api/embedding/` | `EmbeddingProvider` 类型转发与判定 |
+| `astrbot/api/event/extras.py` | 事件附加字段键名常量与带类型兜底的读写函数 |
 
-## 9. 配置与开关设计
+## 5. core 内部改动准则
 
-新开关一律**默认关闭 / 保持旧行为**；在 core 内新增，不修改既有配置项语义。
+遵循最小侵入原则：优先新增独立文件，其次新增带默认值的可选参数，最后才修改既有函数体。严禁删除或缩窄既有公开及半公开函数的参数签名。修改任何 `astrbot/**` 文件后必须同步更新 `maintained/installed_manifest.json` 的 SHA-256。
 
-## 10. 测试策略
+## 6. 異常与降级兜底策略
 
-`tests/maintained/`；`ruff==0.15.22`；pytest；**阶段 4 起每个改动必带测试**。
+| 场景 | 降级行为 |
+|---|---|
+| 底层 core 补丁模块缺失 | `astrbot/api/*` 经 `_bridge.resolve` 返回安全默认值，插件正常加载不抛 `ImportError` |
+| 事件附加字段类型不符或缺失 | `astrbot/api/event/extras.py` 读取器返回对应类型的空默认值并记 debug 日志 |
+| 新增可选参数未传或为 `None` | 完全走上游原有代码路径 |
+| 三方合并出现冲突或漂移 | 以当前 `baseline/*` 锚点标签与 `maintained/installed_manifest.json` 为参照执行 `sync_audit.py` 与 `check_drift.py` |
+| 台账 SHA-256 校验不匹配 | `test_manifest_guard.py` 与 `release_gate.py` 报错阻断发布 |
 
-## 11. 可观测性
+## 7. 版本号与发布规则
 
-日志前缀统一；`maintained/installed_manifest.json` 记录 SHA-256；`CHANGELOG.md` 记录变更。
-
-## 12. 版本与发布策略
-
-- **单一版本来源**：`astrbot/__init__.py` 的 `__version__`，形如 `4.29.4+mtn1`。
-  `+mtnN` 后缀是 PEP 440 允许的本地版本标记，用于区分维护版与官方发布。
-- `pyproject.toml` 的 `version` 与 `__version__` 完全一致（`+mtnN` 后缀一并带上），
-  wheel 的版本号因此也能区分维护版与官方发布；由
-  `tests/maintained/test_version_marker.py` 钉住。
-- 需要严格 `Version()` 可解析的纯发布号时，用 `astrbot.__version_base__`（去掉本地段）。
-- `maintained/VERSION` 是同一版本号的人类可读副本，必须与 `__version__` 完全一致，
-  由 `test_version_marker.py` 校验；不是独立版本来源。
-- 发布 tag：`maintained/v<上游版本>-rN`（N 从 1 起）；阶段 7 转公开满足 AGPL §13。
-
-## 13. 风险登记表
-
-| ID | 风险 | 等级 | 缓解 | 触发阶段 |
-|---|---|---|---|---|
-| R1 | 存量 1639 行无测试、质量未知 | 🔴 | 阶段 2 逆向 + 阶段 3 补测试 | 2、3 |
-| R2 | 第三方代码无许可证，公开分发违规 | 🔴 | 本仓库只发布 core 本体，第三方代码不进本仓 | 5 |
-| R3 | 启动器持续覆盖 core | 🟠 | 台账 `--check` + 一键重打 | 4、6 |
-| R4 | 多份状态脱节 | 🟠 | 单一真相源 + 同步哈希 | 全阶段 |
-| R5 | 主动回复被误开启 | 🟡 | 铁律 6 + 降级默认关闭 | 3、4 |
-| R6 | 上游语义不兼容 | 🟠 | 跟随上游发布版本，升级走三方合并 | 全阶段 |
+- **版本字符串三处严格一致**：`pyproject.toml` 的 `version`、`astrbot/__init__.py` 的 `__version__` 与 `maintained/VERSION` 完全一致，均带有 PEP 440 本地版本标记 `+mtnN`（形如 `4.29.4+mtn1`），由 `tests/maintained/test_version_marker.py` 强制校验。
+- **纯基线版本号**：供严格调用 `packaging.version.Version()` 且不接受 local 段的场景使用 `astrbot.__version_base__`（即去掉 `+mtnN` 后的上游基线版本号，形如 `4.29.4`）。
+- **基线锚点与发布标签**：上游基线使用附注标签 `baseline/*`（如 `baseline/v4.29.4`）长期保留；维护版发布标签格式为 `maintained/v<上游版本>-rN`（`N` 从 1 递增）。
+- **分发范围**：本仓库遵循 AGPL-3.0-or-later 协议，仅打包并分发 core 本体（含构建后的 WebUI 静态资源），不包含任何第三方或私有插件。

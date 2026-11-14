@@ -13,7 +13,7 @@ English ｜ <a href="./README_zh.md">简体中文</a> ｜ <a href="./README_zh-T
 
 </div>
 
-This is a maintained branch of AstrBot that follows upstream releases. The repository is maintained independently and is detached from GitHub's fork network. Distribution packages contain only core itself, with no plugins included. The license is AGPL-3.0-or-later, with no affiliation with the upstream authors.
+This is an independently maintained branch of AstrBot that continuously tracks official upstream releases (baseline anchors are tagged under `baseline/*`, and the current version is recorded in `maintained/VERSION`). Managed outside GitHub's fork network, its distribution packages include only the core runtime without any plugins. The project is released under the AGPL-3.0-or-later license and is not affiliated with the upstream authors.
 
 ## Core Differences and New APIs
 

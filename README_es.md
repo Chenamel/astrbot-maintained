@@ -13,7 +13,7 @@
 
 </div>
 
-Esta es una rama mantenida de AstrBot que sigue las versiones publicadas upstream. El repositorio se mantiene de forma independiente y no forma parte de la red de forks de GitHub. Los paquetes de distribución contienen únicamente el core en sí, sin plugins. La licencia es AGPL-3.0-or-later, sin afiliación alguna con los autores upstream.
+Esta es una rama de AstrBot mantenida de forma independiente que sigue de manera continua las versiones oficiales publicadas upstream (las referencias base se etiquetan bajo `baseline/*` y la versión actual se registra en `maintained/VERSION`). Gestionado fuera de la red de forks de GitHub, el paquete de distribución incluye únicamente el core sin plugins. El proyecto se distribuye bajo la licencia AGPL-3.0-or-later y no tiene afiliación alguna con los autores upstream.
 
 ## Diferencias principales y nuevas API
 

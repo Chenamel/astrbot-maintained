@@ -1,18 +1,16 @@
 # 插件作者 5 分钟入门
 
-本 fork 的卖点是补了上游没有的底层 API。这一页带你写第一个能跑的插件，并说明这些 API
-在**补丁缺席时**会怎样降级。[`api-contract.md`](./api-contract.md) 是唯一规格来源，
-本文只做入口导航；安装与启动见 [`install.md`](./install.md)。
+本页通过最小可运行示例演示如何在插件中调用维护分支的扩展 API，以及这些 API 在上游原版 AstrBot 环境下的降级行为。完整接口规格见 [`api-contract.md`](./api-contract.md)，调用细节见 [`api-reference.md`](./api-reference.md)，安装与启动见 [`install.md`](./install.md)。
 
 ## 1. 最小可运行插件
 
-新建目录 `data/plugins/hello_fork/`，放两个文件。
+新建目录 `data/plugins/hello_fork/`，创建以下两个文件。
 
 `metadata.yaml`：
 
 ```yaml
 name: hello_fork
-desc: 演示如何使用维护版 fork 的公开 API
+desc: 演示如何使用维护分支的公开 API
 author: plugin-author
 version: 0.1.0
 ```
@@ -34,7 +32,7 @@ class HelloFork(Star):
 
     @filter.command("forkhello")
     async def hello(self, event: AstrMessageEvent):
-        # turns.is_current: 本回合是否仍未回复（补丁缺席时 fail-open 返回 True）
+        # turns.is_current: 本回合是否仍未回复；底层能力未就位时 fail-open 返回 True
         already = not turns.is_current(event)
         yield event.plain_result(
             f"API 就位={turns.available()}，本回合已回复={already}"
@@ -42,19 +40,15 @@ class HelloFork(Star):
         turns.mark_sent(event)
 ```
 
-重载插件后，在聊天里发 `/forkhello`，会收到一行回执。
-每个模块都有 `available() -> bool`；返回 `False` 表示对应 core 能力未就位，
-此时该模块的其余函数按 [`api-contract.md`](./api-contract.md) 的「补丁缺席时」列降级，**不会抛异常**。
+重载插件后，在聊天中发送 `/forkhello` 即可收到回执。
+每个扩展模块均提供 `available() -> bool`；返回 `False` 表示当前环境未安装对应底层实现，此时模块内的其余函数会按 [`api-contract.md`](./api-contract.md) 定义的默认值安全降级，不会抛出未捕获异常。
 
-> **唯一硬规则**：外部代码只允许 `import astrbot.api.*`。直接 import `astrbot.core.**`
-> 私有路径的插件，会在上游 core 覆盖补丁时因顶层 `ImportError` 整体无法加载。
+> 插件应仅从 `astrbot.api.*` 导入符号。直接导入 `astrbot.core.*` 内部路径会在核心版本变动或切换回官方原版时因顶层 `ImportError` 导致整个插件无法加载。
 
-## 2. 用上 fork 的核心能力：人格感知生成
+## 2. 人格感知生成
 
-上游的 `Context.llm_generate()` / `Context.tool_loop_agent()` 直接调 provider，
-跳过了 `on_llm_request` 钩子，而人格、长期记忆、群上下文插件正是挂在这个钩子上。
-`generate_with_persona` 构造 `ProviderRequest` → 跑该钩子 → 再调 provider。
-把 §1 的 `main.py` 换成下面这一版（或把 `say` 方法加进同一个类）：
+上游的 `Context.llm_generate()` 与 `Context.tool_loop_agent()` 直接调用底层 provider，跳过了 `on_llm_request` 钩子，导致挂载在该钩子上的人格、长期记忆和群上下文插件无法参与生成。
+`generate_with_persona` 会先构造 `ProviderRequest` 并执行 `on_llm_request` 钩子，再调用底层 provider：
 
 ```python
 from astrbot.api.event import AstrMessageEvent, filter
@@ -84,51 +78,39 @@ class HelloFork(Star):
             yield event.plain_result(resp.completion_text)
 ```
 
-`generate_with_persona(context, event, prompt, system_prompt="", image_urls=None,
-chat_provider_id=None, timeout=None)` 是协程，返回 `LLMResponse | None`。
-它**只生成文本、不发送**：由插件决定要不要 `yield`。能力未就位时返回 `None`（fail-closed），
-所以上面先查 `persona_available()` 再调用，并对 `None` 做了降级。
+`generate_with_persona(context, event, prompt, system_prompt="", image_urls=None, chat_provider_id=None, timeout=None)` 为异步协程，返回 `LLMResponse | None`。该函数只负责生成文本，不执行发送；底层能力未就位或请求被钩子中止时返回 `None`（fail-closed）。
 
 ## 3. 模块速查
 
-下表的模块都在 `astrbot/api/**`，导入方式统一为 `from astrbot.api import <模块>`。
-`astrbot.api.event` / `platform` / `provider` / `star` 是上游已有的公开面，写法与官方一致。
+下表所列模块均位于 `astrbot/api/**`，统一通过 `from astrbot.api import <模块>` 导入。`astrbot.api.event`、`platform`、`provider`、`star` 等上游既有公开模块的用法保持不变。
 
-| 模块 | 一行用途 | 最小调用 | 补丁缺席时 |
+| 模块 | 一句话用途 | 最小调用示例 | 底层能力未就位时的降级返回值 |
 |---|---|---|---|
 | `turns` | 合并同账号直发回合、标记本回合已回复 | `turns.is_current(event)`；`turns.mark_sent(event)` | `is_current` → `True`，`mark_sent` 为 no-op，合并值返回空 |
-| `delivery` | 判定文本是否构成真实源码交付 | `delivery.has_code_delivery(text)` | `False`；`code_task_spec` → `None` |
-| `permissions` | 管理员判定与执行授权拒绝原因 | `permissions.execution_denial(event, config)` | 回退为「仅管理员」判定，**不放行**；`is_admin` 始终可用 |
-| `media` | 图片输入、图片描述与防幻觉常量 | `media.has_visual_input(request)` | 常量使用与 core 同值的本地镜像；判定按请求字段工作 |
-| `content` | 文本 / 图片内容部件的类型与判定 | `content.is_text_part(part)` | 部件类型解析为 `None`，判定返回 `False` |
-| `runtime` | 数据目录、图片下载、本地时间、钩子时序模式 | `runtime.hook_timing_mode()` | 模式回落 `"legacy"`；下载类工具响亮失败 |
+| `delivery` | 判定文本是否包含完整源码交付 | `delivery.has_code_delivery(text)` | `False`；`code_task_spec` → `None` |
+| `permissions` | 管理员判定与单次执行授权判定 | `permissions.execution_denial(event, config)` | 回退为「仅管理员」判定，不放行非管理员；`is_admin` 始终可用 |
+| `media` | 图片输入可用性判定与防幻觉常量 | `media.has_visual_input(request)` | 常量使用与 core 同值的本地镜像；判定函数按请求字段工作 |
+| `content` | 文本与图片内容部件的类型判定 | `content.is_text_part(part)` | 部件类型解析为 `None`，判定返回 `False` |
+| `runtime` | 数据目录、图片下载、本地时间、钩子时序模式 | `runtime.hook_timing_mode()` | 模式回落 `"legacy"`；`download_image_by_url` 抛出 `RuntimeError` |
 | `embedding` | 嵌入 provider 的类型判定 | `embedding.is_embedding_provider(obj)` | `False` |
-| `proactive` | 轻量主动标记、人格生成、历史写回 | `proactive.proactive_switch_is_disabled()` | 恒 `True`（本层不提供主动触发入口，非全局开关）；轻量判定 `False`；生成 `None`；写回 `False` |
+| `proactive` | 轻量主动标记、人格生成、历史写回 | `proactive.proactive_switch_is_disabled()` | 恒 `True`；轻量判定 `False`；生成 `None`；写回 `False` |
+| `event.extras` | 事件附加字段常量与带类型兜底的读写器 | `extras.is_active_reply(event)` | 类型不符或字段缺失时返回安全默认值（`False` / `""` / `[]` / `{}`） |
 
-`api.proactive` 不提供主动触发入口：官方内置的 `active_reply.enable` 与插件自带开关
-各自独立，均不受本层约束。**同一实例同一时间只启用一套**，否则一条群消息可能
-收到两次主动回复。
+`api.proactive` 不提供主动触发入口：官方内置的 `active_reply.enable` 与插件自带的主动开关各自独立，同一实例同一时间只应启用一套，避免单条群消息触发两次主动回复。
 
-每个模块的完整符号表、参数与返回值语义见 [`api-contract.md`](./api-contract.md) §3，
-每个模块都有 `available() -> bool`。
+各模块的完整符号表、参数与返回值契约见 [`api-contract.md`](./api-contract.md) §3。
 
-## 4. 降级行为（本 fork 的设计特色）
+## 4. 降级机制
 
-所有新增模块经内部桥 `astrbot/api/_bridge.py`（**非公开面，插件不许 import**）的
-`resolve(module, name, default)` 惰性解析 core 符号：模块或属性不存在时返回声明好的安全
-默认值，且只在首次缺失时记一条日志。**不会抛 ImportError**，因此上游 core 覆盖补丁后
-插件仍能导入、仍能启动。
+所有扩展模块均通过内部桥接层 `astrbot/api/_bridge.py`（内部实现，插件请勿直接导入）的 `resolve(module, name, default)` 惰性解析底层符号：当模块或属性不存在时返回预设的安全默认值，且仅在首次缺失时记录一条日志，不会抛出 `ImportError`。
 
-- **安全相关一律 fail-closed**：`execution_denial` 缺席时回退「仅管理员」；
-  `is_lightweight_proactive` 返回 `False`；`generate_with_persona` 返回 `None`。
-- **非安全类保持旧行为**：`turns.is_current` 返回 `True`（无回合概念＝永远当前），
-  `mark_sent` 为 no-op，`reset*` 返回 `False`。
-- `permissions.execution_denial` 返回 `None` **不构成授权**，调用方仍须执行自己的权限闸门；
-  只对 `None` / 非 `None` 做判断，不要对拒绝文本做等值断言。
+- **安全与生成相关接口采用 fail-closed**：`execution_denial` 回退为「仅管理员」校验；`is_lightweight_proactive` 返回 `False`；`generate_with_persona` 返回 `None`。
+- **状态查询接口保持旧行为（fail-open）**：`turns.is_current` 返回 `True`，`mark_sent` 为空操作，`reset*` 返回 `False`。
+- `permissions.execution_denial` 返回 `None` 仅代表通过执行意图检查，调用方仍须执行自身的权限守卫；请仅判断返回值是否为 `None`，不要对拒绝原因字符串做精确等值断言。
 
 ## 5. 能力自检
 
-不确定补丁是否就位时，先查能力位再决定路径：
+在不确定底层扩展是否就位时，可先查询 `available()`：
 
 ```python
 from astrbot.api import delivery, permissions, proactive, turns
@@ -141,14 +123,14 @@ print({
 })
 ```
 
-`False` 不代表插件写错了，只表示对应 core 补丁未就位，按 §3 的降级列处理即可。
+返回 `False` 表示当前环境未包含对应 core 扩展，按 §3 的降级返回值处理即可。
 
-## 6. 下一步读什么
+## 6. 延伸阅读
 
-| 想做的事 | 文档 |
+| 需求 | 对应文档 |
 |---|---|
-| 查某个符号的准确签名与降级值 | [`api-contract.md`](./api-contract.md) |
-| 了解事件附加字段、工具能力声明、权限单一入口 | `event-extras-contract.md`、`tool-capability-declaration.md`、`tool-permission-entry.md` |
-| 理解这个 fork 相对上游的差异 | [`fork-advantages.md`](./fork-advantages.md) |
-| 安装、启动、确认跑的是本 fork | [`install.md`](./install.md) |
-| 看每个能力的可运行断言（可当示例读） | `tests/maintained/` |
+| 查阅每个函数的参数、返回值与调用示例 | [`api-reference.md`](./api-reference.md) |
+| 查阅接口签名、事件附加字段契约与降级规格 | [`api-contract.md`](./api-contract.md) |
+| 了解维护分支相对上游的差异与边界 | [`fork-advantages.md`](./fork-advantages.md) |
+| 安装、启动与完整性校验 | [`install.md`](./install.md) |
+| 查看可运行的单元测试断言 | `tests/maintained/` |

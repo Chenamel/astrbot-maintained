@@ -1,29 +1,28 @@
-# API 契约 · `astrbot/api/**` 新增模块（阶段 3 + 阶段 5 追加）
+# API 契约 · `astrbot/api/**` 扩展模块
 
-> 本文件是新增 api 面的唯一规格来源。代码必须与本文件一致；不一致时先改本文件。
-> 设计约束：对外冻结 + 只做加法；新模块一律落在 `astrbot/api/**`，**不修改任何既有 api 文件**。
+> 本文件定义 `astrbot/api/**` 下扩展模块的接口规格、事件附加字段契约与降级行为。
+> 扩展模块均以独立子模块形式提供，不修改上游既有 `astrbot/api` 文件。
 
 ## 1. 设计原则
 
-1. 薄再导出 + 显式 `__all__`：与官方 `astrbot/api/{event,star,provider,util}` 风格一致。
-2. 安全降级：core 侧补丁模块在基线 4.29.4 上不存在（阶段 4 才恢复）。
-   api 层必须在"补丁缺席"时可导入、可调用、返回安全默认值，补丁就位后自动生效，无需改 api 代码。
-3. 零新增依赖：只用标准库 + 既有 core。
-4. 不改变既有行为：api 层只读/转发，不注册钩子、不改全局状态（`reset*` 除外，见 §3.2）。
+1. 薄转发与显式导出：每个扩展子模块均声明显式 `__all__`，与上游 `astrbot/api/{event,star,provider,util}` 风格保持一致。
+2. 安全降级：当底层 core 未安装对应扩展实现时，api 层仍可正常导入和调用，并返回安全默认值；底层实现就位后自动生效，无需修改调用方代码。
+3. 零新增外部依赖：仅使用 Python 标准库与既有 core 模块。
+4. 无副作用转发：除 `turns.reset` 与 `turns.reset_all` 及 `event.extras.set_visual_unavailable` 外，api 层函数均为只读查询或无状态转发，不在导入时注册全局钩子或改写全局状态。
 
-## 2. 降级契约（核心机制）
+## 2. 降级契约与桥接机制
 
-统一走内部桥 `astrbot/api/_bridge.py`（非公开面，外部禁止 import）：
+所有扩展模块统一通过内部桥接模块 `astrbot/api/_bridge.py`（内部实现，外部插件禁止导入）解析底层实现：
 
 ```python
 def resolve(module: str, name: str, default: Any = None) -> Any: ...
 def capabilities() -> dict[str, bool]: ...
 ```
 
-- `resolve` 惰性导入 core 侧符号；模块或属性缺失 → 返回 `default`，并一次性 `logger.info` 记录能力缺失（不刷屏）。
-- `capabilities()` 返回能力清单，供诊断与阶段 5 插件自检使用。
+- `resolve` 惰性导入 core 侧符号；当目标模块或属性缺失时返回 `default`，并在首次缺失时记录一条 `logger.info` 日志。
+- `capabilities()` 返回各扩展能力的就位状态字典，供运行时诊断与插件自检使用。
 
-| 能力键 | 依赖的 core 符号 | 基线 4.29.4 上 | 阶段 4 后 |
+| 能力键 | 依赖的 core 符号 | 原版 core | 维护版 core |
 |---|---|---|---|
 | `turns.direct_turn` | `astrbot.core.utils.direct_turns.coordinator` | ❌ False | ✅ True |
 | `delivery.code_policy` | `astrbot.core.code_delivery_policy` | ❌ False | ✅ True |
@@ -35,248 +34,234 @@ def capabilities() -> dict[str, bool]: ...
 | `runtime.helpers` | `astrbot.core.utils.io.download_image_by_url` | ❌ False | ✅ True |
 | `embedding.provider` | `astrbot.core.provider.provider.EmbeddingProvider` | ❌ False | ✅ True |
 
-## 3. 模块清单
+## 3. 模块与符号规格
 
-### 3.0 阶段 5 追加：把插件剩余的 core 依赖也收敛到公开面
+### 3.0 常用 core 符号的公开转发
 
-背景：参考插件当前有 8 处 `from astrbot.core...`（6 处顶层 + 2 处函数内）。
-经核实，这 8 个符号官方公开面一个都没有，而铁律 1 要求外部只允许 `import astrbot.api.*`。
-故本层再追加 3 个模块（仍为新增目录，不改既有 api 文件）：
+原版 `astrbot.api` 未导出消息段类型、数据目录路径、图片下载与 Embedding 类型。以下三个模块将这些常用符号纳入 `astrbot/api/` 统一转发，并提供缺失时的安全降级：
 
-| core 符号 | 新落点 | 说明 |
+| core 符号 | 公开模块落点 | 说明 |
 |---|---|---|
-| `astrbot.core.agent.message.TextPart` | `astrbot.api.content` | 内容部件类型；插件用它做 isinstance 判断与构造 |
-| `astrbot.core.agent.message.ImageURLPart` | `astrbot.api.content` | 同上，成对提供 |
-| `astrbot.core.utils.astrbot_path.get_astrbot_data_path` | `astrbot.api.runtime` | 运行时路径工具 |
-| `astrbot.core.utils.io.download_image_by_url` | `astrbot.api.runtime` | 图片下载 |
-| `astrbot.core.utils.quoted_message_parser.extract_quoted_message_images` | `astrbot.api.runtime` | 引用消息图片提取 |
-| `astrbot.core.provider.provider.EmbeddingProvider` | `astrbot.api.embedding` | 嵌入提供者类型 |
+| `astrbot.core.agent.message.TextPart` | `astrbot.api.content` | 文本内容部件类型 |
+| `astrbot.core.agent.message.ImageURLPart` | `astrbot.api.content` | 图片内容部件类型 |
+| `astrbot.core.utils.astrbot_path.get_astrbot_data_path` | `astrbot.api.runtime` | 运行时数据目录路径获取 |
+| `astrbot.core.utils.io.download_image_by_url` | `astrbot.api.runtime` | 远程图片下载 |
+| `astrbot.core.utils.quoted_message_parser.extract_quoted_message_images` | `astrbot.api.runtime` | 引用消息中的图片提取 |
+| `astrbot.core.provider.provider.EmbeddingProvider` | `astrbot.api.embedding` | 向量化 provider 基类 |
 
-取舍说明：这 5 个 core 路径在干净的 4.29.4 上都存在（不属"必须修"），
-本阶段把它们也纳入公开面，是为了满足铁律 1 并给插件一个统一且可降级的依赖面。
-本层对它们只做转发（经 `_bridge.resolve`），暂不提供替代实现；
-若将来上游改名，再由本层补 fallback（届时属加法，不破坏契约）。
+上述 core 符号在当前上游基线（`baseline/*`）中均已存在，本层通过 `_bridge.resolve` 原样转发；若未来上游移动或重命名内部路径，可在本层透明补齐兼容转发，插件无需改动导入语句。
 
 ### 3.0.1 `astrbot/api/content/` — 内容部件
 
-| 符号 | 类型 | 补丁/上游缺席时 |
+| 符号 | 类型 | 底层符号缺失时的返回值 |
 |---|---|---|
 | `available() -> bool` | 函数 | `False` |
-| `TextPart` | 类（转发） | `None`（导入不报错） |
-| `ImageURLPart` | 类（转发） | `None` |
+| `TextPart` | 类转发 | `None`（导入不报错） |
+| `ImageURLPart` | 类转发 | `None` |
 | `is_text_part(part) -> bool` | 函数 | `False` |
-| `is_image_part(part) -> bool` | 函数 | 仅识别 OpenAI 风格 `{"type": "image_url"}` |
+| `is_image_part(part) -> bool` | 函数 | 仅识别 OpenAI 风格 `{"type": "image_url"}` 字典 |
 
-> 注意：`TextPart`/`ImageURLPart` 在缺席时为 `None`，`isinstance(x, None)` 会抛 `TypeError`。
-> 插件侧须用本模块提供的 `is_text_part(x)` / `is_image_part(x)` 做判定（缺席时返回 `False`），
-> 而不是直接 `isinstance(x, TextPart)`。
+> 注意：当 `TextPart` 或 `ImageURLPart` 为 `None` 时，直接调用 `isinstance(x, TextPart)` 会抛出 `TypeError`。插件必须使用 `is_text_part(x)` 与 `is_image_part(x)` 进行类型判定。
 
 ### 3.0.2 `astrbot/api/runtime/` — 运行时工具
 
-| 符号 | 类型 | 补丁/上游缺席时 |
+| 符号 | 类型 | 底层符号缺失时的返回值 |
 |---|---|---|
 | `available() -> bool` | 函数 | `False` |
-| `get_astrbot_data_path() -> str` | 函数 | 回退到 `Path.cwd()/data` 的字面量路径 |
-| `download_image_by_url(url, ...) -> Any` | 协程 | `raise RuntimeError`（明确失败，不静默） |
-| `extract_quoted_message_images(event, comp) -> Any` | 协程 | 返回空列表（降级为"没有引用图"） |
-| `HOOK_TIMING_ENHANCED` | `str` 常量 | 字面量 `"enhanced"`（与 core 同值） |
-| `HOOK_TIMING_LEGACY` | `str` 常量 | 字面量 `"legacy"`（与 core 同值） |
-| `hook_timing_mode() -> str` | 函数 | 返回当前生效的模式；默认 `"legacy"`，非法值与 core 缺席时同样回落 `"legacy"` |
-| `format_local_time(value, with_seconds=True, with_date=True) -> str` | 函数 | 原样返回 `str(value)`（不做时区换算） |
+| `get_astrbot_data_path() -> str` | 函数 | 回退为 `str(Path.cwd() / "data")` |
+| `download_image_by_url(url, ...) -> Any` | 协程 | 抛出 `RuntimeError`（显式报错，不静默返回空值） |
+| `extract_quoted_message_images(event, comp) -> Any` | 协程 | 返回空列表 `[]` |
+| `HOOK_TIMING_ENHANCED` | `str` 常量 | `"enhanced"` |
+| `HOOK_TIMING_LEGACY` | `str` 常量 | `"legacy"` |
+| `hook_timing_mode(event=None) -> str` | 函数 | 返回当前生效模式；未配置、非法值或底层缺失时回落 `"legacy"` |
+| `format_local_time(value, with_seconds=True, with_date=True) -> str` | 函数 | 底层缺失或无法解析时原样返回 `str(value)` |
 
-`format_local_time()` 语义（一个时钟规则）：把存储时间渲染成本地时间字符串。
+`format_local_time()` 时钟规则：
+- 数据库 `TimestampMixin` 存储的时间戳均为 naive UTC（`datetime.now(timezone.utc)` 且 `timezone=False`），而日志、用户界面与系统提示词均使用本地时间。
+- 凡是将存储时间戳拼入展示文本或模型提示词的场景，均须调用本函数转换为本地时间，避免同一段上下文混用两套相差 8 小时的时区。
+- 支持输入 `datetime`（naive 视为 UTC）、ISO-8601 字符串与秒级时间戳；解析失败时原样返回字符串，不抛异常。
 
-- 数据库里所有时间戳都是 naive UTC（`db/po.py` 的 `TimestampMixin` 用 `datetime.now(timezone.utc)` + `DateTime(timezone=False)`）；
-  日志、用户、模型看到的系统提醒都是本地时间。
-- 因此任何「把存储时间写进人或模型会读的文本」的地方都必须走这个函数，否则同一个 prompt 里会出现两套差 8 小时的时钟
-  （实测：一次主动生成请求里，同一段对话同时出现 `11:24:45` 与 `03:25:40`）。
-- 输入接受 `datetime`（naive 视为 UTC）、ISO 字符串、epoch 秒；无法解析时原样返回，不抛异常。
-- 插件不得自己实现一份换算逻辑：两份实现就是两套口径。
-
-`hook_timing_mode()` 语义：返回当前生效的「agent 完成钩子时序模式」。
-
-- `legacy`（默认）：在上游有对照的路径上把钩子恢复到「回复先出、钩子后到」，
-  行为与官方原版逐点一致；fork 独有的路径（图片降级兜底、末轮补生成）保留优化。
-- `enhanced`：完成钩子在回复发出之前触发，让审计/改写类插件先拿到控制权。这是本 fork 的架构优化，需显式开启（`agent_runner.config.misc.hook_timing_mode`）。
-
-插件用法：自检当前模式，遇 `legacy` 时自行走保守路径或提示用户，避免静默故障。
-该函数不依赖 `_bridge` 能力键，core 缺席/抛异常/返回非法值一律回落 `"legacy"`。
+`hook_timing_mode()` 时序规则：
+- `"legacy"`：在有上游对照的路径上保持「先发送回复、后触发完成钩子」的上游默认时序。
+- `"enhanced"`：在发送回复前先触发完成钩子，供审计或改写类插件介入（通过 `agent_runner.config.misc.hook_timing_mode` 配置）。
 
 ### 3.0.3 `astrbot/api/embedding/` — 嵌入提供者
 
-| 符号 | 类型 | 补丁/上游缺席时 |
+| 符号 | 类型 | 底层符号缺失时的返回值 |
 |---|---|---|
 | `available() -> bool` | 函数 | `False` |
-| `EmbeddingProvider` | 类（转发） | `None` |
-| `is_embedding_provider(obj) -> bool` | 函数 | 缺席时 `False` |
+| `EmbeddingProvider` | 类转发 | `None` |
+| `is_embedding_provider(obj) -> bool` | 函数 | `False` |
 
-### 3.0.4 插件侧改造规则（阶段 5）
+### 3.0.4 插件侧调用约定
 
-1. 插件中所有 `from astrbot.core...` 改为 `from astrbot.api...`；
-2. 顶层 import 一律包在 `try/except ImportError` 中并设降级默认值，
-   使"被换回官方 core"时插件仍能加载（功能降级）而非整体下线；
-3. 类型判定改用本层提供的 `is_*` 辅助函数，禁止直接 `isinstance(x, 可能为 None 的类)`。
+1. 外部插件统一从 `astrbot.api.*` 导入符号，不直接导入 `astrbot.core.*`。
+2. 顶层导入建议配合 `available()` 检查或 `try/except ImportError` 兜底，确保切换到官方原版 core 时插件仍能加载。
+3. 类型判定统一调用 `is_*` 辅助函数，不直接对可能为 `None` 的转发类调用 `isinstance`。
 
 ### 3.1 `astrbot/api/media/` — 媒体与图片输入契约
 
-解决的共性问题：P1（插件顶层 import core 私有常量 → core 漂移即插件整体下线）、P4（`"<image_caption>"` 5 处硬编码）。
+提供图片输入可用性判定与防幻觉提示常量。
 
 | 符号 | 类型 | 语义 |
 |---|---|---|
-| `IMAGE_CAPTION_MARKER` | `str` | 图片描述标记，固定 `"<image_caption>"`。权威定义在 core（`astrbot.core.provider.entities`），本层经 `resolve` 转发、缺失时用同值字面量兜底 |
-| `IMAGE_INPUT_UNAVAILABLE_MESSAGE` | `str` | 给用户看的文案 |
-| `IMAGE_INPUT_UNAVAILABLE_NOTICE` | `str` | 给模型看的防幻觉指令 |
-| `has_visual_input(request) -> bool` | 函数 | `request` 是否携带真实视觉证据（`image_urls` 或 `ImageURLPart` / `image_url` dict） |
-| `has_image_caption(parts) -> bool` | 函数 | `parts` 中是否存在图片描述部件 |
-| `image_input_available(request) -> bool` | 函数 | 视觉证据是否可用（等价 `not request.image_input_unavailable`，缺失时按有无视觉输入判断） |
-| `available() -> bool` | 函数 | core 契约是否就位 |
+| `IMAGE_CAPTION_MARKER` | `str` | 图片描述标记常量，固定为 `"<image_caption>"` |
+| `IMAGE_INPUT_UNAVAILABLE_MESSAGE` | `str` | 图片不可用时展示给用户的提示文案 |
+| `IMAGE_INPUT_UNAVAILABLE_NOTICE` | `str` | 图片不可用时注入给模型的防幻觉系统指令 |
+| `has_visual_input(request) -> bool` | 函数 | 判断 `request` 是否携带真实视觉输入（`image_urls` 或 `ImageURLPart` / `image_url` dict） |
+| `has_image_caption(parts) -> bool` | 函数 | 判断 `parts` 中是否包含带 `IMAGE_CAPTION_MARKER` 的图片转述段落 |
+| `image_input_available(request) -> bool` | 函数 | 判断视觉输入是否可用（等价于 `not request.image_input_unavailable`，缺失时按是否有视觉输入判定） |
+| `available() -> bool` | 函数 | 底层媒体契约是否就位 |
 
-常量一致性要求（P1 修复的关键）：
+常量镜像一致性要求：
+- 当底层 `astrbot.core.provider.entities` 存在对应常量时原样转发；缺失时回退为与 core 完全一致的本地字面量：
 
-- core 侧存在时**必须原样转发** core 的值（插件有 `part.text != NOTICE` 的字符串比较，值不一致会失效）。
-- core 侧缺失时使用本地镜像常量，文本与 core 完全一致：
+```python
+MESSAGE = "当前看不到图片，请重新发送。"
+NOTICE  = (
+    "[Image unavailable: no visual evidence was received. "
+    "Do not infer or describe the image from history, filenames or surrounding text. "
+    f"Reply only: {MESSAGE}]"
+)
+```
 
-  ```python
-  MESSAGE = "当前看不到图片，请重新发送。"
-  NOTICE  = "[Image unavailable: no visual evidence was received. "
-            "Do not infer or describe the image from history, filenames or surrounding text. "
-            f"Reply only: {MESSAGE}]"
-  ```
+### 3.2 `astrbot/api/turns/` — 直发回合
 
-- 常量解析在模块导入时完成（插件顶层 import 场景，必须导入即得值）。
+提供直发回合合并文本、图片与回合状态访问接口。
 
-### 3.2 `astrbot/api/turns/` — 直报回合
-
-解决的共性问题：P2 的一半（插件需重置回合状态但不能 import 私有模块）。
-
-| 符号 | 类型 | 语义 | 补丁缺席时 |
+| 符号 | 类型 | 语义 | 底层缺失时的返回值 |
 |---|---|---|---|
-| `available() -> bool` | 函数 | 能力是否就位 | `False` |
-| `is_current(event) -> bool` | 函数 | 事件是否代表当前回合 | `True`（无回合概念 = 永远当前，保持旧行为） |
-| `mark_sent(event) -> None` | 函数 | 标记回合已发出回复 | no-op |
-| `turn_version(event) -> int \| None` | 函数 | 回合版本号 | `None` |
-| `merged_text(event) -> str` | 函数 | 合并后的同账号消息文本 | `""` |
-| `merged_image_urls(event) -> list[str]` | 函数 | 合并后的图片 URL（去重） | `[]` |
+| `available() -> bool` | 函数 | 回合协调器是否就位 | `False` |
+| `is_current(event) -> bool` | 函数 | 事件是否处于当前最新回合 | `True`（fail-open） |
+| `mark_sent(event) -> None` | 函数 | 标记本回合已发送回复 | no-op |
+| `turn_version(event) -> int \| None` | 函数 | 获取回合版本号 | `None` |
+| `merged_text(event) -> str` | 函数 | 获取合并后的同发送者消息文本 | `""` |
+| `merged_image_urls(event) -> list[str]` | 函数 | 获取合并并去重后的图片 URL 列表 | `[]` |
 | `reset(unified_msg_origin) -> bool` | 函数 | 清空指定会话的回合状态 | `False` |
-| `reset_all() -> bool` | 函数 | 清空全部回合状态 | `False` |
-
-> `reset*` 是本层唯一有副作用的函数，语义等价于 core `coordinator.reset/reset_all`。
+| `reset_all() -> bool` | 函数 | 清空全部会话的回合状态 | `False` |
 
 ### 3.3 `astrbot/api/delivery/` — 交付策略
 
-解决的共性问题：P3 的一部分（策略纯函数对外可用）。
+提供代码交付完整性与代码任务识别接口。
 
-| 符号 | 类型 | 语义 | 补丁缺席时 |
+| 符号 | 类型 | 语义 | 底层缺失时的返回值 |
 |---|---|---|---|
-| `available() -> bool` | 函数 | 能力是否就位 | `False` |
-| `CODE_DELIVERY_FAILURE` | `str` | 空交付修复失败时的兜底文案 | 本地镜像 `"这次没生成完整代码，可以再试一次"` |
-| `code_task_spec(event) -> tuple[str, str] \| None` | 函数 | 代码任务规格 `(文本, 语言)` | `None` |
-| `has_code_delivery(text, language="") -> bool` | 函数 | 文本是否构成了真实源码交付 | `False` |
+| `available() -> bool` | 函数 | 交付策略模块是否就位 | `False` |
+| `CODE_DELIVERY_FAILURE` | `str` | 代码未完整交付时的兜底提示文案 | `"这次没生成完整代码，可以再试一次"` |
+| `code_task_spec(event) -> tuple[str, str] \| None` | 函数 | 提取代码任务规格 `(任务文本, 目标语言)` | `None` |
+| `has_code_delivery(text, language="") -> bool` | 函数 | 判断文本是否包含非省略的真实代码块 | `False` |
 
 ### 3.4 `astrbot/api/permissions/` — 权限与执行授权
 
-解决的共性问题：P6（权限双模型）。
+提供管理员身份判定与单次执行意图授权判定接口。
 
-| 符号 | 类型 | 语义 | 补丁缺席时 |
+| 符号 | 类型 | 语义 | 底层缺失时的返回值 |
 |---|---|---|---|
-| `available() -> bool` | 函数 | 执行策略引擎是否就位 | `False` |
-| `is_admin(event, config) -> bool` | 函数 | 纯判定：发送者是否在 `config["admins_id"]` | 本函数不依赖补丁，始终可用 |
-| `execution_denial(event, config) -> str \| None` | 函数 | `None`=放行；否则为拒绝原因文本 | 回退为纯管理员判定：非管理员返回拒绝文本，管理员放行 |
-| `EXECUTION_NOT_AUTHORIZED` | `str` | 无法授权时的固定拒绝原因（可读、可断言） | 本地常量，始终可用 |
+| `available() -> bool` | 函数 | 执行授权策略引擎是否就位 | `False` |
+| `is_admin(event, config) -> bool` | 函数 | 判断发送者是否在 `config["admins_id"]` 中 | 始终可用 |
+| `execution_denial(event, config) -> str \| None` | 函数 | 返回 `None` 表示放行；非 `None` 为拒绝原因文本 | 回退为纯管理员校验（非管理员返回拒绝文本） |
+| `EXECUTION_NOT_AUTHORIZED` | `str` | 未获授权时的公开拒绝原因常量 | 本地常量，始终可用 |
 
-> 安全语义：`execution_denial` 在补丁缺席时不降级为放行，而是回退到"仅管理员"这一上游既有强度。
-> 本函数返回 `None` 不构成授权。调用方（工具）仍须执行自身的权限闸门。
->
-> 拒绝原因的两种口径：`execution_denial` 的返回值只是文本，不构成符号级契约。
->
-> - `EXECUTION_NOT_AUTHORIZED`：确定的"未授权"（公开常量，可读、可断言）；
-> - 策略引擎在场但抛异常时，返回 fail-closed 的内部兜底文本
->   （模块私有 `_EXECUTION_POLICY_UNAVAILABLE`；故意不导出、不进 `__all__`，
->   它是内部错误兜底文案，不应对调用方形成版本承诺）。
->
-> ⇒ 调用方只需判断「返回值是否为 `None`」，**不要**对具体文本做等值断言（除非用上面的公开常量）。
-> 该安排遵循本 fork 的 API 文档门槛：不允许"公开名字却不在 `__all__`/契约/测试里"的定义存在。
+> 安全约束：`execution_denial` 在底层策略缺失时回退为管理员校验，绝不降级为无条件放行。调用方仅需判断返回值是否为 `None`，不要对内部异常兜底文本做等值断言。
 
-### 3.5 `astrbot/api/proactive/` — 主动场景
+### 3.5 `astrbot/api/proactive/` — 主动场景与插件能力发现约定
 
-约束：本层（`astrbot/api/proactive/`）只提供主动场景的判定标记、人格生成与历史写回，
-**不提供主动触发入口**；默认策略为关闭，记录在台账 `proactive_must_remain_disabled`。
-这是**分层约定，不是全局禁令**：官方内置的 `provider_ltm_settings.active_reply.enable`
-与插件自带开关各自独立，均不受本层约束。同一实例同一时间只启用一套，避免重复发送。
+本模块提供主动场景判定标记、经过 `on_llm_request` 钩子链的人格感知生成与群聊历史写回接口，不内置主动触发调度器。
 
-| 符号 | 类型 | 语义 | 补丁缺席时 |
+| 符号 | 类型 | 语义 | 底层缺失时的返回值 |
 |---|---|---|---|
 | `available() -> bool` | 函数 | 轻量主动判定是否就位 | `False` |
-| `proactive_switch_is_disabled() -> bool` | 函数 | 恒返回 `True`，表示本层不提供主动触发能力（**非全局开关状态**） | 恒 `True` |
-| `is_lightweight_proactive(event) -> bool` | 函数 | 该请求是否被判定为轻量主动场景 | `False`（fail-closed：宁可走完整路径，也不误入轻量路径） |
+| `proactive_switch_is_disabled() -> bool` | 函数 | 恒返回 `True`，表示本 API 层不内置主动触发入口 | `True` |
+| `is_lightweight_proactive(event) -> bool` | 函数 | 判断请求是否属于轻量主动场景 | `False`（fail-closed） |
 | `persona_available() -> bool` | 函数 | 人格感知生成是否就位 | `False` |
-| `generate_with_persona(context, event, prompt, ...) -> LLMResponse \| None` | 协程 | 生成**带人格**的话：先过 `on_llm_request` 钩子，再调 provider | **`None`**（fail-closed：拿不到人格就不生成，由插件自行降级） |
-| `record_bot_message(context, event, text) -> bool` | 协程 | 把机器人刚说的话写回历史（`sender_id="bot"`）。**成功/幂等为 `True`，跳过或写失败为 `False`** | `False` |
-| `record_user_message(context, event, text, max_messages=700) -> bool` | 协程 | 把收到的群消息写回历史。**返回值回答的是"历史里现在有这条了吗"，不是"这次新增了一行吗"**。core 可能在插件之前已经写入过，`True` 因此包含"已存在" | `False` |
+| `generate_with_persona(context, event, prompt, ...) -> LLMResponse \| None` | 协程 | 先执行 `on_llm_request` 钩子链（并注入 `self_identity_note`）再调用模型生成文本 | `None`（fail-closed） |
+| `record_bot_message(context, event, text) -> bool` | 协程 | 将机器人主动回复写回历史库（`sender_id="bot"`） | `False` |
+| `record_user_message(context, event, text, max_messages=700) -> bool` | 协程 | 将群消息写回历史库；只要记录已在库中即返回 `True` | `False` |
 
-#### `record_*` 的返回值为什么要按"结果"而不是"动作"定义
+#### `record_*` 的幂等返回值定义
 
-core 自己也写群历史（`persist_group_message`），只是优先级最低，一旦别的插件
-`stop_event()` 就跳过。于是插件调用 `record_user_message` 时，这条消息**可能已经存在**。
+若把「记录已存在」当作失敗返回 `False`，调用方会在正常幂等跳过时打出大量误报警告，淹没真实的数据库写入错误。因此返回值按最终状态定义：只要调用结束时该条消息已存在于历史库中即返回 `True`，仅在跳过或写入失败时返回 `False`。
 
-初版把"已存在"当成失败返回 `False`，插件据此打出 5000+ 条 `历史写入失败` WARN，
-真实的写入错误与"已经写过了"混在同一条日志里。排查时容易产生全线崩溃的误判，
-而实际数据一条没丢（2026-10-31 审计实录）。
+#### `generate_with_persona` 的执行链
 
-返回值的语义因此定为**结果判定**：历史上这一刻有没有这条记录。
-调用方拿到 `False` 就意味着"确实该担心"，不需要再分辨是哪种跳过。
+`Context.llm_generate()` 与 `Context.tool_loop_agent()` 直接调用底层 provider，不触发 `on_llm_request` 钩子，导致挂载在该钩子上的人格（`PERSONA_PLUGIN`）、长期记忆（`MEMORY_PLUGIN`）与群上下文（`CONTEXT_PLUGIN`）插件无法注入上下文。`generate_with_persona` 先构造 `ProviderRequest`、注入机器人自身账号归属说明（`self_identity_note`），再调用 `call_event_hook(event, EventType.OnLLMRequestEvent, req)`，最后将修改后的请求交由 provider 生成。该函数只负责生成文本，不执行消息发送。
 
-#### 为什么需要 `generate_with_persona`
+#### 插件能力发现契约（鸭子类型方法约定）
 
-`Context.llm_generate()` 与 `Context.tool_loop_agent()` 都**直接调 provider**，跳过了
-`on_llm_request` 钩子。人格（self_learning）、长期记忆（livingmemory）、群上下文
-（enhance_mode）正是挂在这个钩子上注入的。插件因此无法生成"像这个机器人说的话"，
-主动回复读起来像客服工单。
+core 内部不硬编码任何插件目录名，而是通过遍历已激活插件类（`star_registry`）按方法名发现主动回复协同能力（调用抛异常时记录警告并 fail-closed）：
 
-本函数构造 `ProviderRequest` 后先跑
-`call_event_hook(event, EventType.OnLLMRequestEvent, req)`，再拿（可能已被改写的）
-`req` 调 provider，与 pipeline 内 `internal.py` 的做法一致。
+| 约定方法签名 | 调用时机 | 未实现或异常时的回退行为 |
+|---|---|---|
+| `is_trusted_lightweight_proactive(event) -> bool` | `astr_main_agent._is_lightweight_proactive_request` 校验轻量主动标记是否可信 | 返回 `False`，按常规消息路径处理 |
+| `finish_proactive_request(event) -> Any` | `tool_loop_agent_runner._finish_proactive_request` 在主动请求完成时执行收尾 | 跳过收尾（幂等标记照常置位） |
 
-**纯加法**：没有插件调用它就不会执行，且不触碰默认关闭策略
-（它只生成文本，**不发送**，发送与否由插件决定）。
+### 3.6 `astrbot/api/event/extras.py` — 事件附加字段契约
 
-## 4. 明确不做
+集中定义跨插件与 core 共享的 9 个事件附加字段键名常量、10 个带类型校验的读取函数与 1 个写入函数，消除对 `event.get_extra("_enhance_*")` 的裸读与类型异常：
 
-- **不修改** `astrbot/api/__init__.py`、`all.py`、`message_components.py`、`web.py` 及 `{event,star,provider,util,platform}/`。
-- **不提供**主动回复的开启/注册入口。
-- **不复制** core 的实现逻辑（除常量镜像外，一律转发；**镜像的权威定义在 core**，本层只做转发 + 同值兜底）。
-- **不新增**依赖、不动配置 schema、不改任何既有符号签名。
-
-## 5. 测试要求（`tests/maintained/`）
-
-| 测试文件 | 覆盖 |
-|---|---|
-| `test_api_surface.py` | 各 api 模块可导入；`__all__` 与本文档一致；`_bridge` 不出现在 `__all__`；能力清单键齐全 |
-| `test_api_media.py` | 常量非空且 `NOTICE` 含 `MESSAGE`；`IMAGE_CAPTION_MARKER` 正确；`has_visual_input` / `has_image_caption` 对伪造对象判定正确 |
-| `test_api_turns.py` | 补丁缺席时 `is_current → True`、`mark_sent` no-op、`merged_*` 返回空、`reset* → False`、`available → False` |
-| `test_api_delivery.py` | 缺席时 `code_task_spec → None`、`has_code_delivery → False`、`CODE_DELIVERY_FAILURE` 非空 |
-| `test_api_permissions.py` | `is_admin` 判定正确；缺席时非管理员被拒、管理员放行（**不得**降级为无条件放行） |
-| `test_api_proactive.py` | `proactive_switch_is_disabled → True`；缺席时 `is_lightweight_proactive → False` |
-| `test_api_content.py` | 缺席时 `is_text_part` / `is_image_part` 判定与容错；OpenAI 风格 dict |
-| `test_api_runtime.py` | 数据目录为绝对路径；缺席时下载**响亮失败**、引用图返回空表 |
-| `test_api_embedding.py` | 缺席时 `is_embedding_provider → False`；容错 |
-| `test_manifest_guard.py` | 仓工作树↔台账自洽；台账只含 core、默认关闭策略字段为 `True`、条数钉 |
-| `test_api_frozen.py` | 上游 api 文件相对当前 `baseline/*` 锚点零改动（白名单=`ALLOWED_ADDITIONS`，当前 10 个新增文件） |
-| `test_tools_check_drift.py` / `test_tools_apply_patches.py` | 工具链：漂移检测、预演不写、写前备份、源损坏中止、退出码 |
-
-**测试不依赖运行中的 AstrBot**：用 `SimpleNamespace` 伪造 event / request / part。
-**基线预期**：全部通过（因为断言的是"降级行为"）；阶段 4 恢复补丁后，`available()` 类断言会自动翻转，故此类断言写成"与 `available()` 一致"而非硬编码 `False`。
-
-## 6. 台账要求
-
-新增文件全部位于 `astrbot/**`，属受保护 core 文件 → **必须登记进 `maintained/installed_manifest.json`**（六铁律第 5 条）。
-
-## 7. 消费方自检（只读）
-
-任何消费方（插件或运维脚本）都可以用一段**只读**代码确认公开面是否就位，无需依赖本仓库之外的组件：
+#### 键名常量
 
 ```python
-import astrbot.api as api
+ACTIVE_REPLY_TOKEN = "_enhance_active_reply_token"
+VISUAL_REQUESTED = "_enhance_visual_requested"
+VISUAL_UNAVAILABLE = "_enhance_visual_unavailable"
+OWNED_IMAGE_URLS = "_enhance_owned_image_urls"
+OWNED_QUOTE_IMAGE_URLS = "_enhance_owned_quote_image_urls"
+FOLLOWUP_DIRECT = "_enhance_followup_direct"
+FOLLOWUP_TASK = "_enhance_followup_task"
+PROACTIVE_LIGHTWEIGHT = "_enhance_proactive_lightweight"
+ACTIVE_REPLY_TRIGGERED = "_enhance_active_reply_triggered"
+```
+
+#### 读写器签名与降级默认值
+
+| 函数 | 返回类型 | 缺失或类型不符时的默认值 |
+|---|---|---|
+| `active_reply_token(event)` | `str` | `""` |
+| `is_active_reply(event)` | `bool` | `False` |
+| `visual_requested(event)` | `bool` | `False` |
+| `visual_unavailable(event)` | `bool` | `False` |
+| `owned_image_urls(event)` | `list[str]` | `[]`（若传入单个非空字符串则自动包装为单元素列表） |
+| `owned_quote_image_urls(event)` | `dict[str, list[str]]` | `{}` |
+| `followup_direct(event)` | `bool` | `False` |
+| `followup_task(event)` | `str` | `""` |
+| `proactive_lightweight(event)` | `bool` | `False` |
+| `active_reply_triggered(event)` | `bool` | `False` |
+| `set_visual_unavailable(event, flag: bool)` | `None` | 事件不支持 `set_extra` 时安全忽略 |
+
+## 4. 兼容边界
+
+- 不修改上游既有的 `astrbot/api/__init__.py`、`all.py`、`message_components.py`、`web.py` 及 `{event,star,provider,util,platform}/__init__.py`。
+- 不在 `astrbot/api/` 层内置主动回复触发器。
+- 除防幻觉与错误兜底常量镜像外，不在 `astrbot/api/` 层复制 core 业务逻辑。
+
+## 5. 契约测试矩阵（`tests/maintained/`）
+
+| 测试文件 | 校验内容 |
+|---|---|
+| `test_api_surface.py` | 各扩展模块可导入、`__all__` 与本文档一致、`_bridge` 不出现在 `__all__`、能力键齐全 |
+| `test_api_doc_gate.py` | 每个公开模块具备 docstring、显式 `__all__`、符号 docstring 与常量注释 |
+| `test_api_media.py` | 媒体常量非空且一致，`has_visual_input` / `has_image_caption` / `image_input_available` 判定准确 |
+| `test_api_turns.py` | 回合状态查询、合并文本/图片与重置接口在就位及降级态下的行为 |
+| `test_api_delivery.py` | `code_task_spec`、`has_code_delivery` 与 `CODE_DELIVERY_FAILURE` 判定 |
+| `test_api_permissions.py` | `is_admin` 与 `execution_denial` 权限判定，确保缺失时不降级为放行 |
+| `test_api_proactive.py` | `proactive_switch_is_disabled`、`is_lightweight_proactive`、`generate_with_persona` 与 `record_*` |
+| `test_api_content.py` | `is_text_part` / `is_image_part` 对内容段对象与 OpenAI 字典的容错判定 |
+| `test_api_runtime.py` | 数据目录、本地时间换算、引用图提取及下载缺失时抛 `RuntimeError` |
+| `test_api_embedding.py` | `is_embedding_provider` 类型判定与降级容错 |
+| `test_event_extras.py` | `api.event.extras` 9 个常量与 11 个读写函数在正常值、异常类型与无 `extras` 替身下的表现 |
+| `test_api_frozen.py` | 上游既有 `astrbot/api/**` 文件相对当前 `baseline/*` 锚点零改动 |
+| `test_manifest_guard.py` | 仓库工作树与 `maintained/installed_manifest.json` 哈希一致 |
+
+## 6. 台账登记要求
+
+所有位于 `astrbot/**` 下的新增或修改文件均属于受保护 core 文件，必须同步更新 `maintained/installed_manifest.json` 中的 SHA-256 哈希。
+
+## 7. 运行时只读自检代码
+
+插件或运维脚本可通过以下只读代码检查当前环境中各扩展模块的就位状态：
+
+```python
 from astrbot.api import content, delivery, embedding, media, permissions, proactive, runtime, turns
 
 MODULES = (content, delivery, embedding, media, permissions, proactive, runtime, turns)
@@ -284,24 +269,4 @@ for mod in MODULES:
     print(f"{mod.__name__}: {'installed' if mod.available() else 'degraded'}")
 ```
 
-**实现约束**：
-
-1. **只读**：仅调用各模块公开的 `available()`，不写任何状态；
-2. **只走公开面**：只遍历 `astrbot.api.{content,delivery,embedding,media,permissions,proactive,runtime,turns}`，
-   **禁止 import `astrbot.api._bridge`**（非公开面）；
-3. **可降级**：任一模块缺失时只报告 `degraded`，不抛异常、不影响加载。
-
-**输出语义**：`installed` = 维护版 core 提供了该能力；`degraded` = core 侧支持缺失（对应功能自动降级）。
-
-**实测样例**（维护版实例，8 个模块全部就位）：
-
-```text
-astrbot.api.content: installed
-astrbot.api.delivery: installed
-astrbot.api.embedding: installed
-astrbot.api.media: installed
-astrbot.api.permissions: installed
-astrbot.api.proactive: installed
-astrbot.api.runtime: installed
-astrbot.api.turns: installed
-```
+输出 `installed` 表示底层实现已就位；输出 `degraded` 表示当前运行在未打补丁的原版 core 上，对应接口自动按本契约返回安全默认值。

@@ -13,7 +13,7 @@
 
 </div>
 
-Il s'agit d'une branche maintenue d'AstrBot qui suit les versions publiées en amont. Le dépôt est maintenu de manière indépendante et ne fait pas partie du réseau de forks de GitHub. Les paquets de distribution ne contiennent que le core lui-même, sans aucun plugin. La licence est AGPL-3.0-or-later, sans aucune affiliation avec les auteurs amont.
+Cette branche d'AstrBot est maintenue de manière indépendante et suit en continu les versions officielles publiées en amont (les points d'ancrage sont étiquetés sous `baseline/*` et la version actuelle figure dans `maintained/VERSION`). Géré en dehors du réseau de forks de GitHub, chaque paquet de distribution contient uniquement le core, sans aucun plugin. Le projet est distribué sous licence AGPL-3.0-or-later et n'a aucune affiliation avec les auteurs amont.
 
 ## Différences fondamentales et nouvelles API
 
