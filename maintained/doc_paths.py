@@ -1,4 +1,4 @@
-"""Where the maintained fork keeps its documentation.
+"""Where this repository keeps its documentation.
 
 The repository has two documentation trees, and they are read by different
 people:

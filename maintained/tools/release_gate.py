@@ -147,7 +147,7 @@ def gate_manifest() -> tuple[str, str]:
 
 
 def gate_maintained() -> tuple[str, str, dict[str, int]]:
-    """The fork's own suite must be entirely green."""
+    """The repository's own suite must be entirely green."""
     code, out = _run([sys.executable, "-m", "pytest", "tests/maintained", "-q"])
     counts = _pytest_summary(out)
     if code != 0 or counts.get("failed") or counts.get("error"):
@@ -232,7 +232,7 @@ def gate_dashboard_stamp() -> tuple[str, str]:
 
     Without the stamp the core treats the local assets as foreign and tries to
     download a matching package on every start-up. That download cannot succeed
-    (no upstream release carries this fork's version), so the failure shows up
+    (no published release carries this version), so the failure shows up
     as two errors per boot rather than as a broken dashboard -- easy to live
     with, and therefore easy to keep.
     """
@@ -301,9 +301,7 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         Process exit code: 0 all pass, 1 a gate failed, 2 could not run.
     """
-    parser = argparse.ArgumentParser(
-        description="Release gate for the maintained fork."
-    )
+    parser = argparse.ArgumentParser(description="Release gate.")
     parser.add_argument(
         "--instance", type=Path, default=None, help="Live instance root."
     )

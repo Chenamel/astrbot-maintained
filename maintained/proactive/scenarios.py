@@ -87,7 +87,7 @@ class Scenario:
     family: str
     name: str
     expect: str
-    """REPLY | SKIP | NO_JUDGE, from the fork's proactive scenario corpus."""
+    """REPLY | SKIP | NO_JUDGE, the expected outcome of the scenario."""
     note: str
     messages: list[M] = field(default_factory=list)
     target: int = -1
@@ -111,8 +111,8 @@ SCENARIOS: list[Scenario] = [
         family="forward",
         name="裸发合并转发，无人引用",
         expect="SKIP",
-        note="T2 之前这里是 NO_JUDGE（转发无纯文本，直接返回）；"
-        "现在会当场展开，判定对象变成转发内容 —— 回放里用假 client 验证，forward_chars>0",
+        note="裸发转发没有纯文本，判定对象会在现场展开为转发内容 —— "
+        "回放里用假 client 验证，forward_chars>0",
         messages=[
             M("阿星", U1, "昨天那段聊天我整理了一下"),
             M("阿星", U1, kind="forward"),

@@ -1,4 +1,4 @@
-"""Maintenance tooling for the maintained AstrBot fork.
+"""Tooling for release checks, drift detection and daily reports.
 
 See ``docs/maintained/tools.md``. These tools only ever touch the files listed
 in ``maintained/installed_manifest.json``; they never read or write instance

@@ -1,8 +1,7 @@
 """Quoted-message and attachment helpers for the main agent build.
 
-Extracted from ``astr_main_agent`` by T8-12. The functions are re-exported from
-``astr_main_agent`` because both the pipeline stage and the upstream tests
-resolve them as module attributes.
+The functions are re-exported from ``astr_main_agent`` because both the
+pipeline stage and the upstream tests resolve them as module attributes.
 """
 
 from __future__ import annotations

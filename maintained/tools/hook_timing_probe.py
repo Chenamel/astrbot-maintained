@@ -1,10 +1,9 @@
 """Record and verify the completion-hook ordering of the tool-loop agent runner.
 
-The fork fires ``BaseAgentRunHooks.on_agent_done`` **before** the final reply is
-emitted on the skills-like re-query path (``hook_timing_mode="enhanced"``);
-``legacy`` restores the upstream ordering. T8-12 splits four oversized core
-files, and the five ``_complete_with_assistant_response`` call sites must stay
-faithful while that happens.
+``on_agent_done`` may fire before or after the final reply depending on
+``hook_timing_mode``; the skills-like re-query path is where the difference
+shows up. The ``_complete_with_assistant_response`` call sites must keep their
+interleaving stable when the runner is refactored.
 
 This probe replays one scripted scenario per call site, records the interleaving
 of the completion hook and the emitted agent responses, and stores it as a
@@ -65,8 +64,8 @@ SCHEMA_VERSION = 1
 DEFAULT_BASELINE_DIR = REPO_ROOT / "maintained" / "baselines" / "hook_timing"
 RUNNER_REL_PATH = "astrbot/core/agent/runners/tool_loop_agent_runner.py"
 
-# Upstream 4.29.4 rewrote the runner; it now keeps both the upstream
-# step path and the fork additive path, so the counts below reflect that.
+# The runner keeps both the standard step path and the additive path, so
+# the counts below include call sites from each.
 CALL_SITE_MARKER = "await self._complete_with_assistant_response("
 EXPECTED_CALL_SITES = 9
 EXPECTED_TIMING_SITES = {"enhanced": 2, "legacy": 2}

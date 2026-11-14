@@ -1,14 +1,13 @@
 """Named access to the event extras the core shares with plugins.
 
-The core used to read these keys inline: ``event.get_extra("_enhance_xxx")``.
-That made the core depend on one particular plugin's private vocabulary, and it
-failed quietly -- a renamed key, an uninstalled plugin, or a value of the wrong
-type all produced ``False``/``None`` and a feature that simply stopped working,
+Reading these keys inline ties the core to one plugin's private vocabulary
+and fails quietly: a renamed key, an uninstalled plugin, or a value of the wrong
+type all produce ``False``/``None`` and a feature that simply stops working,
 with nothing in the log to say so.
 
 This module gives those keys one home. The **literals are unchanged**: they are
 a cross-process contract, and renaming them would break every installed plugin
-in the one way that cannot be noticed. What changes is the shape of the read:
+in the one way that cannot be noticed. Only the shape of the read differs:
 
 * one place defines each key;
 * each reader states the type it expects and degrades to a default instead of

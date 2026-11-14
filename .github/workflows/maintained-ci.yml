@@ -1,17 +1,5 @@
 name: Maintained Fork CI
 
-# The eleven workflows inherited from upstream trigger on `master` only.
-# This fork lives on `maintained/v4.28.2`, so none of them run on a normal
-# push here. Keep fork-specific checks in a separate file instead of editing
-# upstream workflow files, and never enable the upstream release / image
-# publishing workflows on this branch.
-#
-# The dashboard and full-suite jobs below replace coverage the fork never had:
-# the upstream dashboard CI skips itself on forks via a repository condition, and
-# the upstream unit-test workflows are disabled in this repo's settings. Both
-# were observed green on a manual run before being bound to every push/PR.
-# The full upstream suite takes about five minutes; keep its timeout generous.
-
 on:
   push:
     branches:
@@ -126,6 +114,7 @@ jobs:
   upstream-suite:
     name: full upstream pytest suite
     runs-on: ubuntu-latest
+    # The full suite takes about five minutes; keep its timeout generous.
     timeout-minutes: 45
     steps:
       - name: Checkout

@@ -1,8 +1,8 @@
 """Optional tool wiring for the main agent build.
 
 Covers the proactive cron tool, the web search tools and the citation prompt,
-plus the citation constants. Extracted from ``astr_main_agent`` by T8-12 and
-re-exported from there because the upstream tests resolve them as module
+plus the citation constants. The names are re-exported from
+``astr_main_agent`` because the upstream tests resolve them as module
 attributes.
 """
 

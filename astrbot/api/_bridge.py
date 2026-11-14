@@ -1,4 +1,4 @@
-"""Internal capability bridge for the maintained fork's additive API modules.
+"""Internal capability bridge for the additive API modules.
 
 This module is **not** part of the public API surface. External consumers
 (plugins) must import from the documented submodules -- ``astrbot.api.media``,
@@ -6,10 +6,9 @@ This module is **not** part of the public API surface. External consumers
 ``astrbot.api.proactive`` -- and never from here.
 
 The additional API modules forward to core-side implementations that may be
-absent. That happens, for example, when upstream overwrote the maintained
-patches, or before those patches are re-applied. :func:`resolve` keeps the
-public modules importable and callable in that situation by returning a safe
-default instead of raising.
+absent from the running tree, for example when core is loaded from a package
+that does not carry them. :func:`resolve` keeps the public modules importable
+and callable in that situation by returning a safe default instead of raising.
 
 See ``docs/maintained/api-contract.md`` for the documented degradation rules.
 """
@@ -109,10 +108,10 @@ def resolve(module: str, name: str, default: Any = None) -> Any:
     return value
 
 
-#: Capabilities whose absence means the fork's patches are not in place.
+#: Capabilities the core cannot run without.
 #:
 #: Everything else degrades safely -- a missing optional helper costs a feature,
-#: not correctness. These do not: the fork's own behaviour depends on them, so
+#: not correctness. These do not: core behaviour depends on them, so
 #: their absence has to be visible at start-up rather than discovered when a
 #: user reports that something quietly stopped working.
 REQUIRED_CAPABILITIES: tuple[str, ...] = (
@@ -127,7 +126,7 @@ def missing_required() -> list[str]:
 
     Returns:
         Names from :data:`REQUIRED_CAPABILITIES` whose core-side provider cannot
-        be resolved. An empty list means the fork's own machinery is in place.
+        be resolved. An empty list means all required capabilities resolved.
     """
     available = capabilities()
     return [name for name in REQUIRED_CAPABILITIES if not available.get(name, False)]

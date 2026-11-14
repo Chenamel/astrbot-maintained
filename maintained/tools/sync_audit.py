@@ -1,10 +1,10 @@
-"""Deterministic audit of upstream-version coverage.
+"""Deterministic audit of baseline-version coverage.
 
-The release gate answers "can this be released?" by checking the fork's own
-artifacts. This tool answers a different question: "did the fork actually
-absorb everything the upstream version changed, and did the running instance
-receive all of it?" It compares the two upstream baseline tags rather than the
-fork's 68-entry manifest, because the manifest only lists files the fork edits.
+The release gate checks whether the repository's own artifacts are consistent.
+This tool answers a different question: whether every symbol and dependency
+declared by the baseline version is still present here, and whether the running
+instance received all of it. It compares the two baseline tags directly; the
+manifest only lists files edited locally and cannot cover additions.
 
 Read-only. Pure standard library. See ``docs/maintained/upstream-sync-audit.md``.
 """
@@ -220,9 +220,9 @@ def check_s1(changed: dict[str, dict[str, Signature | None]]) -> list[Finding]:
             if entry is None and name not in changed.get(module, {}):
                 continue
             if entry is None:
-                # The fork may deliberately keep an old upstream module (that is
-                # what a fork is for). Only report when the symbol is truly gone
-                # from the current tree as well.
+                # A module still present in the current tree is not a missing
+                # symbol, even if an older baseline declared a different one.
+                # Only report when it is truly gone from the current tree.
                 if current_has_symbol(module, name):
                     continue
                 findings.append(
@@ -297,7 +297,7 @@ def check_s2() -> list[Finding]:
 
 
 def check_s3() -> tuple[list[Finding], list[str]]:
-    """New upstream dependencies must be declared in the fork's requirements."""
+    """Dependencies added between baselines must be declared in requirements."""
     old = dependencies(show(OLD_BASE, "pyproject.toml"))
     new = dependencies(show(NEW_BASE, "pyproject.toml"))
     current = dependencies((ROOT / "pyproject.toml").read_text(encoding="utf-8"))

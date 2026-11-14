@@ -291,10 +291,10 @@ class AstrBotCoreLifecycle:
             self.astrbot_config_mgr,
         )
 
-        # Report a partially applied maintained build at start-up. The extra API
-        # modules degrade quietly by design -- a missing optional helper costs a
-        # feature -- but the fork's own machinery is not optional, and finding
-        # out from a user report is too late.
+        # Report an incomplete core at start-up. Optional API helpers degrade
+        # quietly by design -- a missing one costs a feature -- but the required
+        # capabilities are not optional, and finding out from a user report is
+        # too late.
         try:
             from astrbot.api._bridge import missing_required
 
@@ -302,8 +302,8 @@ class AstrBotCoreLifecycle:
             if absent:
                 logger.error(
                     "Maintained core is incomplete; these capabilities are "
-                    "unavailable: %s. The fork's behaviours that depend on them "
-                    "are inactive -- re-apply the maintained patches.",
+                    "unavailable: %s. Behaviour depending on them is inactive "
+                    "until the core files are restored.",
                     ", ".join(absent),
                 )
         except Exception:  # noqa: BLE001 - a diagnostic must never block startup

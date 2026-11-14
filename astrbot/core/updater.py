@@ -65,10 +65,9 @@ class AstrBotUpdater(_RepoZipUpdater):
     """Expose the complete, high-level AstrBot Core update operations."""
 
     #: Where the panel looks for updates when nothing else says otherwise.
-    #: This distribution, not upstream: upstream is a different codebase on a
-    #: faster cadence, and offering its releases would invite a one-click action
-    #: that replaces this tree with one where the APIs this fork adds do not
-    #: exist, with no way back.
+    #: It must stay on a release stream built from this codebase: a release
+    #: from a different codebase would replace the tree with one that lacks
+    #: the extra API modules, with no way back.
     DEFAULT_UPDATE_SOURCE = (
         "https://api.github.com/repos/Chenamel/astrbot-maintained/releases"
     )
@@ -140,8 +139,9 @@ class AstrBotUpdater(_RepoZipUpdater):
     def _release_tag_to_version(tag_name: str) -> str:
         """Turn a release tag into the version string the panel compares.
 
-        Tags carry transport details the version does not. Upstream tags look
-        like ``v4.29.4``; this fork's look like ``maintained/v4.29.4-r2``, where
+        Tags carry transport details the version does not. A plain release tag
+        looks like ``v4.29.4``; release tags here look like
+        ``maintained/v4.29.4-r2``, where
         ``-r2`` counts builds of the same ``4.29.4+mtn1`` release and is *not* a
         version. Feeding a raw tag to :meth:`VersionComparator.compare_version`
         fails to parse, and mapping the build number onto the version would

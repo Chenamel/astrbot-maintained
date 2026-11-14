@@ -1,9 +1,8 @@
-"""Helpers extracted from the tool-loop agent runner by T8-12.
+"""Helpers for the tool-loop agent runner.
 
-The module grew in three steps: Step 4a moved the oversized tool-result
-helpers here, Step 4b the tool-loop iteration helpers (plus the interrupt
-exception and result type they need), and Step 4c the tool sanitize and
-re-query helpers.
+The helpers split into three groups: oversized tool-result helpers, tool-loop
+iteration helpers (plus the interrupt exception and result type they need),
+and the tool sanitize and re-query helpers.
 
 The runner keeps thin delegating methods for all of them so that instance
 level patches and direct method calls in the upstream tests keep working.

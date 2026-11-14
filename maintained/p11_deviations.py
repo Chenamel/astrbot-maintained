@@ -1,35 +1,33 @@
-"""Known upstream test deviations (P11) for the maintained AstrBot fork.
+"""Registry of expected failures in the upstream test suite.
 
-This module is the single source of truth for the upstream tests this fork fails
-**on purpose**. Every entry maps a pytest node id to a ``(group, reason)`` pair:
+This module is the single source of truth for the tests expected to fail here.
+Every entry maps a pytest node id to a ``(group, reason)`` pair:
 
 ``alpha``
-    Execution-tool authorisation tightening. **Reverted on purpose on
-    2026-10-17 (T8-15)**: the tightening is now a mode
-    (``provider_settings.execution_gate_mode``) that defaults to ``legacy``, so
-    the default run matches upstream again and this group holds **no entry**.
-    The behaviour is still available by opting into ``strict``; see the
-    ``inventory`` document ("α 组回退"), resolved through ``doc_paths``.
+    Execution-tool authorisation tightening. Available as a mode
+    (``provider_settings.execution_gate_mode``) that defaults to ``legacy``,
+    so the default run holds no entry in this group. The behaviour stays
+    available by opting into ``strict``; see the ``inventory`` document
+    ("α 组回退"), resolved through ``doc_paths``.
 ``beta``
-    Agent-completion hook timing. **Reverted on purpose on 2026-10-18 (T8-16)**:
-    the mode now defaults to ``legacy``, so the default run matches upstream and
-    this group holds **no entry**. The improved timing stays available through
-    ``agent_runner.config.misc.hook_timing_mode = enhanced`` and the code path
-    must never be deleted by an upstream merge; see the ``inventory`` document
-    ("β 组回退 / α 组回退"), resolved through ``doc_paths``.
+    Agent-completion hook timing. The mode defaults to ``legacy``, so the
+    default run holds no entry in this group. The alternative timing stays
+    available through ``agent_runner.config.misc.hook_timing_mode = enhanced``
+    and must not be removed by a runner refactor; see the ``inventory``
+    document ("β 组回退 / α 组回退"), resolved through ``doc_paths``.
 ``config``
-    Fork-added defaults under ``agent_runner.config.misc``. Upstream migrates
-    that mapping and then compares it by **exact equality**, so the two keys this
-    fork adds (``hook_timing_mode``, ``lightweight_proactive_tools``) make the
-    assertion fail even though both defaults are inert unless opted into. The
-    deviation is a schema-shape difference, not a behaviour difference; see the
+    Extra defaults under ``agent_runner.config.misc``. The test migrates that
+    mapping and compares it by **exact equality**, so the two extra keys
+    (``hook_timing_mode``, ``lightweight_proactive_tools``) fail the assertion
+    even though both defaults are inert unless opted into. This is a
+    schema-shape difference, not a behaviour difference; see the
     ``inventory`` document, section 4 (P11).
 
 The root ``conftest.py`` turns each registered node id into an
 ``xfail(strict=True)`` marker: the test still runs, an expected failure is
-reported as ``xfailed``, and an unexpected pass becomes ``XPASS(strict)``, which
-fails the suite. That last property is the alarm for "this deviation was
-reverted or overwritten by an upstream merge".
+reported as ``xfailed``, and an unexpected pass becomes ``XPASS(strict)``,
+which fails the suite. That last property raises the alarm once a registered
+deviation stops being true.
 
 Adding an entry:
     Document the reason in the ``inventory`` document, section 4 (P11), first,
@@ -48,32 +46,31 @@ ALPHA = "alpha"
 #: Deviation group for the intentional agent-completion hook timing improvement.
 BETA = "beta"
 
-#: Deviation group for the fork's extra ``agent_runner.config.misc`` defaults.
+#: Deviation group for the extra ``agent_runner.config.misc`` defaults.
 CONFIG = "config"
 
 _ALPHA_REASON = (
     "alpha (design): apply_execution_policy() tightens execution-tool "
-    "authorisation, so this fork withholds the execute tools that upstream "
-    "expects to be present."
+    "authorisation, so the execute tools the upstream suite expects are "
+    "withheld."
 )
 
 _BETA_REASON = (
     "beta (design, architectural): the agent-completion hook fires before the "
-    "reply is emitted, so reply pre-audit can intervene first. This fork keeps "
-    "the improved timing on purpose and must not be reverted to upstream."
+    "reply is emitted, so reply pre-audit can intervene first. The timing is "
+    "deliberate and must survive runner refactors."
 )
 
 _CONFIG_REASON = (
-    "config (fork addition): the maintained core adds `hook_timing_mode` and "
-    "`lightweight_proactive_tools` to agent_runner.config.misc. This test "
-    "migrates that mapping and compares it by exact equality, so the two extra "
-    "defaults fail it while the behaviour stays upstream-compatible -- both are "
-    "inert unless a config opts in."
+    "config (schema shape): `agent_runner.config.misc` declares "
+    "`hook_timing_mode` and `lightweight_proactive_tools`. This test migrates "
+    "that mapping and compares it by exact equality, so the two extra defaults "
+    "fail it even though both are inert unless a config opts in."
 )
 
 DEVIATIONS: dict[str, tuple[str, str]] = {
-    # Alpha and beta are empty: both are opt-in modes now, so the default run
-    # matches upstream on every test.
+    # Alpha and beta are empty: both are opt-in modes, so the default run
+    # needs no deviation in those groups.
     "tests/unit/test_agent_runner_config.py"
     "::test_local_legacy_fields_are_fully_migrated": (CONFIG, _CONFIG_REASON),
     "tests/unit/test_agent_runner_config.py"
@@ -94,12 +91,11 @@ APPLIED: list[str] = []
 
 #: Statements the project's protected deviations must keep saying, verbatim.
 #:
-#: These sentences used to live only in ``inventory.md`` and ``project_rules.md``,
-#: which are maintainer-only documents (``.internal/``, not published). A guard
-#: that read them could therefore be satisfied only on the maintainer's machine,
-#: and would either fail or be skipped in a fresh clone -- a silent removal of the
-#: alarm it exists to raise. The red line is a property of the code, so it is
-#: declared here, in a file git tracks, and the guard asserts against this table.
+#: Maintainer-only documents (``.internal/``) are absent from a fresh clone,
+#: so a guard reading them could only be satisfied on the maintainer's machine
+#: and would either fail or be skipped elsewhere -- silently removing the alarm
+#: it exists to raise. The red line is a property of the code, so it is declared
+#: here, in a file git tracks, and the guard asserts against this table.
 #:
 #: Each entry is ``(document key, phrase, why it must stay)``. The phrase is
 #: checked against ``maintained/doc_paths`` when that document is present, so the

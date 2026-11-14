@@ -1,10 +1,10 @@
-"""Deterministic daily report for the maintained fork's live instance.
+"""Deterministic daily report for a live instance.
 
-The morning automation used to ask a model to read log files, a JSONL stream
-and a SQLite table by hand. Figures then drifted whenever a field disappeared,
-a timestamp turned out to be UTC, or a rotated log was missed. This module
-owns those decisions instead: it scans the full local-time window, classifies
-errors and prints a fixed report. The automation only presents the output.
+Log files, a JSONL stream and a SQLite table all feed this report. Reading
+them by hand lets figures drift whenever a field disappeared, a timestamp
+turns out to be UTC, or a rotated log is missed. This module owns those
+decisions: it scans the full local-time window, classifies errors and prints
+a fixed report. The automation only presents the output.
 
 This is deliberately read-only. Usage::
 

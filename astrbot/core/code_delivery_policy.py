@@ -235,10 +235,9 @@ def execution_gate_mode(config: object) -> str:
         with each other.
 
     Notes:
-        This is the only place that reads the setting. It used to be checked
-        inline in three modules, so adding a third mode meant finding all three
-        -- and a miss would leave the tool list filtered while the call gate
-        still allowed the call.
+        This is the only place that reads the setting. Reading it in several
+        modules at once would let a new mode reach the tool list without
+        reaching the call gate, so both decisions ask here.
     """
     provider_settings = (
         config.get("provider_settings", {}) if isinstance(config, dict) else {}
