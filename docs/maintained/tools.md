@@ -142,3 +142,17 @@ PYTHONPATH=maintained python -m tools.sync_audit --json
 `test_tools_hook_timing_probe.py` / `test_sync_audit.py`：
 用 `tmp_path` 造出「假仓 + 假实例」，覆盖无漂移 / 内容不符 / 文件缺失 / 源损坏中止 /
 预演不写文件 / `--apply` 备份与写回 / 写回后复核，以及审计对四类已知事故的检出与误报豁免。
+
+## 9. L2 盲评
+
+`maintained/tools/l2_blind_eval.py` 倒读 `shadow_log.jsonl` 尾部，按四条红线打标、
+生成打乱编码的盲评表与单独保存的揭盲映射，再读入评分生成汇总表。纯标准库、
+离线、不写实例、不发送消息；红线的正则与阈值写在脚本顶部常量里。
+
+```bash
+python maintained/tools/l2_blind_eval.py --selftest
+python maintained/tools/l2_blind_eval.py --mode flag --log "<实例目录>/core/data/plugins/<插件目录>/shadow_log.jsonl"
+```
+
+机器人称呼用环境变量 `L2_BOT_NICKNAMES`（逗号分隔）传入，只用于清洗盲样里的称呼；
+不设置时只剥离通用前缀。配套测试见 `tests/maintained/test_l2_blind_eval.py`。
