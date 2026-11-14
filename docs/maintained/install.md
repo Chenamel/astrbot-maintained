@@ -1,6 +1,6 @@
 # 安装与运行
 
-本页说明如何把 AstrBot 维护版 fork 跑起来。基线锁定上游 `v4.29.4`，配置文件格式与
+本页说明如何把 AstrBot 维护版 fork 跑起来。维护分支跟随上游发布版本更新，配置文件格式与
 上游兼容，已安装的上游插件无需修改即可继续使用。想先了解"比官方多了什么"，请先读
 [`fork-advantages.md`](./fork-advantages.md)。
 
@@ -78,9 +78,9 @@ docker run -d --name astrbot -p 6185:6185 \
 
 - WebUI 地址 `http://localhost:6185`，平台适配器、模型、插件开关都在**面板 → 配置页**设置。
 - 配置、插件、日志等运行时数据落在仓库的 `data/` 目录，该目录不入库。
-- 首次使用按面板引导完成初始化即可；配置文件格式与上游 `v4.29.4` 兼容。
-- 启动日志的艺术字下方会多一行 **`AstrBot Maintained Fork v4.29.4+mtn1`**：
-  官方版本没有这一行，可据此快速确认跑的是本 fork。
+- 首次使用按面板引导完成初始化即可；配置文件格式与当前上游发布版本兼容。
+- 启动日志的艺术字下方会多一行 **`AstrBot Maintained Fork <版本号>`**（当前为
+  `v4.29.4+mtn1`）：官方版本没有这一行，可据此快速确认跑的是本 fork。
 
 ## 4. 哪些内容请直接看官方文档
 
@@ -108,7 +108,7 @@ docker run -d --name astrbot -p 6185:6185 \
 的开关。用它新建实例，装出来的一定是**上游官方版**，不是本 fork。
 
 正确做法是改用 §2 的 wheel 或源码方式安装。若一定要保留启动器管理的实例，
-只能先用它装好官方 `v4.29.4`，再手工把本 fork 的 core 文件与面板覆盖进去；
+只能先用它装好当前上游正式版，再手工把本 fork 的 core 文件与面板覆盖进去；
 这类改造后面板会被启动器按版本校验回滚，需要把 fork 面板放到独立目录并用
 `ASTRBOT_WEBUI_DIR` 指定，步骤见 [`dashboard-build.md`](./dashboard-build.md)
 「使用 AstrBot Launcher 时」。注意该环境变量由启动入口 `main.py` 读取，
@@ -118,16 +118,17 @@ docker run -d --name astrbot -p 6185:6185 \
 
 ```bash
 python -c "import astrbot; print(astrbot.__version__)"
-git rev-parse 'baseline/v4.29.4^{commit}'
+git for-each-ref --format='%(refname:short) -> %(*objectname:short)' refs/tags/baseline/
 ```
 
-- 第一行应为 `4.29.4+mtn1`。`pyproject.toml`、`astrbot/__init__.py`、`maintained/VERSION`
-  三处版本号**完全一致**，由 `tests/maintained/test_version_marker.py` 钉住；
+- 第一行输出当前维护版版本号，形如 `4.29.4+mtn1`。`pyproject.toml`、
+  `astrbot/__init__.py` 与 `maintained/VERSION` 三处版本字符串完全一致，
+  由 `tests/maintained/test_version_marker.py` 钉住；
   `+mtnN` 是 PEP 440 允许的本地版本标记，也是 pip 包名之后第二重身份标识。
-- 启动日志艺术字下方会多一行 `AstrBot Maintained Fork v4.29.4+mtn1`，官方版本没有这一行。
-- 第二行应为 `613354144…`（上游 `v4.29.4` 的基线提交）。`baseline/v4.29.4` 是附注标签，
-  直接 `git rev-parse baseline/v4.29.4` 返回的是标签对象自身的 id，加 `^{commit}` 才是提交；
-  该锚点永久存在，供回滚与三方合并比对。
+- 启动日志艺术字下方会多一行 `AstrBot Maintained Fork` 加当前版本号，官方版本没有这一行。
+- 第二行列出全部 `baseline/*` 锚点及其指向的上游提交，版本号最大的即当前基线。
+  锚点是附注标签，`%(*objectname:short)` 取的是解引用后的提交；直接 `git rev-parse <tag>`
+  只会拿到标签对象自身的 id。所有锚点长期保留，供回滚与三方合并比对。
 
 再核对受保护文件的哈希（纯静态，不需要运行中的实例或面板）：
 

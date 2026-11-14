@@ -1,7 +1,7 @@
 AstrBot Maintained Fork — NOTICE
 
 Upstream:   https://github.com/AstrBotDevs/AstrBot
-Baseline:   tag v4.28.2, commit 3c7adafa1397e182d60b1016bf88759265113c8a
+Baseline:   the upstream release recorded by the current 'baseline/*' annotated tag
 License:    GNU Affero General Public License v3.0 or later (see LICENSE)
 Fork home:  https://github.com/Chenamel/astrbot-maintained
 

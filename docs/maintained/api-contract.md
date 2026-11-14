@@ -261,7 +261,7 @@ core 自己也写群历史（`persist_group_message`），只是优先级最低�
 | `test_api_runtime.py` | 数据目录为绝对路径；缺席时下载**响亮失败**、引用图返回空表 |
 | `test_api_embedding.py` | 缺席时 `is_embedding_provider → False`；容错 |
 | `test_manifest_guard.py` | 仓工作树↔台账自洽；台账只含 core、默认关闭策略字段为 `True`、条数钉 |
-| `test_api_frozen.py` | 上游 api 文件相对 `baseline/v4.29.4` 零改动（白名单=`ALLOWED_ADDITIONS`，当前 10 个新增文件） |
+| `test_api_frozen.py` | 上游 api 文件相对当前 `baseline/*` 锚点零改动（白名单=`ALLOWED_ADDITIONS`，当前 10 个新增文件） |
 | `test_tools_check_drift.py` / `test_tools_apply_patches.py` | 工具链：漂移检测、预演不写、写前备份、源损坏中止、退出码 |
 
 **测试不依赖运行中的 AstrBot**：用 `SimpleNamespace` 伪造 event / request / part。
