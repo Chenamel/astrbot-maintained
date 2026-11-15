@@ -117,3 +117,19 @@ python maintained/tools/l2_blind_eval.py --mode flag --log "<实例目录>/core/
 
 机器人称呼用环境变量 `L2_BOT_NICKNAMES`（逗号分隔）传入，只用于清洗盲样里的称呼；
 不设置时只剥离通用前缀。配套测试见 `tests/maintained/test_l2_blind_eval.py`。
+
+## 10. 上游契约初筛
+
+`maintained/tools/f4_contract_screen.py` 只用 `git show` 读两个 ref 里的源码并做 AST
+比对，检查五个域有没有破坏性变化：`astrbot/api/**` 导出与函数签名、`api/web.py` 的
+插件页桥接、完成钩子调用点、六个冻结 core 符号、以及 `check_admin_permission` 入口。
+纯只读，不写工作区、不联网。
+
+```bash
+python maintained/tools/f4_contract_screen.py --repo . --target HEAD
+python maintained/tools/f4_contract_screen.py --repo . --target upstream/master
+```
+
+基线 tag 在运行时从 `baseline/*` 里取版本号最大的一个，不写死；输出 JSON 里
+`breaking_changes_count` 非 0 时，每条 `issues[i]` 即追版本前要补 shim 的契约点。
+配套测试见 `tests/maintained/test_f4_contract_screen.py`。
