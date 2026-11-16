@@ -37,7 +37,8 @@
     "duration": "Duration",
     "ttft": "TTFT",
     "status": "Status",
-    "empty": "No call records match the current filters"
+    "empty": "No call records match the current filters",
+    "loadFailed": "Failed to load call records: {message}"
   },
   "source": {
     "all": "All",

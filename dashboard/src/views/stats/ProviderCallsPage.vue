@@ -35,6 +35,7 @@ interface CallSummary {
 }
 
 const loading = ref(false);
+const loadError = ref("");
 const items = ref<CallItem[]>([]);
 const total = ref(0);
 const page = ref(1);
@@ -116,6 +117,7 @@ watch(quickRange, applyQuickRange);
 
 async function load() {
   loading.value = true;
+  loadError.value = "";
   try {
     const params: Record<string, unknown> = {
       page: page.value,
@@ -164,6 +166,12 @@ async function load() {
     modelItems.value = [...known].sort();
     callerItems.value = [...knownCallers].sort();
     sessionItems.value = [...knownSessions].sort();
+  } catch (err) {
+    // Silently falling back to the empty state hides a broken endpoint behind
+    // "no records", which reads like missing data instead of a failed request.
+    items.value = [];
+    total.value = 0;
+    loadError.value = err instanceof Error ? err.message : String(err);
   } finally {
     loading.value = false;
   }
@@ -348,6 +356,15 @@ onMounted(() => {
     </section>
 
     <section class="stat-card table-card">
+      <v-alert
+        v-if="loadError"
+        type="error"
+        density="compact"
+        variant="tonal"
+        class="load-error"
+      >
+        {{ tm('table.loadFailed', { message: loadError }) }}
+      </v-alert>
       <div class="v-table-wrap">
         <v-table density="comfortable" class="calls-table">
           <thead>
@@ -390,7 +407,7 @@ onMounted(() => {
                 </v-chip>
               </td>
             </tr>
-            <tr v-if="!items.length && !loading">
+            <tr v-if="!items.length && !loading && !loadError">
               <td colspan="11" class="empty-cell">{{ tm('table.empty') }}</td>
             </tr>
           </tbody>
@@ -660,6 +677,10 @@ onMounted(() => {
   text-align: center;
   opacity: 0.6;
   padding: 32px 0;
+}
+
+.load-error {
+  margin: 12px 12px 0;
 }
 
 .pager {
