@@ -18,7 +18,9 @@ from astrbot.core.utils.astrbot_path import get_astrbot_system_tmp_path
 from ..registry import builtin_tool
 from .fs import _read_allowed_roots, _write_allowed_roots
 from .util import (
+    ToolPermissionLevel,
     check_local_execution_permission,
+    check_tool_permission,
     get_local_permission_policy,
     is_local_runtime,
     workspace_root_for_context,
@@ -63,6 +65,7 @@ def _redirect_background_stdout_command(
 class ExecuteShellTool(FunctionTool):
     name: str = "astrbot_execute_shell"
     description: str = "Execute a command in the shell."
+    is_execution_tool: bool = True
     parameters: dict = field(
         default_factory=lambda: {
             "type": "object",
@@ -101,6 +104,10 @@ class ExecuteShellTool(FunctionTool):
         env: dict[str, Any] | None = None,
         yield_time_ms: int = 10_000,
     ) -> ToolExecResult:
+        if permission_error := check_tool_permission(
+            context, "Shell execution", ToolPermissionLevel.EXECUTION
+        ):
+            return permission_error
         local_policy, permission_error = check_local_execution_permission(
             context,
             "Shell execution",
@@ -302,6 +309,7 @@ class ShellSessionTool(FunctionTool):
         "Sessions are isolated to the current conversation and sender. "
         "Administrators can manage all sessions in the conversation."
     )
+    is_execution_tool: bool = True
     parameters: dict = field(
         default_factory=lambda: {
             "type": "object",
@@ -378,6 +386,11 @@ class ShellSessionTool(FunctionTool):
         Returns:
             JSON session operation result or a user-facing error.
         """
+        if action != "terminate":
+            if permission_error := check_tool_permission(
+                context, "Shell session management", ToolPermissionLevel.EXECUTION
+            ):
+                return permission_error
         _, permission_error = check_local_execution_permission(
             context,
             "Shell session management",

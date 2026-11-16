@@ -88,6 +88,7 @@ async def handle_result(
 class PythonTool(FunctionTool):
     name: str = "astrbot_execute_ipython"
     description: str = f"Run codes in an IPython shell. Current OS: {_OS_NAME}."
+    is_execution_tool: bool = True
     parameters: dict = field(default_factory=lambda: param_schema)
 
     async def call(
@@ -130,6 +131,7 @@ class LocalPythonTool(FunctionTool):
         "Use system-compatible commands. Restricted Linux and macOS calls run "
         "inside an operating-system sandbox."
     )
+    is_execution_tool: bool = True
 
     parameters: dict = field(default_factory=lambda: param_schema)
 
@@ -140,6 +142,10 @@ class LocalPythonTool(FunctionTool):
         silent: bool = False,
         timeout: int = 30,
     ) -> ToolExecResult:
+        if permission_error := check_tool_permission(
+            context, "Python execution", ToolPermissionLevel.EXECUTION
+        ):
+            return permission_error
         local_policy, permission_error = check_local_execution_permission(
             context,
             "Python execution",
