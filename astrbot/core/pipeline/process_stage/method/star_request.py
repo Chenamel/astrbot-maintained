@@ -7,6 +7,12 @@ from typing import Any
 from astrbot.core import logger
 from astrbot.core.message.message_event_result import MessageEventResult
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+from astrbot.core.plugin_attribution import (
+    plugin_of_handler,
+    plugin_of_module,
+    reset_current_plugin,
+    set_current_plugin,
+)
 from astrbot.core.star.filter.command import CommandFilter
 from astrbot.core.star.filter.command_group import CommandGroupFilter
 from astrbot.core.star.filter.regex import RegexFilter
@@ -71,9 +77,19 @@ class StarRequestSubStage(Stage):
                 priority=handler.extras_configs.get("priority", 0),
             )
             try:
-                wrapper = call_handler(event, handler.handler, **params)
-                async for ret in wrapper:
-                    yield ret
+                # Module names cannot identify a plugin ("main" for all of
+                # them); the handler's source file can. The module-name lookup
+                # stays as a fallback for unusual layouts.
+                token = set_current_plugin(
+                    plugin_of_handler(handler.handler)
+                    or plugin_of_module(handler.handler_module_path)
+                )
+                try:
+                    wrapper = call_handler(event, handler.handler, **params)
+                    async for ret in wrapper:
+                        yield ret
+                finally:
+                    reset_current_plugin(token)
                 event.trace.record(
                     "handler_end",
                     kind="plugin_handler",

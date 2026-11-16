@@ -64,11 +64,11 @@ SCHEMA_VERSION = 1
 DEFAULT_BASELINE_DIR = REPO_ROOT / "maintained" / "baselines" / "hook_timing"
 RUNNER_REL_PATH = "astrbot/core/agent/runners/tool_loop_agent_runner.py"
 
-# The runner keeps both the standard step path and the additive path, so
-# the counts below include call sites from each.
+# One call site per terminal path: the image short-circuit, the plain reply,
+# the enhanced/legacy completion pair, and the tool-failure closing reply.
 CALL_SITE_MARKER = "await self._complete_with_assistant_response("
-EXPECTED_CALL_SITES = 9
-EXPECTED_TIMING_SITES = {"enhanced": 2, "legacy": 2}
+EXPECTED_CALL_SITES = 5
+EXPECTED_TIMING_SITES = {"enhanced": 1, "legacy": 1}
 
 HOOK_EVENT_KIND = "agent_done"
 IMAGE_UNAVAILABLE_TEXT = "当前看不到图片，请重新发送。"

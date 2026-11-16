@@ -3,6 +3,7 @@ from collections.abc import AsyncGenerator
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.provider.entities import ProviderRequest
 from astrbot.core.star.star_handler import StarHandlerMetadata
+from astrbot.core.utils.direct_turns import coordinator
 from astrbot.core.utils.session_waiter import FILTERS, USER_SESSIONS, SessionWaiter
 
 from ..context import PipelineContext
@@ -72,5 +73,8 @@ class ProcessStage(Stage):
             if (
                 event.get_result() and not event.is_stopped()
             ) or not event.get_result():
+                if not await coordinator.collect(event):
+                    event.stop_event()
+                    return
                 async for _ in self.agent_sub_stage.process(event):
                     yield

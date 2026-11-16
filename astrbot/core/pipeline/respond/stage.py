@@ -12,6 +12,7 @@ from astrbot.core.platform.astr_message_event import (
     streaming_response_event,
 )
 from astrbot.core.star.star_handler import EventType
+from astrbot.core.utils.direct_turns import is_current, mark_sent
 from astrbot.core.utils.path_util import path_Mapping
 from astrbot.core.utils.telemetry import bounded_text
 
@@ -195,6 +196,13 @@ class RespondStage(Stage):
         self,
         event: AstrMessageEvent,
     ) -> None | AsyncGenerator[None, None]:
+        if not is_current(event):
+            logger.debug(
+                "respond stage dropped a superseded turn | message_id=%s",
+                getattr(getattr(event, "message_obj", None), "message_id", "unknown"),
+            )
+            event.clear_result()
+            return
         result = event.get_result()
         if result is None:
             return
@@ -291,12 +299,15 @@ class RespondStage(Stage):
                             outline_truncated = True
                     yield chain
 
+            if not is_current(event):
+                return
             # Adapter chunks and protocol closing frames share one final trace.
             stream_token = streaming_response_event.set(event)
             try:
                 await event.send_streaming(traced_stream(), realtime_segmenting)
             finally:
                 streaming_response_event.reset(stream_token)
+            mark_sent(event)
             outline = "".join(stream_outline)
             if outline.strip():
                 event.trace.record(
@@ -354,12 +365,15 @@ class RespondStage(Stage):
                 for comp in result.chain:
                     i = await self._calc_comp_interval(comp)
                     await asyncio.sleep(i)
+                    if not is_current(event):
+                        return
                     try:
                         if comp.type in need_separately:
                             await event.send(result.derive([comp]))
                         else:
                             await event.send(result.derive([*header_comps, comp]))
                             header_comps.clear()
+                        mark_sent(event)
                     except Exception as e:
                         logger.error(
                             "Failed to send the message chain: "
@@ -383,9 +397,12 @@ class RespondStage(Stage):
                     modify_raw_chain=True,
                 )
                 for comp in sep_comps:
+                    if not is_current(event):
+                        return
                     chain = result.derive([comp])
                     try:
                         await event.send(chain)
+                        mark_sent(event)
                     except Exception as e:
                         logger.error(
                             f"Failed to send the message chain: chain = {chain}, "
@@ -394,8 +411,11 @@ class RespondStage(Stage):
                         )
                 chain = result.derive(result.chain)
                 if result.chain and len(result.chain) > 0:
+                    if not is_current(event):
+                        return
                     try:
                         await event.send(chain)
+                        mark_sent(event)
                     except Exception as e:
                         logger.error(
                             f"Failed to send the message chain: chain = {chain}, "

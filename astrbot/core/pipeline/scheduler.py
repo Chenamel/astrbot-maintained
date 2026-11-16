@@ -9,6 +9,7 @@ from astrbot.core.platform.sources.webchat.webchat_event import WebChatMessageEv
 from astrbot.core.platform.sources.wecom_ai_bot.wecomai_event import (
     WecomAIBotMessageEvent,
 )
+from astrbot.core.utils.direct_turns import coordinator
 from astrbot.core.utils.trace import trace_execution
 
 from .bootstrap import ensure_builtin_stages_registered
@@ -93,10 +94,21 @@ class PipelineScheduler:
             event_context(event),
             trace_execution(event.trace),
         ):
-            await self._process_stages(event)
+            # Keyed by conversation: a process can serve several bots, and their
+            # profiles may disagree about the window. Without the origin the last
+            # message's profile would decide for everyone.
+            origin = getattr(event, "unified_msg_origin", "") or ""
+            coordinator.configure(
+                self.ctx.astrbot_config.get("direct_turn_quiet_sec"), origin
+            )
+            coordinator.observe(event, self.ctx.astrbot_config.get("wake_prefix", []))
+            try:
+                await self._process_stages(event)
 
-            # Send the closing frame before the event is marked complete.
-            if isinstance(event, WebChatMessageEvent | WecomAIBotMessageEvent):
-                await event.send(None)
+                # Send the closing frame before the event is marked complete.
+                if isinstance(event, WebChatMessageEvent | WecomAIBotMessageEvent):
+                    await event.send(None)
 
-            logger.debug("pipeline execution completed.")
+                logger.debug("pipeline execution completed.")
+            finally:
+                coordinator.finish(event)

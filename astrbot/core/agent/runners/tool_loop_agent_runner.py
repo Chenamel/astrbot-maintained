@@ -1,5 +1,6 @@
 import asyncio
 import copy
+import json
 import sys
 import time
 import traceback
@@ -176,6 +177,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         "`{overflow_path}`. Use {read_tool_hint} to inspect it. "
         "Use a narrower window when reading large files."
     )
+    REPEATED_TOOL_FAILURE_LIMIT = 3
 
     def _get_persona_custom_error_message(self) -> str | None:
         """Read persona-level custom error message from event extras when available."""
@@ -291,6 +293,11 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         self._last_tool_name: str | None = None
         self._last_tool_args: dict[str, T.Any] | None = None
         self._same_tool_streak = 0
+        self._last_failed_tool_key: tuple[str, str] | None = None
+        self._same_tool_failure_streak = 0
+        self._repeated_failed_call_ids: list[str] = []
+        self._blocked_failed_tool_keys: set[tuple[str, str]] = set()
+        self._tool_failure_summary = ""
         self._step_budget_max: int | None = None
         self._step_budget_used = 0
         self._step_budget_notified: set[int] = set()
@@ -809,6 +816,19 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
 
     @override
     async def step(self):
+        """Release proactive busy state only after a terminal or interrupted step."""
+        terminated = False
+        try:
+            async for response in self._step():
+                yield response
+        except BaseException:
+            terminated = True
+            raise
+        finally:
+            if terminated or self.done():
+                self._finish_proactive_request()
+
+    async def _step(self):
         """Process a single step of the agent.
         This method should return the result of the step.
         """
@@ -1176,6 +1196,80 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                         )
 
             self.req.append_tool_calls_result(tool_calls_result)
+            if self._tool_failure_summary:
+                # One bounded final generation replaces further agent iterations.
+                # All emitted calls still have tool results, including skipped calls.
+                self.req.func_tool = None
+                self._skill_like_raw_tool_set = None
+                self._tool_schema_param_set = None
+                self.run_context.messages.append(
+                    Message(
+                        role="user",
+                        content=(
+                            "[Tool failure limit] The same tool failed three consecutive "
+                            "times with the same effective arguments. Stop using tools. "
+                            "Briefly explain what could not be completed and the missing "
+                            "requirement. Do not claim success or repeat any action.\n"
+                            + self._tool_failure_summary
+                        ),
+                    )
+                )
+                final_response = LLMResponse(
+                    role="assistant",
+                    completion_text="这次工具连续失败，没能完成。请补充所需参数后再试。",
+                )
+                try:
+                    generated = await self._await_or_stop(
+                        asyncio.wait_for(
+                            self.provider.text_chat(
+                                contexts=self._sanitize_contexts_for_provider(
+                                    self.run_context.messages
+                                ),
+                                func_tool=None,
+                                model=self.req.model,
+                                session_id=self.req.session_id,
+                                abort_signal=self._abort_signal,
+                                request_max_retries=0,
+                                # The closing message still answers the same
+                                # turn, so it keeps the quoted text and image
+                                # notes even though tools are gone.
+                                extra_user_content_parts=(
+                                    self.req.extra_user_content_parts
+                                ),
+                            ),
+                            timeout=AUXILIARY_LLM_TIMEOUT_SEC,
+                        )
+                    )
+                    if self._is_stop_requested():
+                        yield await self._finalize_aborted_step()
+                        return
+                    if (
+                        generated
+                        and generated.role == "assistant"
+                        and not generated.tools_call_name
+                        and generated.completion_text.strip()
+                    ):
+                        final_response = generated
+                    if generated and generated.usage:
+                        self.stats.token_usage += generated.usage
+                        self.stats.current_context_tokens = generated.usage.input
+                except Exception as exc:
+                    logger.warning(
+                        "Tool failure final response failed: %s", type(exc).__name__
+                    )
+                await self._complete_with_assistant_response(final_response)
+                chain = final_response.result_chain
+                if not chain and final_response.completion_text:
+                    chain = MessageChain().message(final_response.completion_text)
+                if chain:
+                    yield AgentResponse(
+                        type="llm_result", data=AgentResponseData(chain=chain)
+                    )
+                    if self.streaming:
+                        yield AgentResponse(
+                            type="streaming_delta", data=AgentResponseData(chain=chain)
+                        )
+                return
 
     async def step_until_done(
         self, max_step: int
@@ -1215,6 +1309,18 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         llm_response: LLMResponse,
     ) -> T.AsyncGenerator[_HandleFunctionToolsResult, None]:
         """处理函数工具调用。"""
+        # Imported lazily: direct_turns pulls astrbot.api, which imports the star
+        # package, which imports this module back. At module scope that cycle
+        # aborts whenever this file is the entry point.
+        from astrbot.core.utils.direct_turns import (
+            begin_tool,
+            get_tool_result,
+            is_current,
+            record_tool_result,
+            release_tool,
+            wait_tool_result,
+        )
+
         tool_call_result_blocks: list[ToolCallMessageSegment] = []
         logger.info(f"Agent 使用工具: {llm_response.tools_call_name}")
 
@@ -1234,10 +1340,12 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
             llm_response.tools_call_ids,
         ):
             tool_result_blocks_start = len(tool_call_result_blocks)
-            tool_call_streak = self._track_tool_call_streak(
-                func_tool_name,
-                func_tool_args,
-            )
+            event = getattr(self.run_context.context, "event", None)
+            tool_reserved = False
+            call_failed = False
+            call_blocked = False
+            failure_reason = ""
+            failure_key = (func_tool_name, "")
             yield _HandleFunctionToolsResult.from_message_chain(
                 MessageChain(
                     type="tool_call",
@@ -1276,6 +1384,19 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
 
                 if not func_tool:
                     logger.warning(f"未找到指定的工具: {func_tool_name}，将跳过。")
+                    call_failed = True
+                    failure_reason = f"Tool {func_tool_name} not found."
+                    failure_key = (
+                        func_tool_name,
+                        json.dumps(func_tool_args, sort_keys=True, default=str),
+                    )
+                    if failure_key in self._blocked_failed_tool_keys:
+                        call_blocked = True
+                        _append_tool_call_result(
+                            func_tool_id,
+                            "error: Repeated identical tool failure; execution skipped after three failures.",
+                        )
+                        continue
                     _append_tool_call_result(
                         func_tool_id,
                         f"error: Tool {func_tool_name} not found. Available tools are: {', '.join(available_tools)}",
@@ -1310,6 +1431,57 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                     # 如果没有 handler（如 MCP 工具），使用所有参数
                     valid_params = func_tool_args
 
+                normalized_params = dict(valid_params)
+                for name, spec in (
+                    (func_tool.parameters or {}).get("properties", {}).items()
+                ):
+                    if (
+                        name not in normalized_params
+                        and isinstance(spec, dict)
+                        and "default" in spec
+                    ):
+                        normalized_params[name] = spec["default"]
+                failure_key = (
+                    func_tool_name,
+                    json.dumps(normalized_params, sort_keys=True, default=str),
+                )
+                tool_call_streak = self._track_tool_call_streak(
+                    func_tool_name, normalized_params
+                )
+                if failure_key in self._blocked_failed_tool_keys:
+                    call_blocked = True
+                    _append_tool_call_result(
+                        func_tool_id,
+                        "error: Repeated identical tool failure; execution skipped after three failures.",
+                    )
+                    continue
+                missing = [
+                    name
+                    for name in (func_tool.parameters or {}).get("required", [])
+                    if name not in valid_params
+                ]
+                if missing:
+                    raise ValueError(
+                        f"Missing required tool arguments: {', '.join(missing)}"
+                    )
+
+                if not is_current(event):
+                    self.request_stop()
+                    return
+                found, cached_result = get_tool_result(
+                    event, func_tool_name, normalized_params
+                )
+                if not found:
+                    tool_reserved = begin_tool(event, func_tool_name, normalized_params)
+                    if not tool_reserved:
+                        cached_result = await wait_tool_result(
+                            event, func_tool_name, normalized_params
+                        )
+                        found = True
+                if found:
+                    _append_tool_call_result(func_tool_id, cached_result)
+                    continue
+
                 try:
                     await self.agent_hooks.on_tool_start(
                         self.run_context,
@@ -1318,6 +1490,12 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                     )
                 except Exception as e:
                     logger.error(f"Error in on_tool_start hook: {e}", exc_info=True)
+
+                if not is_current(event):
+                    release_tool(event, func_tool_name, normalized_params)
+                    tool_reserved = False
+                    self.request_stop()
+                    return
 
                 executor = self.tool_executor.execute(
                     tool=func_tool,
@@ -1331,6 +1509,8 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                         res = resp
                         _final_resp = resp
                         if not res.content:
+                            call_failed = True
+                            failure_reason = "The tool returned no content."
                             _append_tool_call_result(
                                 func_tool_id,
                                 "The tool returned no content.",
@@ -1424,6 +1604,8 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                         logger.warning(
                             f"Tool 返回了不支持的类型: {type(resp)}。",
                         )
+                        call_failed = True
+                        failure_reason = "The tool returned an unsupported type."
                         _append_tool_call_result(
                             func_tool_id,
                             "*The tool has returned an unsupported type. Please tell the user to check the definition and implementation of this tool.*"
@@ -1445,6 +1627,8 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                 if isinstance(e, _ToolExecutionInterrupted):
                     raise
                 logger.warning(traceback.format_exc())
+                call_failed = True
+                failure_reason = str(e)[:600]
                 _append_tool_call_result(
                     func_tool_id,
                     f"error: {e!s}"
@@ -1452,6 +1636,58 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                         func_tool_name, tool_call_streak
                     ),
                 )
+            finally:
+                if tool_reserved:
+                    content = (
+                        str(tool_call_result_blocks[-1].content)
+                        if len(tool_call_result_blocks) > tool_result_blocks_start
+                        else "Tool execution ended without a confirmed result. Do not repeat the action."
+                    )
+                    record_tool_result(
+                        event, func_tool_name, normalized_params, content
+                    )
+                if not call_blocked:
+                    if call_failed:
+                        if failure_key == self._last_failed_tool_key:
+                            self._same_tool_failure_streak += 1
+                        else:
+                            self._last_failed_tool_key = failure_key
+                            self._same_tool_failure_streak = 1
+                            self._repeated_failed_call_ids = []
+                        self._repeated_failed_call_ids.append(func_tool_id)
+                        if (
+                            self._same_tool_failure_streak
+                            >= self.REPEATED_TOOL_FAILURE_LIMIT
+                        ):
+                            self._blocked_failed_tool_keys.add(failure_key)
+                            self._tool_failure_summary = (
+                                f"{func_tool_name}: {failure_reason[:300]}"
+                            )
+                            failed_ids = set(self._repeated_failed_call_ids)
+                            # Shorten result bodies, never remove one side of a pair.
+                            for previous in self.run_context.messages:
+                                if (
+                                    previous.role == "tool"
+                                    and previous.tool_call_id in failed_ids
+                                ):
+                                    old = str(previous.content)
+                                    if "[SYSTEM NOTICE]" not in old:
+                                        previous.content = "error: Repeated identical tool failure (details in final summary)."
+                            for previous in tool_call_result_blocks:
+                                if (
+                                    previous.tool_call_id in failed_ids
+                                    and "[SYSTEM NOTICE]" not in str(previous.content)
+                                ):
+                                    previous.content = "error: Repeated identical tool failure (details in final summary)."
+                            logger.warning(
+                                "Tool failure limit reached: tool=%s failures=%s",
+                                func_tool_name,
+                                self._same_tool_failure_streak,
+                            )
+                    else:
+                        self._last_failed_tool_key = None
+                        self._same_tool_failure_streak = 0
+                        self._repeated_failed_call_ids = []
 
             if len(tool_call_result_blocks) > tool_result_blocks_start:
                 tool_result_content = str(tool_call_result_blocks[-1].content)
@@ -1727,431 +1963,6 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                         type(exc).__name__,
                     )
                 return
-
-    async def _step(self):
-        """Process a single step of the agent.
-        This method should return the result of the step.
-        """
-        if not self.req:
-            raise ValueError("Request is not set. Please call reset() first.")
-
-        if self._state == AgentState.IDLE:
-            try:
-                await self.agent_hooks.on_agent_begin(self.run_context)
-            except Exception as e:
-                logger.error(f"Error in on_agent_begin hook: {e}", exc_info=True)
-
-        if getattr(self.req, "image_input_unavailable", False):
-            response = LLMResponse(
-                role="assistant",
-                completion_text="当前看不到图片，请重新发送。",
-                image_input_unavailable=True,
-            )
-            await self._complete_with_assistant_response(response)
-            chain = response.result_chain
-            if not chain and response.completion_text:
-                chain = MessageChain().message(response.completion_text)
-            if chain:
-                yield AgentResponse(
-                    type="llm_result", data=AgentResponseData(chain=chain)
-                )
-                if self.streaming:
-                    yield AgentResponse(
-                        type="streaming_delta", data=AgentResponseData(chain=chain)
-                    )
-            return
-
-        # 开始处理，转换到运行状态
-        self._transition_state(AgentState.RUNNING)
-        llm_resp_result = None
-
-        # Process request-time context before sending it to the provider.
-        token_usage = self.req.conversation.token_usage if self.req.conversation else 0
-        self._simple_print_message_role("[BefCompact]", self.run_context.messages)
-        processed_messages = await self._await_or_stop(
-            self.request_context_manager.process(
-                self.run_context.messages,
-                trusted_token_usage=token_usage,
-            )
-        )
-        if processed_messages is None:
-            yield await self._finalize_aborted_step()
-            return
-        self.run_context.messages = processed_messages
-        self._simple_print_message_role("[AftCompact]", self.run_context.messages)
-
-        async for llm_response in self._iter_llm_responses_with_fallback():
-            if llm_response.is_chunk:
-                if self.stats.time_to_first_token == 0:
-                    self.stats.time_to_first_token = time.time() - self.stats.start_time
-
-                if llm_response.reasoning_content:
-                    yield AgentResponse(
-                        type="streaming_delta",
-                        data=AgentResponseData(
-                            chain=MessageChain(type="reasoning").message(
-                                llm_response.reasoning_content,
-                            ),
-                        ),
-                    )
-                if llm_response.result_chain:
-                    yield AgentResponse(
-                        type="streaming_delta",
-                        data=AgentResponseData(chain=llm_response.result_chain),
-                    )
-                elif llm_response.completion_text:
-                    yield AgentResponse(
-                        type="streaming_delta",
-                        data=AgentResponseData(
-                            chain=MessageChain().message(llm_response.completion_text),
-                        ),
-                    )
-                if self._is_stop_requested():
-                    break
-                continue
-            llm_resp_result = llm_response
-
-            # Chunk responses have already continued above. A missing usage report
-            # means the latest context occupancy is unknown.
-            self.stats.current_context_tokens = 0
-            if llm_response.usage:
-                # Keep cumulative usage for billing and expose the latest request
-                # input separately for context-window occupancy displays.
-                self.stats.token_usage += llm_response.usage
-                self.stats.current_context_tokens = llm_response.usage.input
-                if self.req.conversation:
-                    self.req.conversation.token_usage = llm_response.usage.total
-            # end_time must be set before the yield serializes to_dict().
-            self.stats.end_time = time.time()
-            yield AgentResponse(
-                type="agent_stats",
-                data=AgentResponseData(
-                    chain=MessageChain(
-                        type="agent_stats",
-                        chain=[Json(data=self.stats.to_dict())],
-                    )
-                ),
-            )
-            break  # got final response
-
-        if self._is_stop_requested():
-            yield await self._finalize_aborted_step()
-            return
-
-        if not llm_resp_result:
-            return
-
-        # 处理 LLM 响应
-        llm_resp = llm_resp_result
-
-        if llm_resp.role == "err":
-            # 如果 LLM 响应错误，转换到错误状态
-            self.final_llm_resp = llm_resp
-            self.stats.end_time = time.time()
-            self._transition_state(AgentState.ERROR)
-            self._resolve_unconsumed_follow_ups()
-            custom_error_message = self._get_persona_custom_error_message()
-            error_text = custom_error_message or (
-                f"LLM 响应错误: {llm_resp.completion_text or '未知错误'}"
-            )
-            yield AgentResponse(
-                type="err",
-                data=AgentResponseData(
-                    chain=MessageChain().message(error_text),
-                ),
-            )
-            return
-
-        if not llm_resp.tools_call_name:
-            await self._complete_with_assistant_response(llm_resp)
-
-        # 返回 LLM 结果
-        if llm_resp.reasoning_content:
-            yield AgentResponse(
-                type="llm_result",
-                data=AgentResponseData(
-                    chain=MessageChain(type="reasoning").message(
-                        llm_resp.reasoning_content,
-                    ),
-                ),
-            )
-        if llm_resp.result_chain:
-            yield AgentResponse(
-                type="llm_result",
-                data=AgentResponseData(chain=llm_resp.result_chain),
-            )
-        elif llm_resp.completion_text:
-            yield AgentResponse(
-                type="llm_result",
-                data=AgentResponseData(
-                    chain=MessageChain().message(llm_resp.completion_text),
-                ),
-            )
-
-        # 如果有工具调用，还需处理工具调用
-        if llm_resp.tools_call_name:
-            if self.tool_schema_mode == "skills_like":
-                requery_resp, _ = await self._resolve_tool_exec(llm_resp)
-                if self._is_stop_requested():
-                    yield await self._finalize_aborted_step()
-                    return
-                if not requery_resp.tools_call_name:
-                    llm_resp = requery_resp
-                    logger.warning(
-                        "skills_like tool re-query returned no tool calls; fallback to assistant response."
-                    )
-                    # "enhanced" fires the completion hook before the reply is
-                    # emitted; "legacy" (the default) defers it until right
-                    # after the llm_result yields, which is where upstream
-                    # calls it.
-                    legacy_timing = self.hook_timing_mode == "legacy"
-                    if not legacy_timing:
-                        await self._complete_with_assistant_response(llm_resp)
-                    if llm_resp.reasoning_content:
-                        yield AgentResponse(
-                            type="llm_result",
-                            data=AgentResponseData(
-                                chain=MessageChain(type="reasoning").message(
-                                    llm_resp.reasoning_content,
-                                ),
-                            ),
-                        )
-                    if llm_resp.result_chain:
-                        yield AgentResponse(
-                            type="llm_result",
-                            data=AgentResponseData(chain=llm_resp.result_chain),
-                        )
-                    elif llm_resp.completion_text:
-                        yield AgentResponse(
-                            type="llm_result",
-                            data=AgentResponseData(
-                                chain=MessageChain().message(llm_resp.completion_text),
-                            ),
-                        )
-
-                    if legacy_timing:
-                        await self._complete_with_assistant_response(llm_resp)
-
-                    # Re-query uses text_chat(), so its reply has no stream chunks.
-                    # Supply them after hooks without changing llm_result ordering.
-                    if self.streaming:
-                        if llm_resp.reasoning_content:
-                            yield AgentResponse(
-                                type="streaming_delta",
-                                data=AgentResponseData(
-                                    chain=MessageChain(type="reasoning").message(
-                                        llm_resp.reasoning_content,
-                                    ),
-                                ),
-                            )
-                        chain = llm_resp.result_chain
-                        if not chain and llm_resp.completion_text:
-                            chain = MessageChain().message(llm_resp.completion_text)
-                        if chain:
-                            yield AgentResponse(
-                                type="streaming_delta",
-                                data=AgentResponseData(chain=chain),
-                            )
-                    return
-                else:
-                    llm_resp.tools_call_name = requery_resp.tools_call_name
-                    llm_resp.tools_call_args = requery_resp.tools_call_args
-                    llm_resp.tools_call_ids = requery_resp.tools_call_ids
-
-            tool_call_result_blocks = []
-            cached_images = []  # Collect cached images for LLM visibility
-            try:
-                async for result in self._handle_function_tools(self.req, llm_resp):
-                    if result.kind == "tool_call_result_blocks":
-                        if result.tool_call_result_blocks is not None:
-                            tool_call_result_blocks = result.tool_call_result_blocks
-                    elif result.kind == "cached_image":
-                        if result.cached_image is not None:
-                            # Collect cached image info
-                            cached_images.append(result.cached_image)
-                    elif result.kind == "message_chain":
-                        chain = result.message_chain
-                        if chain is None or chain.type is None:
-                            # should not happen
-                            continue
-                        if chain.type == "tool_direct_result":
-                            ar_type = "tool_call_result"
-                        else:
-                            ar_type = chain.type
-                        yield AgentResponse(
-                            type=ar_type,
-                            data=AgentResponseData(chain=chain),
-                        )
-            except _ToolExecutionInterrupted:
-                yield await self._finalize_aborted_step()
-                return
-
-            # 将结果添加到上下文中
-            parts = []
-            if llm_resp.reasoning_content is not None or llm_resp.reasoning_signature:
-                parts.append(
-                    ThinkPart(
-                        think=llm_resp.reasoning_content or "",
-                        encrypted=llm_resp.reasoning_signature,
-                    )
-                )
-            if llm_resp.completion_text:
-                parts.append(TextPart(text=llm_resp.completion_text))
-            if len(parts) == 0:
-                parts = None
-            tool_calls_result = ToolCallsResult(
-                tool_calls_info=AssistantMessageSegment(
-                    tool_calls=llm_resp.to_openai_tool_calls_model(),
-                    content=parts,
-                ),
-                tool_calls_result=tool_call_result_blocks,
-            )
-            # record the assistant message with tool calls
-            self.run_context.messages.extend(
-                tool_calls_result.to_openai_messages_model()
-            )
-
-            # If there are cached images and the model supports image input,
-            # append a user message with images so LLM can see them
-            if cached_images:
-                modalities = self.provider.provider_config.get("modalities", [])
-                supports_image = (
-                    not modalities or "image" in modalities
-                )  # Empty list is treated as unconfigured for backward compatibility
-                if supports_image:
-                    # Build user message with images for LLM to review
-                    image_parts = []
-                    for cached_img in cached_images:
-                        img_data = tool_image_cache.get_image_base64_by_path(
-                            cached_img.file_path, cached_img.mime_type
-                        )
-                        if img_data:
-                            base64_data, mime_type = img_data
-                            image_parts.append(
-                                TextPart(
-                                    text=f"[Image from tool '{cached_img.tool_name}', path='{cached_img.file_path}']"
-                                )
-                            )
-                            image_parts.append(
-                                ImageURLPart(
-                                    image_url=ImageURLPart.ImageURL(
-                                        url=f"data:{mime_type};base64,{base64_data}",
-                                        id=cached_img.file_path,
-                                    )
-                                )
-                            )
-                    if image_parts:
-                        self.run_context.messages.append(
-                            Message(role="user", content=image_parts)
-                        )
-                        logger.debug(
-                            f"Appended {len(cached_images)} cached image(s) to context for LLM review"
-                        )
-
-            self.req.append_tool_calls_result(tool_calls_result)
-            if self._tool_failure_summary:
-                # One bounded final generation replaces further agent iterations.
-                # All emitted calls still have tool results, including skipped calls.
-                self.req.func_tool = None
-                self._skill_like_raw_tool_set = None
-                self._tool_schema_param_set = None
-                self.run_context.messages.append(
-                    Message(
-                        role="user",
-                        content=(
-                            "[Tool failure limit] The same tool failed three consecutive "
-                            "times with the same effective arguments. Stop using tools. "
-                            "Briefly explain what could not be completed and the missing "
-                            "requirement. Do not claim success or repeat any action.\n"
-                            + self._tool_failure_summary
-                        ),
-                    )
-                )
-                final_response = LLMResponse(
-                    role="assistant",
-                    completion_text="这次工具连续失败，没能完成。请补充所需参数后再试。",
-                )
-                try:
-                    generated = await self._await_or_stop(
-                        asyncio.wait_for(
-                            self.provider.text_chat(
-                                contexts=self._sanitize_contexts_for_provider(
-                                    self.run_context.messages
-                                ),
-                                func_tool=None,
-                                model=self.req.model,
-                                session_id=self.req.session_id,
-                                abort_signal=self._abort_signal,
-                                request_max_retries=0,
-                                # The closing message still answers the same
-                                # turn, so it keeps the quoted text and image
-                                # notes even though tools are gone.
-                                extra_user_content_parts=(
-                                    self.req.extra_user_content_parts
-                                ),
-                            ),
-                            timeout=AUXILIARY_LLM_TIMEOUT_SEC,
-                        )
-                    )
-                    if self._is_stop_requested():
-                        yield await self._finalize_aborted_step()
-                        return
-                    if (
-                        generated
-                        and generated.role == "assistant"
-                        and not generated.tools_call_name
-                        and generated.completion_text.strip()
-                    ):
-                        final_response = generated
-                    if generated and generated.usage:
-                        self.stats.token_usage += generated.usage
-                        self.stats.current_context_tokens = generated.usage.input
-                except Exception as exc:
-                    logger.warning(
-                        "Tool failure final response failed: %s", type(exc).__name__
-                    )
-                await self._complete_with_assistant_response(final_response)
-                chain = final_response.result_chain
-                if not chain and final_response.completion_text:
-                    chain = MessageChain().message(final_response.completion_text)
-                if chain:
-                    yield AgentResponse(
-                        type="llm_result", data=AgentResponseData(chain=chain)
-                    )
-                    if self.streaming:
-                        yield AgentResponse(
-                            type="streaming_delta", data=AgentResponseData(chain=chain)
-                        )
-                return
-
-    async def _step_until_done(
-        self, max_step: int
-    ) -> T.AsyncGenerator[AgentResponse, None]:
-        """Process steps until the agent is done."""
-        step_count = 0
-        while not self.done() and step_count < max_step:
-            step_count += 1
-            async for resp in self.step():
-                yield resp
-
-        #  如果循环结束了但是 agent 还没有完成，说明是达到了 max_step
-        if not self.done():
-            logger.warning(
-                f"Agent reached max steps ({max_step}), forcing a final response."
-            )
-            # 拔掉所有工具
-            if self.req:
-                self.req.func_tool = None
-            # 注入提示词
-            self.run_context.messages.append(
-                Message(
-                    role="user",
-                    content=self.MAX_STEPS_REACHED_PROMPT,
-                )
-            )
-            # 再执行最后一步
-            async for resp in self.step():
-                yield resp
 
 
 # --- fork additive extensions (4.28.2+mtn1) ---
