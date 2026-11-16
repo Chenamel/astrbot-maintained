@@ -147,3 +147,30 @@ def test_restoring_a_token_from_another_context_is_not_fatal():
     assert current_plugin() == "sample_plugin"
     reset_current_plugin(token)
     assert current_plugin() == ""
+
+
+def test_dispatcher_marks_the_plugin_before_handing_over_control():
+    """Attribution depends on the dispatcher, not on the plugins.
+
+    Community plugins never announce themselves, and the calls they make are
+    routinely wrapped in ``asyncio.wait_for``, which schedules them as their
+    own task and severs the stack that would otherwise identify the caller.
+    The context variable is the only carrier that survives that hop, so the
+    dispatcher has to set it around the handler call.
+
+    Losing these two lines breaks nothing visibly: every call still succeeds.
+    It only stops being attributable, and the dashboard falls back to listing
+    every plugin that configured the same provider -- which reads like the
+    record is wrong even though the call is fine.
+    """
+    import inspect
+
+    from astrbot.core.pipeline.process_stage.method.star_request import (
+        StarRequestSubStage,
+    )
+
+    source = inspect.getsource(StarRequestSubStage.process)
+    assert "set_current_plugin(" in source
+    assert "reset_current_plugin(" in source
+    assert source.index("set_current_plugin(") < source.index("call_handler(")
+    assert source.index("reset_current_plugin(") > source.index("call_handler(")
