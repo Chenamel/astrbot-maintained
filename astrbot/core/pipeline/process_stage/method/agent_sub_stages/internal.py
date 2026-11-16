@@ -481,6 +481,17 @@ class InternalAgentSubStage(Stage):
 
         except Exception as e:
             logger.error(f"Error occurred while processing agent: {e}")
+            # A run that ends by raising still happened, and the provider was
+            # asked for work. Without this the call log shows nothing at all
+            # and the success rate keeps reading 100%.
+            if agent_runner is not None:
+                await _record_internal_agent_stats(
+                    event,
+                    locals().get("req"),
+                    agent_runner,
+                    None,
+                    failed=True,
+                )
             custom_error_message = extract_persona_custom_error_message_from_event(
                 event
             )
@@ -602,8 +613,19 @@ async def _record_internal_agent_stats(
     req: ProviderRequest | None,
     agent_runner: AgentRunner | None,
     final_resp: LLMResponse | None,
+    *,
+    failed: bool = False,
 ) -> None:
-    """Persist internal agent stats without affecting the user response flow."""
+    """Persist internal agent stats without affecting the user response flow.
+
+    Args:
+        event: Event whose conversation the call belongs to.
+        req: Provider request, when one was built before the failure.
+        agent_runner: Runner that owns the provider and the stats.
+        final_resp: Final response, absent when the run raised.
+        failed: True when the run ended by raising. A missing response would
+            otherwise be reported as a success.
+    """
     if agent_runner is None:
         return
 
@@ -622,7 +644,7 @@ async def _record_internal_agent_stats(
 
         if agent_runner.was_aborted():
             status = "aborted"
-        elif final_resp is not None and final_resp.role == "err":
+        elif failed or (final_resp is not None and final_resp.role == "err"):
             status = "error"
         else:
             status = "completed"

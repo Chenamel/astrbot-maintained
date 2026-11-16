@@ -23,7 +23,11 @@ from typing import Any
 from astrbot import logger
 from astrbot.core.agent.message import TextPart
 from astrbot.core.pipeline.context_utils import call_event_hook
-from astrbot.core.provider.entities import IMAGE_CAPTION_MARKER, ProviderRequest
+from astrbot.core.provider.entities import (
+    IMAGE_CAPTION_MARKER,
+    LLMResponse,
+    ProviderRequest,
+)
 from astrbot.core.star.star_handler import EventType
 from astrbot.core.utils.self_identity import self_identity_note
 
@@ -296,41 +300,52 @@ async def generate_with_persona(
 
     async def _with_stats():
         start_time = time.time()
-        resp = await coro
-        end_time = time.time()
-        # Mirror the agent-runner usage stats so dashboard totals cover this
-        # path too; a stats failure must never break the reply.
+        resp: LLMResponse | None = None
         try:
-            from astrbot.core import db_helper
+            resp = await coro
+        finally:
+            end_time = time.time()
+            # Mirror the agent-runner usage stats so dashboard totals cover
+            # this path too; a stats failure must never break the reply.
+            # Written in `finally` so a refused request still leaves a record
+            # instead of making the call log look idle.
+            try:
+                from astrbot.core import db_helper
 
-            await db_helper.insert_provider_stat(
-                umo=getattr(event, "unified_msg_origin", "") or "unknown",
-                conversation_id=None,
-                provider_id=chat_provider_id or provider.meta().id,
-                provider_model=provider.get_model(),
-                status="completed" if resp.role != "err" else "error",
-                # LLMResponse exposes TokenUsage as .usage; .stats does not
-                # exist, so the old lookup raised and this path went unrecorded.
-                stats=(
-                    {
-                        "token_usage": {
-                            "input_other": resp.usage.input_other,
-                            "input_cached": resp.usage.input_cached,
-                            "output": resp.usage.output,
-                        },
-                        "start_time": start_time,
-                        "end_time": end_time,
-                    }
-                    if resp.usage
-                    else {
-                        "start_time": start_time,
-                        "end_time": end_time,
-                    }
-                ),
-                agent_type="proactive_persona",
-            )
-        except Exception:  # noqa: BLE001
-            pass
+                await db_helper.insert_provider_stat(
+                    umo=getattr(event, "unified_msg_origin", "") or "unknown",
+                    conversation_id=None,
+                    provider_id=chat_provider_id or provider.meta().id,
+                    provider_model=provider.get_model(),
+                    status=(
+                        "completed"
+                        if resp is not None and resp.role != "err"
+                        else "error"
+                    ),
+                    # LLMResponse exposes TokenUsage as .usage; .stats does not
+                    # exist, so the old lookup raised and this path went unrecorded.
+                    stats=(
+                        {
+                            "token_usage": {
+                                "input_other": resp.usage.input_other,
+                                "input_cached": resp.usage.input_cached,
+                                "output": resp.usage.output,
+                            },
+                            "start_time": start_time,
+                            "end_time": end_time,
+                        }
+                        if resp is not None and resp.usage
+                        else {
+                            "start_time": start_time,
+                            "end_time": end_time,
+                        }
+                    ),
+                    agent_type="proactive_persona",
+                )
+            except Exception:  # noqa: BLE001
+                pass
+        if resp is None:  # pragma: no cover - the finally block re-raises first
+            raise RuntimeError("proactive generation produced no response")
         return resp
 
     if timeout:

@@ -242,58 +242,72 @@ class Context:
             # keeps every owner when several plugins share one provider.
             plugin_name = "|".join(plugins_for_provider(chat_provider_id or "")[:3])
         start_time = time.time()
-        llm_resp = await prov.text_chat(
-            prompt=prompt,
-            image_urls=image_urls,
-            audio_urls=audio_urls,
-            func_tool=tools,
-            contexts=contexts,
-            system_prompt=system_prompt,
-            **kwargs,
-        )
-        end_time = time.time()
-        # The agent-runner path already persists usage stats; this direct path
-        # did not, which is why dashboard usage looked incomplete. Opt-in via
-        # umo so callers without a session context stay untouched.
-        if umo:
-            try:
-                from astrbot.core import db_helper
+        llm_resp: LLMResponse | None = None
+        try:
+            llm_resp = await prov.text_chat(
+                prompt=prompt,
+                image_urls=image_urls,
+                audio_urls=audio_urls,
+                func_tool=tools,
+                contexts=contexts,
+                system_prompt=system_prompt,
+                **kwargs,
+            )
+        finally:
+            end_time = time.time()
+            # The agent-runner path already persists usage stats; this direct
+            # path did not, which is why dashboard usage looked incomplete.
+            # Opt-in via umo so callers without a session context stay
+            # untouched. Recorded in `finally` on purpose: a provider that
+            # refuses every request would otherwise leave no trace, and the
+            # call log would read as "no traffic" instead of "all failing".
+            if umo:
+                try:
+                    from astrbot.core import db_helper
 
-                await db_helper.insert_provider_stat(
-                    umo=umo,
-                    conversation_id=None,
-                    provider_id=chat_provider_id,
-                    provider_model=prov.get_model(),
-                    status="completed" if llm_resp.role != "err" else "error",
-                    # LLMResponse carries its usage on .usage (a TokenUsage);
-                    # it has no .stats, so the old lookup raised on every call
-                    # and dropped this path from the dashboard totals.
-                    stats=(
-                        {
-                            "token_usage": {
-                                "input_other": llm_resp.usage.input_other,
-                                "input_cached": llm_resp.usage.input_cached,
-                                "output": llm_resp.usage.output,
-                            },
-                            # Without these the call log showed "-" for duration
-                            # on every plugin-driven call.
-                            "start_time": start_time,
-                            "end_time": end_time,
-                        }
-                        if llm_resp.usage
-                        else {
-                            "start_time": start_time,
-                            "end_time": end_time,
-                        }
-                    ),
-                    # Kept in agent_type instead of a new column: no schema
-                    # migration, and no upstream db module to diverge from.
-                    agent_type=(
-                        f"llm_generate:{plugin_name}" if plugin_name else "llm_generate"
-                    ),
-                )
-            except Exception as e:  # noqa: BLE001 - stats must not break callers
-                logger.warning("Persist llm_generate stats failed: %s", e)
+                    await db_helper.insert_provider_stat(
+                        umo=umo,
+                        conversation_id=None,
+                        provider_id=chat_provider_id,
+                        provider_model=prov.get_model(),
+                        status=(
+                            "completed"
+                            if llm_resp is not None and llm_resp.role != "err"
+                            else "error"
+                        ),
+                        # LLMResponse carries its usage on .usage (a TokenUsage);
+                        # it has no .stats, so the old lookup raised on every call
+                        # and dropped this path from the dashboard totals.
+                        stats=(
+                            {
+                                "token_usage": {
+                                    "input_other": llm_resp.usage.input_other,
+                                    "input_cached": llm_resp.usage.input_cached,
+                                    "output": llm_resp.usage.output,
+                                },
+                                # Without these the call log showed "-" for duration
+                                # on every plugin-driven call.
+                                "start_time": start_time,
+                                "end_time": end_time,
+                            }
+                            if llm_resp is not None and llm_resp.usage
+                            else {
+                                "start_time": start_time,
+                                "end_time": end_time,
+                            }
+                        ),
+                        # Kept in agent_type instead of a new column: no schema
+                        # migration, and no upstream db module to diverge from.
+                        agent_type=(
+                            f"llm_generate:{plugin_name}"
+                            if plugin_name
+                            else "llm_generate"
+                        ),
+                    )
+                except Exception as e:  # noqa: BLE001 - stats must not break callers
+                    logger.warning("Persist llm_generate stats failed: %s", e)
+        if llm_resp is None:  # pragma: no cover - the finally block re-raises first
+            raise RuntimeError("llm_generate produced no response")
         return llm_resp
 
     async def tool_loop_agent(
