@@ -76,7 +76,7 @@ def check_tool_permission(
 | `shipyard_neo/neo_skills.py` ×2 | Using skill lifecycle tools | `IDENTITY` | **不动** |
 | `message_tools.py` ×1 | 消息工具 | `IDENTITY` | **不动** |
 
-> 上游 v4.29.4 在 `python.py` / `shell.py` 里另有一套本地执行策略
+> 上游当前版本在 `python.py` / `shell.py` 里另有一套本地执行策略
 > （`check_local_execution_permission`，负责沙箱、网络与文件系统范围）。
 > 两个执行点现在先过 `EXECUTION` 级统一入口，再过该策略，两道都保留：
 > 只留上游策略会丢掉 `execution_denial` 的危险命令拦截，

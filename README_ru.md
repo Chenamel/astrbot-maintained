@@ -7,7 +7,7 @@
 <br>
 <br>
 
-[![version](https://img.shields.io/badge/version-4.29.4%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
+[![version](https://img.shields.io/github/v/release/Chenamel/astrbot-maintained?label=latest%20release)](https://github.com/Chenamel/astrbot-maintained/releases)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green)](./LICENSE)
 [![python](https://img.shields.io/badge/python-3.12%2B-blue)](./pyproject.toml)
 
@@ -49,14 +49,14 @@
 
 ## Совместимость
 
-Номер версии — `4.29.4+mtn1`. Часть `+mtn1` является локальным сегментом по PEP 440 и игнорируется при сравнении диапазонов версий.
+Текущая версия записана в `maintained/VERSION` (теги релизов имеют вид `maintained/v<upstream>-rN`, якоря базовой версии — `baseline/*`). Локальный суффикс `+mtnN` соответствует PEP 440 и игнорируется при сравнении диапазонов версий.
 
 | Способ объявления | Пример | Решение о совместимости |
 |---|---|---|
-| Объявление диапазона | `>=4.16,<5` | Совместимо |
-| Соответствие базовой версии | `==4.29.4`, `~=4.28.0` | Совместимо |
-| Требование более высокой версии | `>=4.29` | Отклонено |
-| Строгое равенство | `===4.29.4` | Отклонено (по правилам PEP 440 требуется полное строковое совпадение) |
+| Объявление диапазона | `>=<lower-bound>,<upper-bound>` | Совместимо |
+| Соответствие базовой версии | `==<baseline>`, `~=<upstream.minor>` | Совместимо |
+| Требование более высокой версии | `>=<upstream.major>` | Отклонено |
+| Строгое равенство | `===<baseline>` | Отклонено (по правилам PEP 440 требуется полное строковое совпадение) |
 
 В тестах относительно базовой версии проходят оба набора: поддерживаемой версии и апстрима; несколько известных отклонений апстрима регистрируются отдельно.
 
@@ -74,7 +74,7 @@
 
 ```bash
 pip uninstall -y astrbot
-pip install ./astrbot_maintained-4.29.4+mtn1-py3-none-any.whl
+pip install ./astrbot_maintained-<version>-py3-none-any.whl
 astrbot run
 ```
 
@@ -105,7 +105,7 @@ ASTRBOT_BUILD_DASHBOARD=1 uv build --wheel
 - `update_source`: `https://api.github.com/repos/Chenamel/astrbot-maintained/releases`
 - `update_repository`: `https://github.com/Chenamel/astrbot-maintained`
 
-В апстриме `v4.29+` архитектура изменилась, и добавленные здесь низкоуровневые API отсутствуют. При прямом обновлении до официальной версии из панели управления измененные файлы ядра будут перезаписаны, что приведет к отсутствию интерфейсов и ошибкам в работе.
+В последних релизах апстрима архитектура изменилась, и добавленные здесь низкоуровневые API отсутствуют. При прямом обновлении до официальной версии из панели управления измененные файлы ядра будут перезаписаны, что приведет к отсутствию интерфейсов и ошибкам в работе.
 
 При необходимости вернуться к официальным обновлениям измените в панели управления `update_source` на `https://api.soulter.top/releases`, а `update_repository` — на `https://github.com/AstrBotDevs/AstrBot`.
 

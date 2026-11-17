@@ -31,7 +31,7 @@ uv run main.py
 
 ```bash
 pip uninstall -y astrbot        # 若装过官方包需先卸载，避免同导入名文件互相覆盖
-pip install "./astrbot_maintained-4.29.4+mtn1-py3-none-any.whl"
+pip install "./astrbot_maintained-<version>-py3-none-any.whl"
 astrbot run
 ```
 

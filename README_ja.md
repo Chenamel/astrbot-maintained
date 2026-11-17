@@ -7,7 +7,7 @@
 <br>
 <br>
 
-[![version](https://img.shields.io/badge/version-4.29.4%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
+[![version](https://img.shields.io/github/v/release/Chenamel/astrbot-maintained?label=latest%20release)](https://github.com/Chenamel/astrbot-maintained/releases)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green)](./LICENSE)
 [![python](https://img.shields.io/badge/python-3.12%2B-blue)](./pyproject.toml)
 
@@ -49,14 +49,14 @@
 
 ## 互換性
 
-バージョン番号は `4.29.4+mtn1` です。`+mtn1` は PEP 440 の local セグメントであり、バージョン範囲の比較時には無視されます。
+現在のバージョンは `maintained/VERSION` に記録されています（リリースタグは `maintained/v<upstream>-rN`、ベースラインAnchorは `baseline/*` の形）。`+mtnN` のローカル接尾辞は PEP 440 に従い、バージョン範囲の比較では無視されます。
 
 | 宣言方法 | 例 | 互換性判定 |
 |---|---|---|
-| 範囲宣言 | `>=4.16,<5` | 互換 |
-| ベースライン一致 | `==4.29.4`、`~=4.28.0` | 互換 |
-| 上位バージョン要求 | `>=4.29` | 拒否 |
-| 厳密な等号一致 | `===4.29.4` | 拒否（PEP 440 の規則により文字列の完全一致が必要） |
+| 範囲宣言 | `>=<lower-bound>,<upper-bound>` | 互換 |
+| ベースライン一致 | `==<baseline>`、`~=<upstream.minor>` | 互換 |
+| 上位バージョン要求 | `>=<upstream.major>` | 拒否 |
+| 厳密な等号一致 | `===<baseline>` | 拒否（PEP 440 の規則により文字列の完全一致が必要） |
 
 ベースラインに対するテストでは、メンテナンス版と上流の両スイートが合格しました。既知の上流側の差異は別途登録されています。
 
@@ -74,7 +74,7 @@ Releases ページから `.whl` ファイルをダウンロードします。フ
 
 ```bash
 pip uninstall -y astrbot
-pip install ./astrbot_maintained-4.29.4+mtn1-py3-none-any.whl
+pip install ./astrbot_maintained-<version>-py3-none-any.whl
 astrbot run
 ```
 
@@ -105,7 +105,7 @@ ASTRBOT_BUILD_DASHBOARD=1 uv build --wheel
 - `update_source`: `https://api.github.com/repos/Chenamel/astrbot-maintained/releases`
 - `update_repository`: `https://github.com/Chenamel/astrbot-maintained`
 
-上流の `v4.29+` ではアーキテクチャが変更されており、ここに追加された低レイヤー API は存在しません。パネルから公式バージョンへ直接アップデートすると、変更されたコアファイルが上書きされ、インターフェースの欠落や動作異常の原因となります。
+最近の上流リリースではアーキテクチャが変更されており、ここに追加された低レイヤー API は存在しません。パネルから公式バージョンへ直接アップデートすると、変更されたコアファイルが上書きされ、インターフェースの欠落や動作異常の原因となります。
 
 公式のアップデート追従に戻す必要がある場合は、管理パネルで `update_source` を `https://api.soulter.top/releases` に、`update_repository` を `https://github.com/AstrBotDevs/AstrBot` に変更してください。
 

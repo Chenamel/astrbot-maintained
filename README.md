@@ -7,7 +7,7 @@ English ｜ <a href="./README_zh.md">简体中文</a> ｜ <a href="./README_zh-T
 <br>
 <br>
 
-[![version](https://img.shields.io/badge/version-4.29.4%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
+[![version](https://img.shields.io/github/v/release/Chenamel/astrbot-maintained?label=latest%20release)](https://github.com/Chenamel/astrbot-maintained/releases)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green)](./LICENSE)
 [![python](https://img.shields.io/badge/python-3.12%2B-blue)](./pyproject.toml)
 
@@ -49,14 +49,14 @@ Added 4 new configuration options, all defaulting to match upstream official beh
 
 ## Compatibility
 
-The version number is `4.29.4+mtn1`. The `+mtn1` suffix is the local segment under PEP 440, which is ignored during version range comparisons.
+The current version is recorded in `maintained/VERSION` (release tags follow `maintained/v<upstream>-rN`; baseline anchors follow `baseline/*`). The `+mtnN` local suffix follows PEP 440 and is ignored during version range comparisons.
 
 | Declaration Style | Example | Compatibility Result |
 |---|---|---|
-| Range declaration | `>=4.16,<5` | Compatible |
-| Baseline matching | `==4.29.4`, `~=4.28.0` | Compatible |
-| Higher version requirement | `>=4.29` | Rejected |
-| Strict equal matching | `===4.29.4` | Rejected (PEP 440 rules require exact string equality) |
+| Range declaration | `>=<lower-bound>,<upper-bound>` | Compatible |
+| Baseline matching | `==<baseline>`, `~=<upstream.minor>` | Compatible |
+| Higher version requirement | `>=<upstream.major>` | Rejected |
+| Strict equal matching | `===<baseline>` | Rejected (PEP 440 rules require exact string equality) |
 
 In tests against the baseline, both the maintained suite and the upstream suite pass; the few known upstream deviations are registered separately.
 
@@ -74,7 +74,7 @@ Download the `.whl` file from the Releases page. The filename contains a `+` cha
 
 ```bash
 pip uninstall -y astrbot
-pip install ./astrbot_maintained-4.29.4+mtn1-py3-none-any.whl
+pip install ./astrbot_maintained-<version>-py3-none-any.whl
 astrbot run
 ```
 
@@ -105,7 +105,7 @@ Dashboard update checks point to this repository's Releases by default:
 - `update_source`: `https://api.github.com/repos/Chenamel/astrbot-maintained/releases`
 - `update_repository`: `https://github.com/Chenamel/astrbot-maintained`
 
-The upstream `v4.29+` architecture has changed and does not include the underlying APIs added here. Updating directly to the official version from the dashboard will overwrite modified core files, leading to missing interfaces and runtime errors.
+Recent upstream releases changed the architecture and do not include the underlying APIs added here. Updating directly to the official version from the dashboard will overwrite modified core files, leading to missing interfaces and runtime errors.
 
 To resume following official updates, change `update_source` to `https://api.soulter.top/releases` and `update_repository` to `https://github.com/AstrBotDevs/AstrBot` in the admin dashboard.
 

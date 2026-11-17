@@ -7,7 +7,7 @@
 <br>
 <br>
 
-[![version](https://img.shields.io/badge/version-4.29.4%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
+[![version](https://img.shields.io/github/v/release/Chenamel/astrbot-maintained?label=latest%20release)](https://github.com/Chenamel/astrbot-maintained/releases)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green)](./LICENSE)
 [![python](https://img.shields.io/badge/python-3.12%2B-blue)](./pyproject.toml)
 
@@ -49,14 +49,14 @@
 
 ## 兼容性
 
-版本號是 `4.29.4+mtn1`。其中 `+mtn1` 是 PEP 440 的 local 段，在版本區間比較時會被忽略。
+目前版本記錄在 `maintained/VERSION`（發布標籤形如 `maintained/v<upstream>-rN`，基準錨點形如 `baseline/*`）。`+mtnN` 本地後綴遵循 PEP 440，在版本區間比較時會被忽略。
 
 | 聲明方式 | 示例 | 兼容判定 |
 |---|---|---|
-| 區間聲明 | `>=4.16,<5` | 兼容 |
-| 基準匹配 | `==4.29.4`、`~=4.28.0` | 兼容 |
-| 高版本要求 | `>=4.29` | 拒絕 |
-| 嚴格等號匹配 | `===4.29.4` | 拒絕（PEP 440 規則要求字符串全量相等） |
+| 區間聲明 | `>=<lower-bound>,<upper-bound>` | 兼容 |
+| 基準匹配 | `==<baseline>`、`~=<upstream.minor>` | 兼容 |
+| 高版本要求 | `>=<upstream.major>` | 拒絕 |
+| 嚴格等號匹配 | `===<baseline>` | 拒絕（PEP 440 規則要求字符串全量相等） |
 
 針對基準的測試中，維護版與上游兩套測試均通過；少數已知的上游偏差另行登記。
 
@@ -74,7 +74,7 @@
 
 ```bash
 pip uninstall -y astrbot
-pip install ./astrbot_maintained-4.29.4+mtn1-py3-none-any.whl
+pip install ./astrbot_maintained-<version>-py3-none-any.whl
 astrbot run
 ```
 
@@ -105,7 +105,7 @@ ASTRBOT_BUILD_DASHBOARD=1 uv build --wheel
 - `update_source`: `https://api.github.com/repos/Chenamel/astrbot-maintained/releases`
 - `update_repository`: `https://github.com/Chenamel/astrbot-maintained`
 
-上游 `v4.29+` 架構已變更，沒有這裡新增的底層 API。若從面板直接更新到官方版本，修改過的核心文件會被覆蓋，導致接口缺失與運行異常。
+近期上游版本的架構已變更，沒有這裡新增的底層 API。若從面板直接更新到官方版本，修改過的核心文件會被覆蓋，導致接口缺失與運行異常。
 
 若需要恢復跟隨官方更新，在管理面板中將 `update_source` 修改為 `https://api.soulter.top/releases`，將 `update_repository` 修改為 `https://github.com/AstrBotDevs/AstrBot`。
 

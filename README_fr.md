@@ -7,7 +7,7 @@
 <br>
 <br>
 
-[![version](https://img.shields.io/badge/version-4.29.4%2Bmtn1-blue)](https://github.com/Chenamel/astrbot-maintained/releases)
+[![version](https://img.shields.io/github/v/release/Chenamel/astrbot-maintained?label=latest%20release)](https://github.com/Chenamel/astrbot-maintained/releases)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green)](./LICENSE)
 [![python](https://img.shields.io/badge/python-3.12%2B-blue)](./pyproject.toml)
 
@@ -49,14 +49,14 @@ Dans la version originale en amont, `Context.llm_generate` appelle directement l
 
 ## Compatibilité
 
-Le numéro de version est `4.29.4+mtn1`. La mention `+mtn1` correspond au segment local de PEP 440, qui est ignoré lors des comparaisons d'intervalles de versions.
+La version actuelle est enregistrée dans `maintained/VERSION` (les tags de publication suivent `maintained/v<upstream>-rN` et les ancrages de base `baseline/*`). Le suffixe local `+mtnN` suit PEP 440 et est ignoré lors des comparaisons d'intervalles.
 
 | Style de déclaration | Exemple | Décision de compatibilité |
 |---|---|---|
-| Déclaration d'intervalle | `>=4.16,<5` | Compatible |
-| Correspondance de référence | `==4.29.4`, `~=4.28.0` | Compatible |
-| Exigence de version supérieure | `>=4.29` | Rejetée |
-| Correspondance stricte d'égalité | `===4.29.4` | Rejetée (les règles de PEP 440 exigent l'égalité stricte des chaînes) |
+| Déclaration d'intervalle | `>=<lower-bound>,<upper-bound>` | Compatible |
+| Correspondance de référence | `==<baseline>`, `~=<upstream.minor>` | Compatible |
+| Exigence de version supérieure | `>=<upstream.major>` | Rejetée |
+| Correspondance stricte d'égalité | `===<baseline>` | Rejetée (les règles de PEP 440 exigent l'égalité stricte des chaînes) |
 
 Lors des tests par rapport à la version de référence, les deux suites (version maintenue et version amont) passent ; les quelques écarts connus en amont sont enregistrés séparément.
 
@@ -74,7 +74,7 @@ Téléchargez le fichier `.whl` depuis la page Releases. Le nom de fichier conti
 
 ```bash
 pip uninstall -y astrbot
-pip install ./astrbot_maintained-4.29.4+mtn1-py3-none-any.whl
+pip install ./astrbot_maintained-<version>-py3-none-any.whl
 astrbot run
 ```
 
@@ -105,7 +105,7 @@ La vérification des mises à jour du panneau pointe par défaut vers les Releas
 - `update_source`: `https://api.github.com/repos/Chenamel/astrbot-maintained/releases`
 - `update_repository`: `https://github.com/Chenamel/astrbot-maintained`
 
-L'architecture en amont de `v4.29+` a changé et ne contient pas les API sous-jacentes ajoutées ici. Une mise à jour directe vers la version officielle depuis le panneau écrasera les fichiers centraux modifiés, entraînant l'absence d'interfaces et des erreurs d'exécution.
+Les récentes versions en amont ont modifié l'architecture et ne contiennent pas les API sous-jacentes ajoutées ici. Une mise à jour directe vers la version officielle depuis le panneau écrasera les fichiers centraux modifiés, entraînant l'absence d'interfaces et des erreurs d'exécution.
 
 Si vous devez rétablir le suivi des mises à jour officielles, modifiez `update_source` par `https://api.soulter.top/releases` et `update_repository` par `https://github.com/AstrBotDevs/AstrBot` dans le panneau d'administration.
 
