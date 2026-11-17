@@ -74,7 +74,7 @@ Téléchargez le fichier `.whl` depuis la page Releases. Le nom de fichier conti
 
 ```bash
 pip uninstall -y astrbot
-pip install ./astrbot_maintained-<version>-py3-none-any.whl
+pip install ./astrbot_maintained-4.29.4+mtn1-py3-none-any.whl
 astrbot run
 ```
 

@@ -38,10 +38,11 @@ def test_a_drifting_technical_number_is_detected(tmp_path: Path) -> None:
     root = _fixture(tmp_path)
     path = root / "README_fr.md"
     text = path.read_text(encoding="utf-8")
-    # Drift a stable technical token shared by all seven files. Avoid a version
-    # number here: those are deliberately not pinned in the ring any more.
-    assert "3.12" in text
-    path.write_bytes(text.replace("3.12", "3.13", 1).encode("utf-8"))
+    # Drift a stable technical token shared by all seven files. Use the API
+    # boundary declaration, not a version number: versions (including the
+    # Python badge) change on upgrades and would make this probe drift.
+    assert "`astrbot/api/**`" in text
+    path.write_bytes(text.replace("`astrbot/api/**`", "`astrbot/api/**!`", 1).encode("utf-8"))
 
     problems = check_ring(root).problems
     assert any("code/URL/number" in p for p in problems)
