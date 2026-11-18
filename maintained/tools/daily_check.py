@@ -193,7 +193,7 @@ def _cost(root: Path, utc_start: datetime, utc_end: datetime) -> dict:
     if not path.is_file():
         return empty
     try:
-        con = sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True, timeout=5)
+        con = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True, timeout=5)
         rows = con.execute(
             "SELECT agent_type, COUNT(*), COALESCE(SUM(token_input_other), 0) "
             "FROM provider_stats WHERE created_at >= ? AND created_at < ? "

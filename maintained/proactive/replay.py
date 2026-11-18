@@ -79,6 +79,13 @@ PLUGIN_NAME = os.environ.get("ASTRBOT_REPLAY_PLUGIN", "my_plugin")
 PLUGIN_DIR = INSTANCE / "core/data/plugins" / PLUGIN_NAME
 CMD_CONFIG = INSTANCE / "core/data/cmd_config.json"
 DB_PATH = INSTANCE / "core/data/data_v4.db"
+
+
+def ro_uri(path: Path) -> str:
+    """Read-only SQLite URI that survives special characters in the path."""
+    return f"{path.resolve().as_uri()}?mode=ro"
+
+
 PLACEHOLDER_SELF = "SELF"
 """Scenario marker for our own bot; replaced at run time by :func:`infer_self_id`."""
 
@@ -101,7 +108,7 @@ def infer_self_id() -> str:
     """
     counts: dict[str, int] = {}
     try:
-        with closing(sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)) as con:
+        with closing(sqlite3.connect(ro_uri(DB_PATH), uri=True)) as con:
             for sender, content in con.execute(
                 "SELECT sender_id, content FROM platform_message_history"
             ):
@@ -346,7 +353,7 @@ def make_scratch(dst_dir: Path, name: str, keep_user_id: str = "") -> Path:
     if dst.exists():
         dst.unlink()
     with (
-        closing(sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)) as src,
+        closing(sqlite3.connect(ro_uri(DB_PATH), uri=True)) as src,
         closing(sqlite3.connect(str(dst))) as out,
     ):
         src.backup(out)
@@ -399,7 +406,7 @@ class Row:
 
 def load_group_rows(user_id: str) -> list[Row]:
     """Read one group's archived messages, oldest first."""
-    with closing(sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)) as con:
+    with closing(sqlite3.connect(ro_uri(DB_PATH), uri=True)) as con:
         raw = con.execute(
             "SELECT id, sender_id, sender_name, content, created_at "
             "FROM platform_message_history WHERE user_id = ? ORDER BY id",
@@ -421,7 +428,7 @@ def load_group_rows(user_id: str) -> list[Row]:
 
 def list_groups(min_rows: int = 30) -> list[tuple[str, int]]:
     """Groups in the archive, busiest first."""
-    with closing(sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)) as con:
+    with closing(sqlite3.connect(ro_uri(DB_PATH), uri=True)) as con:
         raw = con.execute(
             "SELECT user_id, COUNT(*) FROM platform_message_history "
             "WHERE user_id LIKE 'default:GroupMessage:%' "
@@ -581,7 +588,11 @@ async def replay_group(
     if log_path:
         plugin.log_path = Path(log_path)
     runner = Runner(plugin, run_id)
-    for row in picked:
+    # Walk newest-to-oldest: trim_after removes every row newer than the one
+    # being judged (production sees the incoming message as the newest row).
+    # Ascending order would delete all later candidates on the first pass and
+    # silently evaluate them against an empty/frozen window.
+    for row in reversed(picked):
         trim_after(scratch, row.id)
         event = ReplayEvent(
             group_id=gid,
@@ -792,7 +803,7 @@ async def main_async(args) -> int:
     )
     counts = []
     for g in groups:
-        with closing(sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)) as con:
+        with closing(sqlite3.connect(ro_uri(DB_PATH), uri=True)) as con:
             n = con.execute(
                 "SELECT COUNT(*) FROM platform_message_history WHERE user_id = ?",
                 (g,),
