@@ -158,3 +158,16 @@ def test_main_json_and_exit_code(monkeypatch, capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload[0]["level"] == "BLOCK"
     assert payload[0]["check"] == "S1"
+
+
+def test_signatures_records_classes_and_methods():
+    """A class is a symbol too; methods keep bare names for diff stability."""
+    sigs = audit.signatures(
+        "class Foo:\n"
+        "    def bar(self, x): pass\n"
+        "class Baz:\n"
+        "    def bar(self, y): pass\n"
+    )
+    assert "Foo" in sigs
+    assert "Baz" in sigs
+    assert "bar" in sigs  # methods keep bare names so old/new diffs stay stable

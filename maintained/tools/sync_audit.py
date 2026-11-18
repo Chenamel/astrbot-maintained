@@ -124,6 +124,14 @@ def signatures(source: str) -> dict[str, Signature]:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             record(node)
         elif isinstance(node, ast.ClassDef):
+            # A class is itself a symbol: current_has_symbol() asks whether a
+            # name still exists, so classes must be recorded too. Methods keep
+            # their bare names so old/new signature diffs stay comparable.
+            out[node.name] = Signature(
+                names=frozenset(),
+                positional_max=10**6,
+                accepts_kwargs=True,
+            )
             for child in node.body:
                 if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     record(child)

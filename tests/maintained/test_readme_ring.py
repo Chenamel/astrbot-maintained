@@ -42,7 +42,9 @@ def test_a_drifting_technical_number_is_detected(tmp_path: Path) -> None:
     # boundary declaration, not a version number: versions (including the
     # Python badge) change on upgrades and would make this probe drift.
     assert "`astrbot/api/**`" in text
-    path.write_bytes(text.replace("`astrbot/api/**`", "`astrbot/api/**!`", 1).encode("utf-8"))
+    path.write_bytes(
+        text.replace("`astrbot/api/**`", "`astrbot/api/**!`", 1).encode("utf-8")
+    )
 
     problems = check_ring(root).problems
     assert any("code/URL/number" in p for p in problems)
