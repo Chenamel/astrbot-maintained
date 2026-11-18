@@ -18,8 +18,12 @@ from pathlib import Path
 from typing import Any
 
 # T4 §2 四条一票否决红线正则（与量表严格一致）
+# Each atom matches a whole unit (a repeated single character or a fixed
+# phrase). Keeping the alternation non-overlapping avoids the (A+)+ nesting
+# that made a long run of "哈" followed by a non-matching char explode
+# exponentially. Semantics are identical to the previous expression.
 ECHO_WHOLE_RE = re.compile(
-    r"^(哈+|嘿+|草+|笑死|确实|是的+|对的+|没错|附议|赞同|有道理|牛+|6+|真的+|太真实了|我也觉得|嗯+|啊+|哦+|\?+|!+|！+|？+|。+|\.+)+$"
+    r"^([哈嘿草牛6嗯啊哦?!？！.。]|笑死|确实|是的+|对的+|没错|附议|赞同|有道理|真的+|太真实了|我也觉得)+$"
 )
 ECHO_TOKEN_RE = re.compile(
     r"(哈+|嘿+|草+|笑死|确实|是的+|对的+|没错|附议|赞同|有道理|牛+|6+|真的+|太真实了|我也觉得|嗯+|啊+|哦+)"
