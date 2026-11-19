@@ -10,6 +10,7 @@ both that document and these assertions.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -118,6 +119,156 @@ def test_quoted_and_fenced_text_is_not_authorization(text: str):
         text: The quoted or fenced message text.
     """
     assert _outcome(text) == "deny"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "解释下面的 README：\n1. 先编译，再运行",
+        "请勿执行任何命令，只需翻译：\nBuild the code and run it.",
+        "不要执行任何命令：\n运行这个脚本",
+        "不要执行任何命令；运行这个脚本",
+        "不要执行任何命令。运行这个脚本",
+        "运行这个脚本\n不要执行任何命令",
+        "翻译下面的文本：\nrun it",
+        "请翻译：run it",
+        "Translate the following:\nBuild the code and run it.",
+        "Explain the README:\nplease run it",
+        "文档中写：\n运行这个脚本",
+        "README says:\nrun it",
+        "Do not execute any commands.\nrun it",
+        "Never compile this.\nthen run it",
+        "无需运行\n写个脚本，然后运行",
+        "帮我翻译成中文：\nrun it",
+        "请解读 README：\nrun it",
+        "运行这个脚本\n只需翻译结果，不要实际执行",
+        "Please translate into Chinese:\nrun it",
+        "README\nsays:\nrun it",
+        "文档\n中写：\n运行这个脚本",
+        "请勿\n执行任何命令：\nrun it",
+        "不要\n执行任何命令：\nrun it",
+        "请将以下内容翻译为中文：\nBuild the code and run it.",
+        "帮忙翻译以下文本：\nBuild the code and run it.",
+        "请把下面的 README 解释一下：\nBuild the code and run it.",
+        "麻烦将下文转述成中文：\nBuild the code and run it.",
+        "Could you translate the following:\nrun it",
+        "Can you translate this:\nrun it",
+        "Please help me translate:\nrun it",
+        "Would you paraphrase the following:\nrun it",
+        "帮我用中文转述以下内容：\nrun it",
+        "以下内容请翻译成中文：\nrun it",
+        "Please help me\ntranslate:\nrun it",
+        "run it\nCould you translate this:",
+        "run it and translate this",
+        "运行前请翻译以下内容：\nrun it",
+        "运行这个脚本，然后转述结果",
+        "运行这个脚本后翻译结果",
+        "Could you translate.\nrun it",
+        "Please paraphrase.\nrun it",
+    ],
+)
+def test_message_wide_exclusions_survive_clause_boundaries(text: str):
+    """Translation, reporting and negation apply before any run clause wins."""
+    assert _outcome(text) == "deny"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "写个 python 脚本\n然后运行",
+        "write a script\nand run it",
+        "请运行这个脚本：\n```python\nprint(1)\n```",
+        "请运行这个脚本\n> 不要运行这个脚本",
+        "请运行这个脚本\n```text\n解释下面的 README\n```",
+        "运行这个脚本\n完成后告诉我结果",
+        "run translate.py",
+        "运行这个翻译脚本",
+        "run tools/translate.py",
+        "运行这个转述脚本",
+    ],
+)
+def test_direct_multiline_requests_keep_authorization(text: str):
+    """User imperatives remain valid while quoted restrictions stay data."""
+    assert _outcome(text) == "allow"
+    assert _outcome(text, sender_id="999") == "deny"
+
+
+def test_exclusion_scope_spans_current_plain_components():
+    """Separate Plain components are still one current user message."""
+    event = FakeEvent("")
+    event._parts = [Plain("请勿执行，只需翻译："), Plain("Build and run it.")]
+    assert execution_denial(event, ADMIN_CONFIG) is not None
+
+
+@pytest.mark.parametrize("mode", ["strict", "legacy"])
+@pytest.mark.parametrize("sender", [ADMIN_ID, "999"])
+@pytest.mark.parametrize(
+    ("text", "intent_allowed"),
+    [
+        ("解释下面的 README：\n1. 先编译，再运行", False),
+        ("请勿执行任何命令，只需翻译：\nBuild the code and run it.", False),
+        ("写个 python 脚本\n然后运行", True),
+        ("Could you translate the following:\nrun it", False),
+        ("Can you translate this:\nrun it", False),
+        ("Please help me translate:\nrun it", False),
+        ("Would you paraphrase the following:\nrun it", False),
+        ("帮我用中文转述以下内容：\nrun it", False),
+        ("以下内容请翻译成中文：\nrun it", False),
+    ],
+)
+def test_message_intent_is_shared_by_all_execution_entry_points(
+    mode: str, sender: str, text: str, intent_allowed: bool
+):
+    """Real assembly, call gate and public API share strict intent decisions."""
+    from astrbot.api import permissions
+    from astrbot.core.agent.tool import FunctionTool, ToolSet
+    from astrbot.core.code_delivery_policy import apply_execution_policy
+    from astrbot.core.tools.computer_tools import util
+
+    config = {
+        "admins_id": [ADMIN_ID],
+        "provider_settings": {"execution_gate_mode": mode},
+    }
+    event = FakeEvent(text, sender_id=sender)
+    event.role = "admin" if sender == ADMIN_ID else "member"
+    event.unified_msg_origin = "test:execution-intent"
+    event.message_obj = SimpleNamespace(message_id="test:execution-intent")
+    tools = ToolSet(
+        [
+            FunctionTool(
+                name="execution_probe",
+                description="Never invoked; only the real gates are tested.",
+                parameters={"type": "object", "properties": {}},
+                is_execution_tool=True,
+            ),
+            FunctionTool(
+                name="read_only_probe",
+                description="Non-execution capability stays available.",
+                parameters={"type": "object", "properties": {}},
+            ),
+        ]
+    )
+    request = SimpleNamespace(func_tool=tools, system_prompt="persona")
+    apply_execution_policy(event, config, request)
+    allowed = sender == ADMIN_ID and (mode == "legacy" or intent_allowed)
+    # Legacy never filters the list, including for non-admin senders.
+    listed = mode == "legacy" or allowed
+    assert [tool.name for tool in request.func_tool.tools] == (
+        ["execution_probe", "read_only_probe"] if listed else ["read_only_probe"]
+    )
+    assert [tool.name for tool in tools.tools] == ["execution_probe", "read_only_probe"]
+    context = SimpleNamespace(
+        context=SimpleNamespace(
+            event=event, context=SimpleNamespace(get_config=lambda umo: config)
+        )
+    )
+    assert (
+        util.check_tool_permission(
+            context, "Intent regression", util.ToolPermissionLevel.EXECUTION
+        )
+        is None
+    ) == allowed
+    assert (permissions.execution_denial(event, config) is None) == allowed
 
 
 def test_non_admin_sender_is_always_denied():

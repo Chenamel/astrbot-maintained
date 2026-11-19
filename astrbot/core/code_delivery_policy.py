@@ -56,25 +56,59 @@ def execution_denial(event, config) -> str | None:
     text = re.sub(r"(?ms)^\s*(`{3,}|~{3,}).*?^\s*\1[^\n]*", "", text)
     text = re.sub(r"`[^`]*`|[“\"][^”\"]*[”\"]|‘[^’]*’|'[^'\n]*'", "", text)
     text = re.sub(r"(?m)^\s*>.*$", "", text)
-    clauses = re.split(r"[\n。！？!?;；]", text)
-    for clause in clauses:
-        clause = clause.strip().lower()
+    denial = "error: Execution requires an explicit request to run in the current message; writing, explanation, quotes and follow-ups do not authorize execution."
+    # Scan exclusions across line breaks before accepting any run clause.
+    # Mixed intent is denied; quoted restrictions have already been removed.
+    exclusion_text = " ".join(text.splitlines())
+    # Task verbs can occur after arbitrary polite prefixes or before the run
+    # clause. Exclude explicit target names, not an ever-growing prefix list.
+    task_text = re.sub(
+        r"(?:运行|执行)(?:一下|一遍)?(?:这(?:个|段)|该)?"
+        r"(?:翻译|转述|解读)(?:脚本|程序|工具|函数|模块|文件|器)",
+        "",
+        text,
+    )
+    if (
+        re.search(
+            r"翻译|转述|解读|(?<![\w/\\-])(?<!\w\.)(?:translate|paraphrase)(?![\w/\\-]|\.\w)",
+            task_text,
+            re.I,
+        )
+        or re.search(
+            r"(?:^|[，,。！？!?;；:：])\s*(?:(?:请|麻烦|帮我|帮忙|替我|只需|仅需|只要|只|先|然后|再)\s*)*"
+            r"(?:(?:将|把)\s*[^\n，,。！？!?;；:：]{0,80}?)?"
+            r"(?:解释|介绍|说明)"
+            r"|(?:^|[,.!?;:])\s*(?:(?:please|only|just|first|then)\s+)*(?:explain|describe)\b",
+            text,
+            re.I | re.M,
+        )
+        or re.search(
+            r"\b(?:readme|docs?|documentation|tutorial)\b[^\n。！？!?]{0,40}\b(?:says?|states?|reads?)\b"
+            r"|(?:请勿|切勿|勿).{0,12}(?:运行|执行|编译)",
+            exclusion_text,
+            re.I,
+        )
+    ):
+        return denial
+    for clause in re.split(r"[。！？!?;；]", exclusion_text.lower()):
         if re.search(
             r"(?:不要|别|无需|不用|禁止|不必|不能).{0,12}(?:运行|执行|编译)|\b(?:do not|don't|never)\s+(?:run|execute|compile)",
             clause,
         ):
-            continue
+            return denial
         if re.search(
             r"(?:解释|介绍|说明|如何|怎么|示例中|代码中|函数名|字符串).{0,12}(?:运行|执行)|\b(?:explain|describe|how to|example of)\b",
             clause,
         ):
-            continue
+            return denial
         if re.search(
             r"(?i)(?:文档|教程|示例|例子|例如|举例|说明书|readme|注释|书中|官方|上[一面]|下[一面]|里写|写着|说的是|意思是|中提到|里提到)[^。！？!?\n]{0,12}(?:写|说|提到|表示|描述|是|：|:)",
             clause,
         ):
             # Quoting a document, tutorial or snippet is not a run request.
-            continue
+            return denial
+    for clause in re.split(r"[\n。！？!?;；]", text.lower()):
+        clause = clause.strip()
         if re.search(
             r"^(?:(?:请|麻烦|帮我|替我|帮忙|现在|直接|实际|在电脑上|在本机|把这段代码|把这个脚本)\s*)*(?:编译并运行|运行|执行)(?:一下|一遍|它|这|该|代码|程序|脚本|命令|python|shell|cpp|c\+\+|\s|$)"
             r"|(?:然后|并|再|并且)\s*(?:实际|直接|帮我)?\s*(?:运行|执行)(?:一下|它|这|代码|程序|脚本|命令|\s|$)"
@@ -83,7 +117,7 @@ def execution_denial(event, config) -> str | None:
             clause,
         ):
             return None
-    return "error: Execution requires an explicit request to run in the current message; writing, explanation, quotes and follow-ups do not authorize execution."
+    return denial
 
 
 def _task_text(event) -> tuple[str, str, str | None]:
