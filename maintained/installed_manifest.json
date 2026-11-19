@@ -70,7 +70,7 @@
     "astrbot/dashboard/api/stats.py": "3cbef624f6bbfd9d09c0a3c3062373135ed9f39fd9f3354ad5f758a068939e89",
     "astrbot/dashboard/api/updates.py": "4729563b2b81d450116c1b6490eb003a4e6f85638a6ab0cb72e388d5f89d126a",
     "astrbot/dashboard/services/plugin_service.py": "3918d19eadd588b159141bacca60ee3acb1c20235d2812475a27e08588ee8b8e",
-    "astrbot/dashboard/services/stat_service.py": "e5a7c50f22447d152b78f47c813c73aaf7b0e08b4e02fbbe7d25e71b88580307",
+    "astrbot/dashboard/services/stat_service.py": "b2ef2d1bcc2ecae4e63cef04bd82002f62939eeb8263a1b6ed4f1e0de9d86bab",
     "astrbot/dashboard/services/update_service.py": "ab881ad5736e1ac135338f885cf0ed25f6a0876d446fe91362eacbd0f9ddcbdc"
   }
 }

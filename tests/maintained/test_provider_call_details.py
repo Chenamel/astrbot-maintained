@@ -7,10 +7,17 @@ that aggregates over the same filters, and local-timezone serialization.
 """
 
 import time
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
+import httpx
 import pytest
+from fastapi import FastAPI
+from sqlmodel import select
 
+from astrbot.core.db.po import ProviderStat
+from astrbot.dashboard.api import stats as stats_api
+from astrbot.dashboard.services import stat_service
 from astrbot.dashboard.services.stat_service import StatService
 
 
@@ -195,3 +202,141 @@ async def test_unattributed_rows_expose_no_caller(temp_db):
     item = (await _make_service(temp_db).list_provider_calls())["items"][0]
 
     assert item["caller"] is None
+
+
+@pytest.fixture
+def overview_clock(monkeypatch):
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            fixed = cls(2026, 1, 15, 12, tzinfo=timezone.utc)
+            return fixed.astimezone(tz) if tz is not None else fixed
+
+    monkeypatch.setattr(stat_service, "datetime", FixedDatetime)
+    return FixedDatetime.now(timezone.utc)
+
+
+async def _seed_overview(
+    db, now, agent_type, *, status="completed", tokens=(10, 5, 20), days_ago=0
+):
+    await _seed(
+        db, agent_type=agent_type, model=agent_type, status=status, tokens=tokens
+    )
+    async with db.get_db() as session:
+        record = (
+            (
+                await session.execute(
+                    select(ProviderStat).order_by(ProviderStat.id.desc())
+                )
+            )
+            .scalars()
+            .first()
+        )
+        record.created_at = now - timedelta(days=days_ago)
+        session.add(record)
+        await session.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "agent_type",
+    [
+        "internal",
+        "llm_generate",
+        "llm_generate:plugin_a",
+        "proactive_persona",
+        "proactive_persona:plugin_a",
+        "future_source",
+    ],
+)
+@pytest.mark.parametrize("days", [1, 3, 7])
+async def test_overview_counts_every_persisted_call_source(
+    temp_db, overview_clock, agent_type, days
+):
+    await _seed_overview(temp_db, overview_clock, agent_type)
+    service = _make_service(temp_db)
+    result = await service.get_provider_token_stats(days)
+    detail = await service.list_provider_calls()
+    assert (
+        result["range_total_calls"]
+        == result["today_total_calls"]
+        == detail["total"]
+        == 1
+    )
+    assert (
+        result["range_total_tokens"]
+        == result["today_total_tokens"]
+        == detail["summary"]["total_tokens"]
+        == 35
+    )
+    assert result["range_success_rate"] == 1
+    assert result["range_by_provider"] == [
+        {"provider_id": f"prov/{agent_type}", "tokens": 35}
+    ]
+    assert result["today_by_model"] == [{"provider_model": agent_type, "tokens": 35}]
+    assert result["range_by_umo"][0]["tokens"] == 35
+    assert sum(tokens for _, tokens in result["trend"]["total_series"]) == 35
+    assert result["trend"]["series"][0]["total_tokens"] == 35
+
+
+@pytest.mark.asyncio
+async def test_overview_mixed_sources_keep_success_and_window_rules(
+    temp_db, overview_clock
+):
+    await _seed_overview(temp_db, overview_clock, "internal")
+    await _seed_overview(
+        temp_db,
+        overview_clock,
+        "llm_generate:plugin_a",
+        status="error",
+        tokens=(0, 0, 0),
+    )
+    await _seed_overview(
+        temp_db, overview_clock, "proactive_persona", status="aborted", tokens=(1, 2, 3)
+    )
+    await _seed_overview(
+        temp_db, overview_clock, "proactive_persona", tokens=(100, 100, 100), days_ago=8
+    )
+    result = await _make_service(temp_db).get_provider_token_stats(1)
+    assert result["range_total_calls"] == result["today_total_calls"] == 3
+    assert result["range_total_tokens"] == result["today_total_tokens"] == 41
+    # Existing overview semantics treat all non-error statuses as successful.
+    assert result["range_success_rate"] == pytest.approx(2 / 3)
+    assert result["range_avg_ttft_ms"] == 500
+    assert result["range_avg_duration_ms"] == 2000
+    assert result["range_avg_tpm"] == pytest.approx(23 / (6 / 60))
+
+
+@pytest.mark.asyncio
+async def test_overview_empty_database_keeps_zero_response(temp_db, overview_clock):
+    result = await _make_service(temp_db).get_provider_token_stats(1)
+    assert result["range_total_calls"] == result["range_total_tokens"] == 0
+    assert result["today_total_calls"] == result["today_total_tokens"] == 0
+    assert result["range_success_rate"] == 0
+    assert result["trend"]["series"] == []
+    assert result["range_by_provider"] == result["today_by_model"] == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "path", ["/api/v1/stats/provider-tokens", "/api/stat/provider-tokens"]
+)
+async def test_overview_routes_serve_all_sources(temp_db, overview_clock, path):
+    await _seed_overview(temp_db, overview_clock, "llm_generate:plugin_a")
+    await _seed_overview(temp_db, overview_clock, "proactive_persona")
+    app = FastAPI()
+    app.include_router(stats_api.router, prefix="/api/v1")
+    app.include_router(stats_api.legacy_router)
+    app.dependency_overrides[stats_api.get_service] = lambda: _make_service(temp_db)
+    # Authentication is outside this aggregation regression; use local overrides.
+    app.dependency_overrides[stats_api.require_system_scope] = lambda: None
+    app.dependency_overrides[stats_api.require_dashboard_user] = lambda: "test"
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.get(path, params={"days": 1})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["data"]["range_total_calls"] == 2
+    assert body["data"]["range_total_tokens"] == 70

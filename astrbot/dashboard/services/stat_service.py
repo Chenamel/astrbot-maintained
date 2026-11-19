@@ -356,10 +356,7 @@ class StatService:
             async with self.db_helper.get_db() as session:
                 result = await session.execute(
                     select(ProviderStat)
-                    .where(
-                        ProviderStat.agent_type == "internal",
-                        ProviderStat.created_at >= query_start_utc,
-                    )
+                    .where(ProviderStat.created_at >= query_start_utc)
                     .order_by(col(ProviderStat.created_at).asc())
                 )
                 records = result.scalars().all()
