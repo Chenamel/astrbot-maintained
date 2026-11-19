@@ -45,12 +45,15 @@ _NO_VISUAL_NOTE = (
 )
 
 
-async def _resolve_provider(context: Any, chat_provider_id: str | None) -> Any | None:
+async def _resolve_provider(
+    context: Any, chat_provider_id: str | None, umo: str | None = None
+) -> Any | None:
     """Look up the provider to use.
 
     Args:
         context: The plugin ``Context`` carrying a provider manager.
-        chat_provider_id: Explicit provider id, or ``None`` for the default.
+        chat_provider_id: Explicit provider id, or ``None`` for session selection.
+        umo: Message origin used for session-specific provider preferences.
 
     Returns:
         A provider instance, or ``None`` when none can be resolved.
@@ -63,6 +66,10 @@ async def _resolve_provider(context: Any, chat_provider_id: str | None) -> Any |
         if getter is None:
             return None
         return await getter(chat_provider_id)
+    resolver = getattr(context, "get_using_provider_async", None)
+    if resolver is not None:
+        return await resolver(umo=umo)
+    # Older contexts have no session-aware async resolver.
     return getattr(manager, "curr_provider_inst", None)
 
 
@@ -230,14 +237,15 @@ async def generate_with_persona(
         prompt: What the bot should react to or say.
         system_prompt: Optional extra instruction for this single call.
         image_urls: Optional images to include with the prompt.
-        chat_provider_id: Provider to use; defaults to the current provider.
+        chat_provider_id: Provider to use; defaults to the event's session provider.
         timeout: Optional seconds bound for the provider call.
 
     Returns:
         The ``LLMResponse`` from the provider, or ``None`` when no provider is
         available or a plugin cancelled the request through the hook.
     """
-    provider = await _resolve_provider(context, chat_provider_id)
+    umo = getattr(event, "unified_msg_origin", "") or ""
+    provider = await _resolve_provider(context, chat_provider_id, umo=umo or None)
     if provider is None:
         logger.info("proactive persona generation skipped: no provider available")
         return None
@@ -246,18 +254,24 @@ async def generate_with_persona(
         prompt=prompt,
         system_prompt=system_prompt,
         image_urls=list(image_urls or []),
-        session_id=getattr(event, "unified_msg_origin", "") or "",
+        session_id=umo,
     )
-    # The persona chain lives in core, not in this module: the normal agent path
-    # applies it from a conversation context, which a one-shot call has none of.
-    # Without this the bot answered proactive messages with no persona at all --
-    # the configured 1.3k-character description only reached @-mentions.
+    # Read the selected persona without creating a conversation or loading its
+    # history into this one-shot request.
     try:
         persona_manager = getattr(context, "persona_manager", None)
         if persona_manager is not None:
+            conversation_persona_id = None
+            conv_mgr = getattr(context, "conversation_manager", None)
+            if conv_mgr is not None and umo:
+                cid = await conv_mgr.get_curr_conversation_id(umo)
+                if cid:
+                    conversation = await conv_mgr.get_conversation(umo, cid)
+                    if conversation is not None:
+                        conversation_persona_id = conversation.persona_id
             _, persona, _, _ = await persona_manager.resolve_selected_persona(
-                umo=getattr(event, "unified_msg_origin", "") or "",
-                conversation_persona_id=None,
+                umo=umo,
+                conversation_persona_id=conversation_persona_id,
                 platform_name=getattr(event, "get_platform_name", lambda: "")() or "",
             )
             if persona:

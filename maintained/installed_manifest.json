@@ -48,7 +48,7 @@
     "astrbot/core/platform/astr_message_event.py": "bacb98ee82bb9c22a32c37e8c3f98c510de6f0a62adc2f21a66c8c0a2f79cbf0",
     "astrbot/core/platform/sources/aiocqhttp/aiocqhttp_message_event.py": "5d192508d2255e588da3088637d6a8a9b74441789d4368afe5b0dadf0e76e8de",
     "astrbot/core/plugin_attribution.py": "a05a465a4e8dce1b16b8b7796b80a009e56b7fcc1542b7ea1a77eccd2c7e0f67",
-    "astrbot/core/proactive_persona.py": "88671fc372e9f1074baf17def20b184552e9e9862dcb6d068d25bb16168e1884",
+    "astrbot/core/proactive_persona.py": "0e0ab069b8fcac6518a31322c41f2aa17bf900958c275e2969f5c4bae232306c",
     "astrbot/core/provider/entities.py": "ca54b03277c58c24c60afbbd9a6e6bff66f686ff1af399ac23ed666b2a94f424",
     "astrbot/core/provider/sources/anthropic_source.py": "ccadb116c7ccd16c95eb18b3c762e37f172862f5fd39dec35045468690d1c614",
     "astrbot/core/provider/sources/openai_responses_source.py": "08afb66572019ad6316cf89c3cda8598ae3a001f42050dd4e39f660104a0d4ec",

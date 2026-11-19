@@ -184,7 +184,7 @@ NOTICE  = (
 
 #### `generate_with_persona` 的执行链
 
-`Context.llm_generate()` 与 `Context.tool_loop_agent()` 直接调用底层 provider，不触发 `on_llm_request` 钩子，导致挂载在该钩子上的人格（`PERSONA_PLUGIN`）、长期记忆（`MEMORY_PLUGIN`）与群上下文（`CONTEXT_PLUGIN`）插件无法注入上下文。`generate_with_persona` 先构造 `ProviderRequest`、注入机器人自身账号归属说明（`self_identity_note`），再调用 `call_event_hook(event, EventType.OnLLMRequestEvent, req)`，最后将修改后的请求交由 provider 生成。该函数只负责生成文本，不执行消息发送。
+`Context.llm_generate()` 与 `Context.tool_loop_agent()` 直接调用底层 provider，不触发 `on_llm_request` 钩子，导致挂载在该钩子上的人格（`PERSONA_PLUGIN`）、长期记忆（`MEMORY_PLUGIN`）与群上下文（`CONTEXT_PLUGIN`）插件无法注入上下文。`generate_with_persona` 默认按事件 UMO 解析会话主模型；显式 provider ID 优先且查无结果不改投。构造 `ProviderRequest` 后，只读当前选中对话的人格 ID（不创建对话、不导入历史），复用人格解析器的强制规则、对话选择和配置默认优先级，保留显式无人格；再注入机器人自身账号归属说明（`self_identity_note`），调用 `call_event_hook(event, EventType.OnLLMRequestEvent, req)`，最后将修改后的请求交由 provider 生成。该函数只负责生成文本，不执行消息发送。人格读取或解析异常仍告警并跳过注入；钩子仍可修改提示词，不承诺强制禁止插件另加人格。
 
 #### 插件能力发现契约（鸭子类型方法约定）
 

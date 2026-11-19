@@ -114,7 +114,7 @@ def test_proactive_persona_request_carries_the_note(monkeypatch) -> None:
             captured.update(kwargs)
             return LLMResponse(role="assistant", completion_text="好")
 
-    async def fake_resolve(_context, _provider_id):
+    async def fake_resolve(_context, _provider_id, umo=None):
         return _FakeProvider()
 
     async def fake_hook(_event, _hook_type, _req):
