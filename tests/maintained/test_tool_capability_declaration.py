@@ -9,7 +9,9 @@ Core keeps no hardcoded tool-name allowlist: execution tools declare
 
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -17,8 +19,16 @@ from astrbot.core import astr_main_agent, code_delivery_policy
 from astrbot.core.agent.tool import FunctionTool, ToolSet
 from astrbot.core.astr_main_agent import _apply_lightweight_proactive_tools
 from astrbot.core.code_delivery_policy import apply_execution_policy
+from astrbot.core.computer.booters.local import LocalShellComponent
 from astrbot.core.config.agent_runner import DEFAULT_LIGHTWEIGHT_PROACTIVE_TOOLS
 from astrbot.core.message.components import Plain
+from astrbot.core.tools.computer_tools import shell as shell_tools
+from astrbot.core.tools.computer_tools.python import LocalPythonTool, PythonTool
+from astrbot.core.tools.computer_tools.shell import (
+    ExecuteShellTool,
+    LocalExecuteShellTool,
+    ShellSessionTool,
+)
 
 #: Minimal JSON schema accepted by the tool schema validator.
 PARAMS: dict = {"type": "object", "properties": {}}
@@ -123,6 +133,295 @@ def test_tools_without_the_declaration_are_never_dropped():
     assert _names(request) == ["some_plugin_shell", "web_search"]
 
 
+@pytest.fixture
+def session_request(monkeypatch):
+    """Assemble real tools; replace only process/output operations in memory."""
+
+    def assemble(mode="strict", sender="100", text="停止这个会话", runtime="local"):
+        config = {
+            "admins_id": ["100"],
+            "provider_settings": {
+                "execution_gate_mode": mode,
+                "computer_use_runtime": runtime,
+                "computer_use_local_permissions": {
+                    role: {
+                        "allow_execution": True,
+                        "allow_network": True,
+                        "filesystem_scope": "host",
+                    }
+                    for role in ("admin", "member")
+                },
+            },
+        }
+        event = _Event(sender_id=sender, text=text)
+        event.role = "admin" if sender == "100" else "member"
+        event.unified_msg_origin = "test:group:session"
+        wrapper = SimpleNamespace(
+            context=SimpleNamespace(
+                event=event,
+                context=SimpleNamespace(get_config=lambda **kwargs: config),
+            )
+        )
+        shell = LocalShellComponent()
+        shell._terminate_process = AsyncMock()
+        shell.poll_session = AsyncMock(
+            return_value={"session_id": "sh_test", "status": "terminated"}
+        )
+        shell.list_sessions = AsyncMock(return_value={"sessions": []})
+        shell.write_session = AsyncMock(return_value={"written_chars": 6})
+        shell.interrupt_session = AsyncMock(return_value={"status": "running"})
+        shell.shutdown_sessions = AsyncMock()
+        monkeypatch.setattr(
+            shell_tools, "get_local_booter", lambda: SimpleNamespace(shell=shell)
+        )
+        tools = [
+            ShellSessionTool(),
+            ExecuteShellTool(),
+            LocalExecuteShellTool(),
+            PythonTool(),
+            LocalPythonTool(),
+        ]
+        original = ToolSet(tools)
+        request = SimpleNamespace(func_tool=original, system_prompt="")
+        apply_execution_policy(event, config, request)
+        return request, original, wrapper, shell, config
+
+    return assemble
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["strict", "legacy"])
+@pytest.mark.parametrize("sender", ["100", "member-user"])
+async def test_session_stop_survives_assembly_and_keeps_owner_checks(
+    session_request, mode, sender
+):
+    """Real assembly -> call -> ownership -> terminate, with no real process."""
+    request, original, wrapper, shell, _ = session_request(mode=mode, sender=sender)
+    tool = request.func_tool.get_tool("astrbot_shell_session")
+    assert tool is original.tools[0]
+    assert len(original.tools) == 5
+    assert len(request.func_tool.tools) == (1 if mode == "strict" else 5)
+    assert (
+        code_delivery_policy.execution_denial(
+            wrapper.context.event, {"admins_id": ["100"]}
+        )
+        is not None
+    )
+    session = SimpleNamespace(
+        owner_id=wrapper.context.event.unified_msg_origin,
+        creator_id=sender,
+        creator_is_admin=sender == "100",
+        permission_check=lambda: True,
+        terminated=False,
+    )
+    shell._sessions["sh_test"] = session
+    result = await tool.call(wrapper, action="terminate", session_id="sh_test")
+    assert json.loads(result)["status"] == "terminated"
+    assert session.terminated is True
+    shell._terminate_process.assert_awaited_once_with(session)
+    shell.poll_session.assert_awaited_once_with(
+        owner_id=wrapper.context.event.unified_msg_origin,
+        requester_id=sender,
+        requester_is_admin=sender == "100",
+        session_id="sh_test",
+        yield_time_ms=0,
+        max_output_chars=10000,
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("action", ["list", "poll", "write", "write_line", "interrupt"])
+@pytest.mark.parametrize("sender", ["100", "member-user"])
+@pytest.mark.parametrize("text", ["停止这个会话", "翻译下面的文本：\nrun it"])
+async def test_visible_session_sensitive_actions_still_require_execution_intent(
+    session_request, action, sender, text
+):
+    """Visibility never grants permission to read, write or interrupt a session."""
+    request, _, wrapper, shell, _ = session_request(sender=sender, text=text)
+    tool = request.func_tool.get_tool("astrbot_shell_session")
+    assert tool is not None
+    expected = code_delivery_policy.execution_denial(
+        wrapper.context.event, {"admins_id": ["100"]}
+    )
+    assert expected is not None
+    assert (
+        await tool.call(wrapper, action=action, session_id="sh_test", chars="input")
+        == expected
+    )
+    for operation in (
+        shell.list_sessions,
+        shell.poll_session,
+        shell.write_session,
+        shell.interrupt_session,
+        shell._terminate_process,
+    ):
+        operation.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("sender", "owner", "creator", "creator_admin", "valid", "session_id", "error"),
+    [
+        ("", "test:group:session", "", False, True, "sh_test", "sender identity"),
+        ("100", "other:group", "100", True, True, "sh_test", "not found"),
+        (
+            "member-user",
+            "test:group:session",
+            "other",
+            False,
+            True,
+            "sh_test",
+            "not found",
+        ),
+        (
+            "member-user",
+            "test:group:session",
+            "member-user",
+            True,
+            True,
+            "sh_test",
+            "not found",
+        ),
+        ("100", "test:group:session", "100", True, True, "missing", "not found"),
+        (
+            "100",
+            "test:group:session",
+            "100",
+            True,
+            True,
+            None,
+            "session_id is required",
+        ),
+        (
+            "100",
+            "test:group:session",
+            "100",
+            True,
+            False,
+            "sh_test",
+            "permission change",
+        ),
+        (
+            "100",
+            "test:group:session",
+            "100",
+            True,
+            None,
+            "sh_test",
+            "permission change",
+        ),
+    ],
+)
+async def test_session_stop_does_not_bypass_identity_or_ownership(
+    session_request, sender, owner, creator, creator_admin, valid, session_id, error
+):
+    """Exercise real terminate and ownership logic, including expired permissions."""
+    request, _, wrapper, shell, _ = session_request(sender=sender)
+    tool = request.func_tool.get_tool("astrbot_shell_session")
+    assert tool is not None
+    session = SimpleNamespace(
+        owner_id=owner,
+        creator_id=creator,
+        creator_is_admin=creator_admin,
+        permission_check=(lambda: valid) if valid is not None else None,
+        terminated=False,
+    )
+    shell._sessions["sh_test"] = session
+    result = await tool.call(wrapper, action="terminate", session_id=session_id)
+    assert error in result
+    assert session.terminated is False
+    shell._terminate_process.assert_not_awaited()
+    shell.poll_session.assert_not_awaited()
+    if valid is False or valid is None:
+        shell.shutdown_sessions.assert_awaited_once_with(invalid_only=True)
+    else:
+        shell.shutdown_sessions.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["strict", "legacy"])
+@pytest.mark.parametrize("action", ["list", "poll", "write", "write_line", "interrupt"])
+async def test_session_authorized_actions_keep_existing_dispatch(
+    session_request, mode, action
+):
+    """An authorized administrator still reaches each original action handler."""
+    request, original, wrapper, shell, _ = session_request(
+        mode=mode, text="运行这个脚本"
+    )
+    assert request.func_tool is original
+    assert len(original.tools) == 5
+    tool = request.func_tool.get_tool("astrbot_shell_session")
+    result = await tool.call(
+        wrapper, action=action, session_id="sh_test", chars="input"
+    )
+    assert not result.startswith("Error")
+    operation = {
+        "list": shell.list_sessions,
+        "poll": shell.poll_session,
+        "write": shell.write_session,
+        "write_line": shell.write_session,
+        "interrupt": shell.interrupt_session,
+    }[action]
+    operation.assert_awaited_once()
+    assert operation.await_args.kwargs["requester_id"] == "100"
+    if action in {"write", "write_line"}:
+        assert operation.await_args.kwargs["chars"] == (
+            "input\n" if action == "write_line" else "input"
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("restriction", ["disabled", "nonlocal"])
+@pytest.mark.parametrize("action", ["terminate", "list", "write"])
+async def test_session_stop_keeps_existing_local_permission_exception(
+    session_request, restriction, action
+):
+    """Runtime/role changes keep cleanup reachable, not further execution."""
+    request, _, wrapper, shell, config = session_request(text="运行这个脚本")
+    settings = config["provider_settings"]
+    if restriction == "disabled":
+        settings["computer_use_local_permissions"]["admin"]["allow_execution"] = False
+    else:
+        settings["computer_use_runtime"] = "none"
+    session = SimpleNamespace(
+        owner_id=wrapper.context.event.unified_msg_origin,
+        creator_id="100",
+        creator_is_admin=True,
+        permission_check=lambda: True,
+        terminated=False,
+    )
+    shell._sessions["sh_test"] = session
+    tool = request.func_tool.get_tool("astrbot_shell_session")
+    result = await tool.call(wrapper, action=action, session_id="sh_test")
+    if action == "terminate":
+        assert json.loads(result)["status"] == "terminated"
+        shell._terminate_process.assert_awaited_once_with(session)
+    else:
+        assert "Permission denied" in result or "only local runtime" in result
+        shell._terminate_process.assert_not_awaited()
+        shell.list_sessions.assert_not_awaited()
+        shell.write_session.assert_not_awaited()
+        shell.poll_session.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("sender", ["100", "member-user"])
+async def test_session_legacy_sensitive_action_still_uses_identity_gate(
+    session_request, sender
+):
+    """Legacy does not require run intent, but retains the original admin gate."""
+    request, _, wrapper, shell, _ = session_request(mode="legacy", sender=sender)
+    result = await request.func_tool.get_tool("astrbot_shell_session").call(
+        wrapper, action="list"
+    )
+    if sender == "100":
+        assert json.loads(result) == {"sessions": []}
+        shell.list_sessions.assert_awaited_once()
+    else:
+        assert "only allowed for admin" in result
+        shell.list_sessions.assert_not_awaited()
+
+
 def _apply(*tools: FunctionTool, misc: dict | None = None, persona: dict | None = None):
     """Run the proactive tool filter and return the surviving names.
 
@@ -145,6 +444,12 @@ def _apply(*tools: FunctionTool, misc: dict | None = None, persona: dict | None 
     if request.func_tool is None:
         return None
     return [tool.name for tool in request.func_tool.tools]
+
+
+def test_session_visibility_does_not_declare_proactive_safety():
+    """The mixed tool stays out of the default lightweight proactive path."""
+    assert ShellSessionTool().is_lightweight_proactive_safe is False
+    assert _apply(ShellSessionTool()) is None
 
 
 def test_proactive_path_accepts_declared_tools():

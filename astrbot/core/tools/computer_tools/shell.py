@@ -309,7 +309,8 @@ class ShellSessionTool(FunctionTool):
         "Sessions are isolated to the current conversation and sender. "
         "Administrators can manage all sessions in the conversation."
     )
-    is_execution_tool: bool = True
+    # Keep terminate reachable without run intent; call() gates other actions.
+    is_execution_tool: bool = False
     parameters: dict = field(
         default_factory=lambda: {
             "type": "object",
