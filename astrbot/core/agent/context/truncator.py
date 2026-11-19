@@ -34,11 +34,17 @@ class ContextTruncator:
         truncated: list[Message],
         original_messages: list[Message],
     ) -> list[Message]:
-        """Ensure the result always contains the first user message right after
-        system messages. This is required by many LLM APIs (e.g. Zhipu) that
-        mandate a ``user`` message immediately following the ``system`` message.
+        """Ensure a user message follows system messages.
+
+        An empty result must retain the latest question, not resurrect an old
+        turn. Nonempty tool-chain repair keeps its existing first-user fallback.
         """
-        if truncated and truncated[0].role == "user":
+        if not truncated:
+            latest_user = next(
+                (m for m in reversed(original_messages) if m.role == "user"), None
+            )
+            return system_messages + ([latest_user] if latest_user is not None else [])
+        if truncated[0].role == "user":
             return system_messages + truncated
 
         # Locate the first user message from the *original* list.

@@ -331,7 +331,27 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
             or request.extra_user_content_parts
         ):
             m = await self._assemble_request_context_for_provider(request)
-            messages.append(Message.model_validate(m))
+            current_message = Message.model_validate(m)
+            # File extracts belong to the current user turn, not separate turns
+            # that can displace the question when old context is truncated.
+            file_parts = []
+            while (
+                messages
+                and messages[-1].role == "user"
+                and not messages[-1]._no_save
+                and messages[-1]._checkpoint_after is None
+                and isinstance(messages[-1].content, str)
+                and messages[-1].content.startswith(
+                    "File Extract Results of user uploaded files:\n"
+                )
+            ):
+                file_parts.append(TextPart(text=messages.pop().content))
+            if file_parts:
+                content = current_message.content
+                current_message.content = list(reversed(file_parts)) + (
+                    [TextPart(text=content)] if isinstance(content, str) else content
+                )
+            messages.append(current_message)
         if request.system_prompt:
             messages.insert(
                 0,

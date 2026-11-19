@@ -422,9 +422,10 @@ async def _apply_file_extract(
         return
 
     for file_content, file_name in zip(file_contents, file_names):
+        # Extracted documents are user data, never trusted system instructions.
         req.contexts.append(
             {
-                "role": "system",
+                "role": "user",
                 "content": (
                     "File Extract Results of user uploaded files:\n"
                     f"{file_content}\nFile Name: {file_name or 'Unknown'}"
@@ -1832,6 +1833,21 @@ async def build_main_agent(
 
     if isinstance(req.contexts, str):
         req.contexts = json.loads(req.contexts)
+    # Older histories persisted extracted documents as system messages. Demote
+    # only that exact format, without mutating the caller's history objects.
+    req.contexts = [
+        {**message, "role": "user"}
+        if (
+            isinstance(message, dict)
+            and message.get("role") == "system"
+            and isinstance(message.get("content"), str)
+            and message["content"].startswith(
+                "File Extract Results of user uploaded files:\n"
+            )
+        )
+        else message
+        for message in req.contexts
+    ]
     thread_selected_text = event.get_extra("thread_selected_text")
     if isinstance(thread_selected_text, str) and thread_selected_text.strip():
         req.extra_user_content_parts.append(

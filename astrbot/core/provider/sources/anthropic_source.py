@@ -177,20 +177,36 @@ class ProviderAnthropic(Provider):
             }
 
     def _prepare_payload(self, messages: list[dict]):
-        """准备 Anthropic API 的请求 payload
+        """Prepare messages while preserving every system message in order.
 
         Args:
-            messages: OpenAI 格式的消息列表，包含用户输入和系统提示等信息
-        Returns:
-            system_prompt: 系统提示内容
-            new_messages: 处理后的消息列表，去除系统提示
+            messages: OpenAI-format messages with string or block-list systems.
 
+        Returns:
+            The combined system content and messages with systems removed.
+            A single system keeps its existing string or block-list form.
         """
         system_prompt = ""
         new_messages = []
         for message in messages:
             if message["role"] == "system":
-                system_prompt = message["content"] or "<empty system prompt>"
+                content = message["content"] or "<empty system prompt>"
+                if not system_prompt:
+                    system_prompt = content
+                elif isinstance(system_prompt, str) and isinstance(content, str):
+                    system_prompt = f"{system_prompt}\n\n{content}"
+                else:
+                    previous = (
+                        [{"type": "text", "text": system_prompt}]
+                        if isinstance(system_prompt, str)
+                        else system_prompt
+                    )
+                    current = (
+                        [{"type": "text", "text": content}]
+                        if isinstance(content, str)
+                        else content
+                    )
+                    system_prompt = previous + current
             elif message["role"] == "assistant":
                 blocks = []
                 reasoning_content = ""
